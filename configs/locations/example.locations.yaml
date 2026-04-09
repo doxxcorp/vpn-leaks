@@ -1,0 +1,3 @@
+# Optional cache of locations — can be filled by adapter or by hand
+provider: example
+locations: []

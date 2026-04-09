@@ -1,0 +1,19 @@
+# Example VPN provider — copy and edit for a real provider.
+provider_name: "Example VPN"
+slug: example
+connection_mode: manual_gui # wireguard | openvpn | cli | manual_gui
+
+# Declared adapter module under vpn_leaks.adapters (optional override)
+# adapter: manual
+
+locations:
+  - id: baseline
+    label: "Baseline (no VPN) — dry run"
+
+credentials:
+  # env_var names only — values never in repo
+  username_env: null
+  password_env: null
+
+policy_urls:
+  - "https://example.com/privacy"

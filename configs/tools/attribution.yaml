@@ -1,0 +1,5 @@
+ripestat_base: "https://stat.ripe.net/data"
+cymru_dns_query_template: "{ip}.origin.asn.cymru.com"
+peeringdb_enabled: true
+# Optional: path to GeoLite2-ASN.mmdb (never commit the file)
+geolite_asn_path: null

@@ -1,0 +1,27 @@
+# Underlay provider: {{ provider_title }}
+
+- **Report generated:** {{ generated_utc }}
+- **Evidence sources:** RIPEstat, Team Cymru, PeeringDB (advisory), optional GeoLite ASN
+
+## Exit IP / ASN evidence
+
+{% for block in evidence_blocks %}
+### {{ block.title }}
+
+```
+{{ block.body }}
+```
+
+{% endfor %}
+
+## Policy change tracking
+
+{% for p in policy_hashes %}
+- {{ p.url }} — SHA-256: `{{ p.sha256 }}` ({{ p.fetched_at }})
+{% else %}
+- No policy hashes recorded.
+{% endfor %}
+
+## Risk notes (general)
+
+Flow monitoring standards (e.g. IPFIX) can include source IP and byte counts in flow records; whether a specific operator retains such data is a **policy and operational** question—compare public terms to observed exit ASNs.

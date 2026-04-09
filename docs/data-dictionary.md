@@ -1,0 +1,54 @@
+# Data dictionary
+
+## `runs/<run_id>/run.json`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `run_id` | string | Unique run identifier |
+| `created_utc` | ISO-8601 | Manifest creation time |
+| `git_sha` | string? | `git rev-parse HEAD` when available |
+| `vpn_provider` | string | Slug from config |
+| `tool_versions` | object | e.g. Python version |
+| `runner_env` | object | OS, kernel, python |
+
+## `runs/<run_id>/raw/` layout
+
+| Path | Content |
+|------|---------|
+| `connect.log` | Adapter / orchestrator log |
+| `ip-check.json` | Raw multi-source IP responses |
+| `dnsleak/` | Resolver snapshots, external test HTML |
+| `webrtc/` | ICE candidate JSON, optional screenshots |
+| `ipv6/` | curl/dig outputs, external page HTML |
+| `fingerprint/` | Optional fingerprint JSON |
+| `pcap/` | Optional (gated) |
+| `attribution.json` | Raw RIPEstat/Cymru/PeeringDB responses |
+| `policy/` | `vpn_policy.html`, `underlay_*.html` |
+
+## `runs/<run_id>/locations/<location_id>/normalized.json`
+
+Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
+
+| Field | Notes |
+|-------|--------|
+| `run_id` | Parent run |
+| `timestamp_utc` | Location run start/end |
+| `runner_env` | OS, kernel, browser, vpn_protocol |
+| `vpn_provider` | Provider slug |
+| `vpn_location_id` / `vpn_location_label` | From adapter/config |
+| `connection_mode` | e.g. `wireguard`, `manual_gui` |
+| `exit_ip_v4` / `exit_ip_v6` | Best-effort canonical |
+| `exit_ip_sources` | List of `{url, ipv4, ipv6, error}` |
+| `dns_servers_observed` | Tier local + external observations |
+| `dns_leak_flag` | Boolean + `dns_leak_notes` |
+| `webrtc_candidates` | ICE candidates |
+| `webrtc_leak_flag` | vs expected exit / LAN |
+| `ipv6_status` | Semantic status string |
+| `ipv6_leak_flag` | |
+| `fingerprint_snapshot` | Anonymous summary |
+| `attribution` | ASN, holder, confidence, sources, disclaimers |
+| `policies` | vpn + underlay policy records |
+| `services_contacted` | Third-party URLs used in tests |
+| `artifacts` | Relative paths into `raw/` |
+
+Append-only: add fields with new `schema_version` rather than renaming.

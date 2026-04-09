@@ -1,0 +1,31 @@
+# {{ vpn_name }} ({{ vpn_slug }})
+
+- **Report generated:** {{ generated_utc }}
+- **Runs included:** {{ run_ids | join(", ") }}
+
+## Matrix
+
+| Field | Value |
+|-------|--------|
+| Connection modes observed | {{ connection_modes | join(", ") }} |
+| Locations covered | {{ locations | length }} |
+
+## Leak summary
+
+| Location | DNS leak | WebRTC leak | IPv6 leak |
+|----------|----------|-------------|-----------|
+{% for row in table_rows -%}
+| {{ row.label }} | {{ row.dns }} | {{ row.webrtc }} | {{ row.ipv6 }} |
+{% endfor %}
+
+## Underlay (ASNs)
+
+{% for asn, note in asn_notes %}
+- **AS{{ asn }}:** {{ note }}
+{% else %}
+- No ASN data aggregated.
+{% endfor %}
+
+## Appendix
+
+- Normalized JSON paths: `runs/<run_id>/locations/<id>/normalized.json`
