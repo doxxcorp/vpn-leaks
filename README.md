@@ -55,6 +55,8 @@ Artifacts are written under `runs/<run_id>/` (gitignored).
 | Per-VPN rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` |
 | Underlay (ASN) | `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md` |
 
+Generated `VPNs/*.md` and `PROVIDERS/*.md` are listed in `.gitignore` so local benchmark output is not committed by default.
+
 ## Development
 
 ```bash
