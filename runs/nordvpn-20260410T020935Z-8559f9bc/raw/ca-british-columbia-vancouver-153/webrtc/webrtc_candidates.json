@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "7ac25ac0-3a03-4166-8750-f4f9b34e2306.local",
+    "port": 63199,
+    "raw": "candidate:435352409 1 udp 2113937151 7ac25ac0-3a03-4166-8750-f4f9b34e2306.local 63199 typ host generation 0 ufrag lGf9 network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "45.90.222.153",
+    "port": 45050,
+    "raw": "candidate:208917849 1 udp 1677729535 45.90.222.153 45050 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag lGf9 network-cost 999"
+  }
+]

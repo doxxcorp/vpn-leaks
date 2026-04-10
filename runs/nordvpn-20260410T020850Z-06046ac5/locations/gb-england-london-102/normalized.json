@@ -1,0 +1,280 @@
+{
+  "schema_version": "1.0",
+  "run_id": "nordvpn-20260410T020850Z-06046ac5",
+  "timestamp_utc": "2026-04-10T02:09:19.012269+00:00",
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": "manual_gui",
+    "vpn_client": null
+  },
+  "vpn_provider": "nordvpn",
+  "vpn_location_id": "gb-england-london-102",
+  "vpn_location_label": "London, England, United Kingdom",
+  "connection_mode": "manual_gui",
+  "exit_ip_v4": "2.58.73.102",
+  "exit_ip_v6": null,
+  "exit_ip_sources": [
+    {
+      "url": "https://api.ipify.org",
+      "ipv4": "2.58.73.102",
+      "ipv6": null,
+      "raw_excerpt": "2.58.73.102",
+      "error": null
+    },
+    {
+      "url": "https://api64.ipify.org",
+      "ipv4": "2.58.73.102",
+      "ipv6": null,
+      "raw_excerpt": "2.58.73.102",
+      "error": null
+    },
+    {
+      "url": "https://api.ipify.org?format=json",
+      "ipv4": "2.58.73.102",
+      "ipv6": null,
+      "raw_excerpt": "{\"ip\":\"2.58.73.102\"}",
+      "error": null
+    }
+  ],
+  "dns_servers_observed": [
+    {
+      "tier": "local",
+      "detail": "resolv.conf nameserver lines (Unix)",
+      "servers": [
+        "100.64.0.2"
+      ]
+    },
+    {
+      "tier": "local",
+      "detail": "getaddrinfo('whoami.akamai.net')",
+      "servers": [
+        "2.58.73.109"
+      ]
+    },
+    {
+      "tier": "external",
+      "detail": "ipleak_dns",
+      "servers": [
+        "2.58.73.102"
+      ]
+    }
+  ],
+  "dns_leak_flag": false,
+  "dns_leak_notes": "Heuristic: no obvious public resolver IPs parsed from external page",
+  "webrtc_candidates": [
+    {
+      "candidate_type": "host",
+      "protocol": "udp",
+      "address": "9447bb44-ab52-4053-b1b6-b5b44e521d4f.local",
+      "port": 51329,
+      "raw": "candidate:1680063244 1 udp 2113937151 9447bb44-ab52-4053-b1b6-b5b44e521d4f.local 51329 typ host generation 0 ufrag WTai network-cost 999"
+    },
+    {
+      "candidate_type": "srflx",
+      "protocol": "udp",
+      "address": "2.58.73.102",
+      "port": 17445,
+      "raw": "candidate:1681275434 1 udp 1677729535 2.58.73.102 17445 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag WTai network-cost 999"
+    }
+  ],
+  "webrtc_leak_flag": false,
+  "webrtc_notes": "Exit IP appears in candidate set (expected for tunneled public)",
+  "ipv6_status": "unsupported_or_no_ipv6",
+  "ipv6_leak_flag": false,
+  "ipv6_notes": "No IPv6 observed via curl or IP endpoints",
+  "fingerprint_snapshot": {},
+  "attribution": {
+    "asn": 62240,
+    "holder": "CLOUVIDER - Clouvider Limited",
+    "country": null,
+    "confidence": 0.7,
+    "confidence_notes": "ASNs seen: [62240]",
+    "supporting_sources": [
+      {
+        "name": "ripestat",
+        "asn": 62240,
+        "holder": "CLOUVIDER - Clouvider Limited",
+        "country": null,
+        "raw": {
+          "prefix_overview": {
+            "messages": [
+              [
+                "warning",
+                "Given resource is not announced but result has been aligned to first-level less-specific (2.58.73.0/24)."
+              ]
+            ],
+            "see_also": [],
+            "version": "1.3",
+            "data_call_name": "prefix-overview",
+            "data_call_status": "supported",
+            "cached": false,
+            "query_id": "20260410020914-addb5b63-fc08-4f00-8453-07e0fc3a5494",
+            "process_time": 96,
+            "server_id": "app182",
+            "build_version": "v0.9.7-2026.04.09",
+            "pipeline": "1221926",
+            "status": "ok",
+            "status_code": 200,
+            "time": "2026-04-10T02:09:14.949369",
+            "data": {
+              "is_less_specific": true,
+              "announced": true,
+              "asns": [
+                {
+                  "asn": 62240,
+                  "holder": "CLOUVIDER - Clouvider Limited"
+                }
+              ],
+              "related_prefixes": [],
+              "resource": "2.58.73.0/24",
+              "type": "prefix",
+              "block": {
+                "resource": "2.0.0.0/8",
+                "desc": "RIPE NCC (Status: ALLOCATED)",
+                "name": "IANA IPv4 Address Space Registry"
+              },
+              "actual_num_related": 0,
+              "query_time": "2026-04-09T16:00:00",
+              "num_filtered_out": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "team_cymru",
+        "asn": 62240,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "asn": 62240,
+          "raw_line": "62240 | 2.58.73.0/24 | DE | ripencc | 2019-03-21",
+          "parts": [
+            "62240",
+            "2.58.73.0/24",
+            "DE",
+            "ripencc",
+            "2019-03-21"
+          ],
+          "disclaimer": [
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        }
+      },
+      {
+        "name": "peeringdb",
+        "asn": null,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "data": [
+            {
+              "id": 7115,
+              "org_id": 11519,
+              "name": "Clouvider",
+              "aka": "",
+              "name_long": "",
+              "website": "https://www.clouvider.com",
+              "social_media": [
+                {
+                  "service": "website",
+                  "identifier": "https://www.clouvider.com"
+                }
+              ],
+              "asn": 62240,
+              "looking_glass": "",
+              "route_server": "",
+              "irr_as_set": "RIPE::AS-CLOUVIDER",
+              "info_type": "Content",
+              "info_types": [
+                "Content"
+              ],
+              "info_prefixes4": 5000,
+              "info_prefixes6": 5000,
+              "info_traffic": "1-5Tbps",
+              "info_ratio": "Balanced",
+              "info_scope": "Global",
+              "info_unicast": true,
+              "info_multicast": false,
+              "info_ipv6": true,
+              "info_never_via_route_servers": false,
+              "ix_count": 14,
+              "fac_count": 40,
+              "notes": "",
+              "netixlan_updated": "2026-03-26T18:36:11Z",
+              "netfac_updated": "2026-03-04T18:28:29Z",
+              "poc_updated": "2023-05-30T08:07:56Z",
+              "policy_url": "",
+              "policy_general": "Open",
+              "policy_locations": "Preferred",
+              "policy_ratio": false,
+              "policy_contracts": "Not Required",
+              "allow_ixp_update": false,
+              "status_dashboard": "",
+              "rir_status": "ok",
+              "rir_status_updated": "2024-06-26T04:47:55Z",
+              "logo": null,
+              "created": "2014-08-12T09:49:51Z",
+              "updated": "2026-03-04T18:28:33Z",
+              "status": "ok"
+            }
+          ],
+          "meta": {}
+        }
+      }
+    ],
+    "disclaimers": [
+      "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+    ]
+  },
+  "policies": [
+    {
+      "role": "vpn",
+      "url": "https://nordvpn.com/privacy-policy/",
+      "fetched_at_utc": "2026-04-10T02:09:19.010583+00:00",
+      "sha256": null,
+      "summary_bullets": [
+        "fetch error: Client error '403 Forbidden' for url 'https://nordvpn.com/privacy-policy/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      ]
+    }
+  ],
+  "services_contacted": [
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org",
+    "https://ipleak.net/",
+    "https://ipwho.is/2.58.73.102",
+    "https://nordvpn.com/privacy-policy/",
+    "https://test-ipv6.com/",
+    "webrtc:local_playwright_chromium"
+  ],
+  "artifacts": {
+    "connect_log": "runs/nordvpn-20260410T020850Z-06046ac5/raw/connect.log",
+    "ip_check_json": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/ip-check.json",
+    "dnsleak_dir": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/dnsleak",
+    "webrtc_dir": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/webrtc",
+    "ipv6_dir": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/ipv6",
+    "fingerprint_dir": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/fingerprint",
+    "attribution_json": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/attribution.json",
+    "policy_dir": "runs/nordvpn-20260410T020850Z-06046ac5/raw/gb-england-london-102/policy"
+  },
+  "extra": {
+    "exit_geo": {
+      "source": "ipwho.is",
+      "ip": "2.58.73.102",
+      "country_code": "GB",
+      "region": "England",
+      "city": "London",
+      "connection": {
+        "asn": 62240,
+        "org": "Packethub S.A.",
+        "isp": "Clouvider Limited",
+        "domain": "packethub.net"
+      },
+      "location_id": "gb-england-london-102",
+      "location_label": "London, England, United Kingdom"
+    }
+  }
+}

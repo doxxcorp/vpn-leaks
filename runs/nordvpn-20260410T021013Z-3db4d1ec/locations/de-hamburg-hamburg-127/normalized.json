@@ -1,0 +1,278 @@
+{
+  "schema_version": "1.0",
+  "run_id": "nordvpn-20260410T021013Z-3db4d1ec",
+  "timestamp_utc": "2026-04-10T02:10:41.972601+00:00",
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": "manual_gui",
+    "vpn_client": null
+  },
+  "vpn_provider": "nordvpn",
+  "vpn_location_id": "de-hamburg-hamburg-127",
+  "vpn_location_label": "Hamburg, Hamburg, Germany",
+  "connection_mode": "manual_gui",
+  "exit_ip_v4": "185.161.202.127",
+  "exit_ip_v6": null,
+  "exit_ip_sources": [
+    {
+      "url": "https://api.ipify.org",
+      "ipv4": "185.161.202.127",
+      "ipv6": null,
+      "raw_excerpt": "185.161.202.127",
+      "error": null
+    },
+    {
+      "url": "https://api64.ipify.org",
+      "ipv4": "185.161.202.127",
+      "ipv6": null,
+      "raw_excerpt": "185.161.202.127",
+      "error": null
+    },
+    {
+      "url": "https://api.ipify.org?format=json",
+      "ipv4": "185.161.202.127",
+      "ipv6": null,
+      "raw_excerpt": "{\"ip\":\"185.161.202.127\"}",
+      "error": null
+    }
+  ],
+  "dns_servers_observed": [
+    {
+      "tier": "local",
+      "detail": "resolv.conf nameserver lines (Unix)",
+      "servers": [
+        "100.64.0.2"
+      ]
+    },
+    {
+      "tier": "local",
+      "detail": "getaddrinfo('whoami.akamai.net')",
+      "servers": [
+        "45.90.222.34"
+      ]
+    },
+    {
+      "tier": "external",
+      "detail": "ipleak_dns",
+      "servers": [
+        "185.161.202.127"
+      ]
+    }
+  ],
+  "dns_leak_flag": false,
+  "dns_leak_notes": "Heuristic: no obvious public resolver IPs parsed from external page",
+  "webrtc_candidates": [
+    {
+      "candidate_type": "host",
+      "protocol": "udp",
+      "address": "fa4b8d6b-8fd4-4661-8274-69485a14f0c6.local",
+      "port": 63716,
+      "raw": "candidate:3959360398 1 udp 2113937151 fa4b8d6b-8fd4-4661-8274-69485a14f0c6.local 63716 typ host generation 0 ufrag S6Zs network-cost 999"
+    },
+    {
+      "candidate_type": "srflx",
+      "protocol": "udp",
+      "address": "185.161.202.127",
+      "port": 35239,
+      "raw": "candidate:3958016680 1 udp 1677729535 185.161.202.127 35239 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag S6Zs network-cost 999"
+    }
+  ],
+  "webrtc_leak_flag": false,
+  "webrtc_notes": "Exit IP appears in candidate set (expected for tunneled public)",
+  "ipv6_status": "unsupported_or_no_ipv6",
+  "ipv6_leak_flag": false,
+  "ipv6_notes": "No IPv6 observed via curl or IP endpoints",
+  "fingerprint_snapshot": {},
+  "attribution": {
+    "asn": 207137,
+    "holder": "PACKETHUBSA - PacketHub S.A.",
+    "country": null,
+    "confidence": 0.7,
+    "confidence_notes": "ASNs seen: [207137]",
+    "supporting_sources": [
+      {
+        "name": "ripestat",
+        "asn": 207137,
+        "holder": "PACKETHUBSA - PacketHub S.A.",
+        "country": null,
+        "raw": {
+          "prefix_overview": {
+            "messages": [
+              [
+                "warning",
+                "Given resource is not announced but result has been aligned to first-level less-specific (185.161.202.0/24)."
+              ]
+            ],
+            "see_also": [],
+            "version": "1.3",
+            "data_call_name": "prefix-overview",
+            "data_call_status": "supported",
+            "cached": false,
+            "query_id": "20260410021037-06c32bff-19d4-4c9d-9ea6-873029abc393",
+            "process_time": 112,
+            "server_id": "app175",
+            "build_version": "v0.9.7-2026.04.09",
+            "pipeline": "1221926",
+            "status": "ok",
+            "status_code": 200,
+            "time": "2026-04-10T02:10:37.823014",
+            "data": {
+              "is_less_specific": true,
+              "announced": true,
+              "asns": [
+                {
+                  "asn": 207137,
+                  "holder": "PACKETHUBSA - PacketHub S.A."
+                }
+              ],
+              "related_prefixes": [],
+              "resource": "185.161.202.0/24",
+              "type": "prefix",
+              "block": {
+                "resource": "185.0.0.0/8",
+                "desc": "RIPE NCC (Status: ALLOCATED)",
+                "name": "IANA IPv4 Address Space Registry"
+              },
+              "actual_num_related": 0,
+              "query_time": "2026-04-09T16:00:00",
+              "num_filtered_out": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "team_cymru",
+        "asn": 207137,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "asn": 207137,
+          "raw_line": "207137 | 185.161.202.0/24 | DE | ripencc | 2016-08-02",
+          "parts": [
+            "207137",
+            "185.161.202.0/24",
+            "DE",
+            "ripencc",
+            "2016-08-02"
+          ],
+          "disclaimer": [
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        }
+      },
+      {
+        "name": "peeringdb",
+        "asn": null,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "data": [
+            {
+              "id": 31153,
+              "org_id": 28491,
+              "name": "PacketHub AS207137",
+              "aka": "",
+              "name_long": "",
+              "website": "https://www.packethub.net/",
+              "social_media": [
+                {
+                  "service": "website",
+                  "identifier": "https://www.packethub.net/"
+                }
+              ],
+              "asn": 207137,
+              "looking_glass": "",
+              "route_server": "",
+              "irr_as_set": "AS-SET-AS207137",
+              "info_type": "",
+              "info_types": [],
+              "info_prefixes4": 5000,
+              "info_prefixes6": 5000,
+              "info_traffic": "",
+              "info_ratio": "Not Disclosed",
+              "info_scope": "Global",
+              "info_unicast": true,
+              "info_multicast": false,
+              "info_ipv6": true,
+              "info_never_via_route_servers": false,
+              "ix_count": 3,
+              "fac_count": 0,
+              "notes": "",
+              "netixlan_updated": "2026-03-30T06:43:18Z",
+              "netfac_updated": null,
+              "poc_updated": "2022-10-06T09:33:32Z",
+              "policy_url": "",
+              "policy_general": "Open",
+              "policy_locations": "Not Required",
+              "policy_ratio": false,
+              "policy_contracts": "Not Required",
+              "allow_ixp_update": false,
+              "status_dashboard": "",
+              "rir_status": "ok",
+              "rir_status_updated": "2024-06-26T04:47:55Z",
+              "logo": null,
+              "created": "2022-10-06T06:26:09Z",
+              "updated": "2024-07-04T10:28:36Z",
+              "status": "ok"
+            }
+          ],
+          "meta": {}
+        }
+      }
+    ],
+    "disclaimers": [
+      "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+    ]
+  },
+  "policies": [
+    {
+      "role": "vpn",
+      "url": "https://nordvpn.com/privacy-policy/",
+      "fetched_at_utc": "2026-04-10T02:10:41.970671+00:00",
+      "sha256": null,
+      "summary_bullets": [
+        "fetch error: Client error '403 Forbidden' for url 'https://nordvpn.com/privacy-policy/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      ]
+    }
+  ],
+  "services_contacted": [
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org",
+    "https://ipleak.net/",
+    "https://ipwho.is/185.161.202.127",
+    "https://nordvpn.com/privacy-policy/",
+    "https://test-ipv6.com/",
+    "webrtc:local_playwright_chromium"
+  ],
+  "artifacts": {
+    "connect_log": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/connect.log",
+    "ip_check_json": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/ip-check.json",
+    "dnsleak_dir": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/dnsleak",
+    "webrtc_dir": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/webrtc",
+    "ipv6_dir": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/ipv6",
+    "fingerprint_dir": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/fingerprint",
+    "attribution_json": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/attribution.json",
+    "policy_dir": "runs/nordvpn-20260410T021013Z-3db4d1ec/raw/de-hamburg-hamburg-127/policy"
+  },
+  "extra": {
+    "exit_geo": {
+      "source": "ipwho.is",
+      "ip": "185.161.202.127",
+      "country_code": "DE",
+      "region": "Hamburg",
+      "city": "Hamburg",
+      "connection": {
+        "asn": 207137,
+        "org": "Packethub S.A.",
+        "isp": "Packethub S.A.",
+        "domain": "packethub.net"
+      },
+      "location_id": "de-hamburg-hamburg-127",
+      "location_label": "Hamburg, Hamburg, Germany"
+    }
+  }
+}

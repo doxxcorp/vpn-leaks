@@ -1,0 +1,131 @@
+[
+  {
+    "name": "ripestat",
+    "asn": 147049,
+    "holder": "PACKETHUBSA-AS-AP PacketHub S.A.",
+    "country": null,
+    "raw": {
+      "prefix_overview": {
+        "messages": [
+          [
+            "warning",
+            "Given resource is not announced but result has been aligned to first-level less-specific (45.90.222.0/24)."
+          ]
+        ],
+        "see_also": [],
+        "version": "1.3",
+        "data_call_name": "prefix-overview",
+        "data_call_status": "supported",
+        "cached": false,
+        "query_id": "20260410020957-ff190de7-1f1a-44c4-884f-ba54b6db7904",
+        "process_time": 80,
+        "server_id": "app192",
+        "build_version": "v0.9.7-2026.04.09",
+        "pipeline": "1221926",
+        "status": "ok",
+        "status_code": 200,
+        "time": "2026-04-10T02:09:57.884788",
+        "data": {
+          "is_less_specific": true,
+          "announced": true,
+          "asns": [
+            {
+              "asn": 147049,
+              "holder": "PACKETHUBSA-AS-AP PacketHub S.A."
+            }
+          ],
+          "related_prefixes": [],
+          "resource": "45.90.222.0/24",
+          "type": "prefix",
+          "block": {
+            "resource": "45.80.0.0/12",
+            "desc": "This IP space was taken from IANA's recovered IPv4 pool in September 2014 and given to RIPE NCC (Source: IPv4 Recovered Address Space)",
+            "name": "IANA Recovered Address Space Registry"
+          },
+          "actual_num_related": 0,
+          "query_time": "2026-04-09T16:00:00",
+          "num_filtered_out": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "team_cymru",
+    "asn": 147049,
+    "holder": null,
+    "country": null,
+    "raw": {
+      "asn": 147049,
+      "raw_line": "147049 | 45.90.222.0/24 | DE | ripencc | 2019-06-26",
+      "parts": [
+        "147049",
+        "45.90.222.0/24",
+        "DE",
+        "ripencc",
+        "2019-06-26"
+      ],
+      "disclaimer": [
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    }
+  },
+  {
+    "name": "peeringdb",
+    "asn": null,
+    "holder": null,
+    "country": null,
+    "raw": {
+      "data": [
+        {
+          "id": 29054,
+          "org_id": 28491,
+          "name": "PacketHub AS147049",
+          "aka": "",
+          "name_long": "",
+          "website": "https://www.packethub.net/",
+          "social_media": [
+            {
+              "service": "website",
+              "identifier": "https://www.packethub.net/"
+            }
+          ],
+          "asn": 147049,
+          "looking_glass": "",
+          "route_server": "",
+          "irr_as_set": "APNIC::AS-SET-AS147049",
+          "info_type": "",
+          "info_types": [],
+          "info_prefixes4": 1000,
+          "info_prefixes6": 1000,
+          "info_traffic": "",
+          "info_ratio": "Not Disclosed",
+          "info_scope": "Global",
+          "info_unicast": true,
+          "info_multicast": false,
+          "info_ipv6": true,
+          "info_never_via_route_servers": false,
+          "ix_count": 7,
+          "fac_count": 1,
+          "notes": "",
+          "netixlan_updated": "2026-03-26T15:30:03Z",
+          "netfac_updated": "2023-07-18T08:22:19Z",
+          "poc_updated": "2022-10-06T09:29:57Z",
+          "policy_url": "",
+          "policy_general": "Open",
+          "policy_locations": "Not Required",
+          "policy_ratio": false,
+          "policy_contracts": "Not Required",
+          "allow_ixp_update": false,
+          "status_dashboard": "",
+          "rir_status": "ok",
+          "rir_status_updated": "2024-06-26T04:47:55Z",
+          "logo": null,
+          "created": "2022-01-18T09:17:39Z",
+          "updated": "2025-11-03T13:33:39Z",
+          "status": "ok"
+        }
+      ],
+      "meta": {}
+    }
+  }
+]

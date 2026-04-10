@@ -1,0 +1,278 @@
+{
+  "schema_version": "1.0",
+  "run_id": "nordvpn-20260410T020935Z-8559f9bc",
+  "timestamp_utc": "2026-04-10T02:10:00.221665+00:00",
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": "manual_gui",
+    "vpn_client": null
+  },
+  "vpn_provider": "nordvpn",
+  "vpn_location_id": "ca-british-columbia-vancouver-153",
+  "vpn_location_label": "Vancouver, British Columbia, Canada",
+  "connection_mode": "manual_gui",
+  "exit_ip_v4": "45.90.222.153",
+  "exit_ip_v6": null,
+  "exit_ip_sources": [
+    {
+      "url": "https://api.ipify.org",
+      "ipv4": "45.90.222.153",
+      "ipv6": null,
+      "raw_excerpt": "45.90.222.153",
+      "error": null
+    },
+    {
+      "url": "https://api64.ipify.org",
+      "ipv4": "45.90.222.153",
+      "ipv6": null,
+      "raw_excerpt": "45.90.222.153",
+      "error": null
+    },
+    {
+      "url": "https://api.ipify.org?format=json",
+      "ipv4": "45.90.222.153",
+      "ipv6": null,
+      "raw_excerpt": "{\"ip\":\"45.90.222.153\"}",
+      "error": null
+    }
+  ],
+  "dns_servers_observed": [
+    {
+      "tier": "local",
+      "detail": "resolv.conf nameserver lines (Unix)",
+      "servers": [
+        "100.64.0.2"
+      ]
+    },
+    {
+      "tier": "local",
+      "detail": "getaddrinfo('whoami.akamai.net')",
+      "servers": [
+        "45.90.222.34"
+      ]
+    },
+    {
+      "tier": "external",
+      "detail": "ipleak_dns",
+      "servers": [
+        "45.90.222.153"
+      ]
+    }
+  ],
+  "dns_leak_flag": false,
+  "dns_leak_notes": "Heuristic: no obvious public resolver IPs parsed from external page",
+  "webrtc_candidates": [
+    {
+      "candidate_type": "host",
+      "protocol": "udp",
+      "address": "7ac25ac0-3a03-4166-8750-f4f9b34e2306.local",
+      "port": 63199,
+      "raw": "candidate:435352409 1 udp 2113937151 7ac25ac0-3a03-4166-8750-f4f9b34e2306.local 63199 typ host generation 0 ufrag lGf9 network-cost 999"
+    },
+    {
+      "candidate_type": "srflx",
+      "protocol": "udp",
+      "address": "45.90.222.153",
+      "port": 45050,
+      "raw": "candidate:208917849 1 udp 1677729535 45.90.222.153 45050 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag lGf9 network-cost 999"
+    }
+  ],
+  "webrtc_leak_flag": false,
+  "webrtc_notes": "Exit IP appears in candidate set (expected for tunneled public)",
+  "ipv6_status": "unsupported_or_no_ipv6",
+  "ipv6_leak_flag": false,
+  "ipv6_notes": "No IPv6 observed via curl or IP endpoints",
+  "fingerprint_snapshot": {},
+  "attribution": {
+    "asn": 147049,
+    "holder": "PACKETHUBSA-AS-AP PacketHub S.A.",
+    "country": null,
+    "confidence": 0.7,
+    "confidence_notes": "ASNs seen: [147049]",
+    "supporting_sources": [
+      {
+        "name": "ripestat",
+        "asn": 147049,
+        "holder": "PACKETHUBSA-AS-AP PacketHub S.A.",
+        "country": null,
+        "raw": {
+          "prefix_overview": {
+            "messages": [
+              [
+                "warning",
+                "Given resource is not announced but result has been aligned to first-level less-specific (45.90.222.0/24)."
+              ]
+            ],
+            "see_also": [],
+            "version": "1.3",
+            "data_call_name": "prefix-overview",
+            "data_call_status": "supported",
+            "cached": false,
+            "query_id": "20260410020957-ff190de7-1f1a-44c4-884f-ba54b6db7904",
+            "process_time": 80,
+            "server_id": "app192",
+            "build_version": "v0.9.7-2026.04.09",
+            "pipeline": "1221926",
+            "status": "ok",
+            "status_code": 200,
+            "time": "2026-04-10T02:09:57.884788",
+            "data": {
+              "is_less_specific": true,
+              "announced": true,
+              "asns": [
+                {
+                  "asn": 147049,
+                  "holder": "PACKETHUBSA-AS-AP PacketHub S.A."
+                }
+              ],
+              "related_prefixes": [],
+              "resource": "45.90.222.0/24",
+              "type": "prefix",
+              "block": {
+                "resource": "45.80.0.0/12",
+                "desc": "This IP space was taken from IANA's recovered IPv4 pool in September 2014 and given to RIPE NCC (Source: IPv4 Recovered Address Space)",
+                "name": "IANA Recovered Address Space Registry"
+              },
+              "actual_num_related": 0,
+              "query_time": "2026-04-09T16:00:00",
+              "num_filtered_out": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "team_cymru",
+        "asn": 147049,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "asn": 147049,
+          "raw_line": "147049 | 45.90.222.0/24 | DE | ripencc | 2019-06-26",
+          "parts": [
+            "147049",
+            "45.90.222.0/24",
+            "DE",
+            "ripencc",
+            "2019-06-26"
+          ],
+          "disclaimer": [
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        }
+      },
+      {
+        "name": "peeringdb",
+        "asn": null,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "data": [
+            {
+              "id": 29054,
+              "org_id": 28491,
+              "name": "PacketHub AS147049",
+              "aka": "",
+              "name_long": "",
+              "website": "https://www.packethub.net/",
+              "social_media": [
+                {
+                  "service": "website",
+                  "identifier": "https://www.packethub.net/"
+                }
+              ],
+              "asn": 147049,
+              "looking_glass": "",
+              "route_server": "",
+              "irr_as_set": "APNIC::AS-SET-AS147049",
+              "info_type": "",
+              "info_types": [],
+              "info_prefixes4": 1000,
+              "info_prefixes6": 1000,
+              "info_traffic": "",
+              "info_ratio": "Not Disclosed",
+              "info_scope": "Global",
+              "info_unicast": true,
+              "info_multicast": false,
+              "info_ipv6": true,
+              "info_never_via_route_servers": false,
+              "ix_count": 7,
+              "fac_count": 1,
+              "notes": "",
+              "netixlan_updated": "2026-03-26T15:30:03Z",
+              "netfac_updated": "2023-07-18T08:22:19Z",
+              "poc_updated": "2022-10-06T09:29:57Z",
+              "policy_url": "",
+              "policy_general": "Open",
+              "policy_locations": "Not Required",
+              "policy_ratio": false,
+              "policy_contracts": "Not Required",
+              "allow_ixp_update": false,
+              "status_dashboard": "",
+              "rir_status": "ok",
+              "rir_status_updated": "2024-06-26T04:47:55Z",
+              "logo": null,
+              "created": "2022-01-18T09:17:39Z",
+              "updated": "2025-11-03T13:33:39Z",
+              "status": "ok"
+            }
+          ],
+          "meta": {}
+        }
+      }
+    ],
+    "disclaimers": [
+      "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+    ]
+  },
+  "policies": [
+    {
+      "role": "vpn",
+      "url": "https://nordvpn.com/privacy-policy/",
+      "fetched_at_utc": "2026-04-10T02:10:00.219907+00:00",
+      "sha256": null,
+      "summary_bullets": [
+        "fetch error: Client error '403 Forbidden' for url 'https://nordvpn.com/privacy-policy/'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+      ]
+    }
+  ],
+  "services_contacted": [
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org",
+    "https://ipleak.net/",
+    "https://ipwho.is/45.90.222.153",
+    "https://nordvpn.com/privacy-policy/",
+    "https://test-ipv6.com/",
+    "webrtc:local_playwright_chromium"
+  ],
+  "artifacts": {
+    "connect_log": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/connect.log",
+    "ip_check_json": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/ip-check.json",
+    "dnsleak_dir": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/dnsleak",
+    "webrtc_dir": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/webrtc",
+    "ipv6_dir": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/ipv6",
+    "fingerprint_dir": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/fingerprint",
+    "attribution_json": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/attribution.json",
+    "policy_dir": "runs/nordvpn-20260410T020935Z-8559f9bc/raw/ca-british-columbia-vancouver-153/policy"
+  },
+  "extra": {
+    "exit_geo": {
+      "source": "ipwho.is",
+      "ip": "45.90.222.153",
+      "country_code": "CA",
+      "region": "British Columbia",
+      "city": "Vancouver",
+      "connection": {
+        "asn": 147049,
+        "org": "Packethub S.A.",
+        "isp": "Packethub S.A.",
+        "domain": "packethub.net"
+      },
+      "location_id": "ca-british-columbia-vancouver-153",
+      "location_label": "Vancouver, British Columbia, Canada"
+    }
+  }
+}

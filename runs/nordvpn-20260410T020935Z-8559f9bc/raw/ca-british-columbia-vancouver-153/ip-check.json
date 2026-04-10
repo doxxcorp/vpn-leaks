@@ -1,0 +1,23 @@
+[
+  {
+    "url": "https://api.ipify.org",
+    "ipv4": "45.90.222.153",
+    "ipv6": null,
+    "raw_excerpt": "45.90.222.153",
+    "error": null
+  },
+  {
+    "url": "https://api64.ipify.org",
+    "ipv4": "45.90.222.153",
+    "ipv6": null,
+    "raw_excerpt": "45.90.222.153",
+    "error": null
+  },
+  {
+    "url": "https://api.ipify.org?format=json",
+    "ipv4": "45.90.222.153",
+    "ipv6": null,
+    "raw_excerpt": "{\"ip\":\"45.90.222.153\"}",
+    "error": null
+  }
+]

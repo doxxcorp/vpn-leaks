@@ -1,0 +1,23 @@
+[
+  {
+    "tier": "local",
+    "detail": "resolv.conf nameserver lines (Unix)",
+    "servers": [
+      "100.64.0.2"
+    ]
+  },
+  {
+    "tier": "local",
+    "detail": "getaddrinfo('whoami.akamai.net')",
+    "servers": [
+      "45.90.222.34"
+    ]
+  },
+  {
+    "tier": "external",
+    "detail": "ipleak_dns",
+    "servers": [
+      "185.161.202.127"
+    ]
+  }
+]

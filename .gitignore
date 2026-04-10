@@ -1,5 +1,4 @@
 # Runs and secrets
-runs/
 .env
 .env.*
 !.env.example
