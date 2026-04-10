@@ -1,3 +1,0 @@
-skip_vpn: not invoking adapter.connect
-skip_vpn: not invoking adapter.disconnect
-wrote /Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260410T021116Z-5cf8e0dc/locations/us-new-mexico-albuquerque-136/normalized.json

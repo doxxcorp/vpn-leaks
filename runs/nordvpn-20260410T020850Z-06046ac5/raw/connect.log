@@ -1,3 +1,0 @@
-skip_vpn: not invoking adapter.connect
-skip_vpn: not invoking adapter.disconnect
-wrote /Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260410T020850Z-06046ac5/locations/gb-england-london-102/normalized.json

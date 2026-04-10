@@ -1,7 +1,0 @@
-{
-  "v6_from_curl": null,
-  "exit_ip_v6": null,
-  "ipv6_status": "unsupported_or_no_ipv6",
-  "ipv6_leak_flag": false,
-  "notes": "No IPv6 observed via curl or IP endpoints"
-}
