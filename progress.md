@@ -1,14 +1,21 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-09._
+_Last updated: 2026-04-10._
+
+## 2026-04-10 — Competitor-surface probes in `vpn-leaks run`
+
+- **Decision:** Fold competitive-intelligence probes into the same **`vpn-leaks run`** invocation (not a separate subcommand). Config lives under **`competitor_probe`** in [`configs/vpns/<slug>.yaml`](configs/vpns/nordvpn.yaml).
+- **Implementation:** [`vpn_leaks/checks/competitor_probes.py`](vpn_leaks/checks/competitor_probes.py) — provider apex **NS/A/AAAA** (dnspython), **traceroute** toward exit IPv4, **Playwright** page loads with **HAR** + CDN-oriented response headers + script/image hosts (captcha heuristics), **HTTPS** probes for portal hosts, bounded **GET**s for stray JSON paths. Summaries go to **`normalized.json`** as `competitor_surface` (`schema_version` **1.1**); raw JSON under `raw/<location>/competitor_probe/`.
+- **Dependency:** `dnspython` added in [pyproject.toml](pyproject.toml).
+- **NordVPN** config includes example domains/URLs; older benchmark runs remain **`schema_version` 1.0** without `competitor_surface`.
 
 ## Where the project stands
 
 The **VPN Leaks harness is implemented and usable end-to-end** in this repository:
 
-- **CLI:** `vpn-leaks run` and `vpn-leaks report` (install with `pip install -e ".[dev]"`, Playwright Chromium for WebRTC).
+- **CLI:** `vpn-leaks run` and `vpn-leaks report` (install with `pip install -e ".[dev]"`, Playwright Chromium for WebRTC and web probes).
 - **Preflight:** Each run resolves exit IPv4 first, skips duplicate benchmarks for the same provider + exit IP unless `--force`, and (by default) **auto-detects** location id/label via ipwho.is when `--locations` is omitted.
-- **Suite per location:** Multi-source exit IP, DNS (local + IPLeak HTML), IPv6 (curl + test-ipv6 page), WebRTC (Playwright ICE), optional fingerprint, **RIPEstat + Team Cymru + PeeringDB** attribution, **privacy policy** fetch + SHA-256 + keyword summary ([vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py): browser-like httpx headers; **Playwright** when the response is a Cloudflare interstitial or a thin JS shell such as Nord Account; Nord config uses [my.nordaccount.com legal privacy URL](https://my.nordaccount.com/legal/privacy-policy/) because `nordvpn.com/privacy-policy/` is often blocked for automated clients).
+- **Suite per location:** Multi-source exit IP, DNS (local + IPLeak HTML), IPv6 (curl + test-ipv6 page), WebRTC (Playwright ICE), optional fingerprint, **RIPEstat + Team Cymru + PeeringDB** attribution, **privacy policy** fetch + SHA-256 + keyword summary ([vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py): browser-like httpx headers; **Playwright** when the response is a Cloudflare interstitial or a thin JS shell such as Nord Account; Nord config uses [my.nordaccount.com legal privacy URL](https://my.nordaccount.com/legal/privacy-policy/) because `nordvpn.com/privacy-policy/` is often blocked for automated clients), and optional **competitor_probe** phases when configured (see section above).
 - **Artifacts:** Under `runs/<run_id>/` (gitignored): `run.json`, `raw/preflight.json`, per-location `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy HTML), and `locations/<location_id>/normalized.json`.
 - **Docs:** [README.md](README.md), [HANDOFF.md](HANDOFF.md) (full context for future agents), [docs/spec.md](docs/spec.md), [docs/methodology.md](docs/methodology.md), [docs/data-dictionary.md](docs/data-dictionary.md), canonical [vpn-leaks.md](vpn-leaks.md).
 
@@ -31,7 +38,7 @@ You ran **`vpn-leaks run --provider nordvpn --skip-vpn`** (auto location) after 
 **What each run stored (per location):**
 
 - **`normalized.json`:** Full structured record: `exit_ip_sources`, `dns_servers_observed`, WebRTC candidates, IPv6 status, `attribution` (confidence + sources), `policies` (Nord privacy URL + content hash + heuristic bullets), `services_contacted`, `extra.exit_geo` (ipwho snapshot when auto-location was used).
-- **`raw/<location_id>/`:** `ip-check.json`, `dnsleak/` (e.g. `ipleak_dns.html`, `dns_summary.json`), `webrtc/webrtc_candidates.json`, `ipv6/` (curl output, test-ipv6 HTML, summary JSON), `attribution.json`, `policy/` (fetched HTML).
+- **`raw/<location_id>/`:** `ip-check.json`, `dnsleak/` (e.g. `ipleak_dns.html`, `dns_summary.json`), `webrtc/webrtc_candidates.json`, `ipv6/` (curl output, test-ipv6 HTML, summary JSON), `attribution.json`, `policy/` (fetched HTML), optional **`competitor_probe/`** (DNS/transit/web/portal/stray JSON artifacts).
 - **`raw/preflight.json`:** Preflight IPv4 and whether auto-location was used for that run.
 
 **Config updated:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) now lists the six location entries (including the older `sf-usa` placeholder) plus the five auto-derived ids above.

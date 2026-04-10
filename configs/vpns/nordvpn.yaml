@@ -23,3 +23,21 @@ credentials:
 policy_urls:
 - https://my.nordaccount.com/legal/privacy-policy/
 underlay_policy_urls: []
+
+# Competitor-surface probes (DNS, CDN/HAR, portals, transit, stray JSON). See vpn_leaks/checks/competitor_probes.py
+competitor_probe:
+  provider_domains:
+    - nordvpn.com
+    - nordaccount.com
+  probe_urls:
+    - https://nordvpn.com/
+    - https://api.nordvpn.com/v1/servers/count
+  portal_hosts:
+    - my.nordaccount.com
+  stray_json:
+    origins:
+      - https://nordvpn.com
+      - https://my.nordaccount.com
+    paths:
+      - /data.json
+      - /config.json

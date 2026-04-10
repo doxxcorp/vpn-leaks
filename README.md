@@ -4,7 +4,7 @@
 
 # VPN Leaks
 
-Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, and policy capture.
+Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, policy capture, and optional **competitor-surface** probes (provider DNS, web/CDN/HAR, portals, traceroute transit, stray JSON paths) configured per provider in `configs/vpns/<slug>.yaml` under `competitor_probe`.
 
 - **Operational overview:** [docs/spec.md](docs/spec.md)  
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  

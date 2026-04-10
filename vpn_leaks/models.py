@@ -78,12 +78,27 @@ class ArtifactIndex(BaseModel):
     fingerprint_dir: str | None = None
     attribution_json: str | None = None
     policy_dir: str | None = None
+    competitor_probe_dir: str | None = Field(
+        default=None,
+        description="Raw JSON/HAR from competitor-surface probes (DNS, web, portal, transit)",
+    )
+
+
+class CompetitorSurfaceSnapshot(BaseModel):
+    """Summarized competitor-facing signals; detail under raw/.../competitor_probe/."""
+
+    provider_dns: dict[str, Any] = Field(default_factory=dict)
+    web_probes: list[dict[str, Any]] = Field(default_factory=list)
+    portal_probes: list[dict[str, Any]] = Field(default_factory=list)
+    transit: dict[str, Any] = Field(default_factory=dict)
+    stray_json: list[dict[str, Any]] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
 
 
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)
@@ -122,4 +137,5 @@ class NormalizedRun(BaseModel):
     )
 
     artifacts: ArtifactIndex = Field(default_factory=ArtifactIndex)
+    competitor_surface: CompetitorSurfaceSnapshot | None = None
     extra: dict[str, Any] = Field(default_factory=dict)

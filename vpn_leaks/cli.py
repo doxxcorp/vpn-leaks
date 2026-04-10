@@ -18,6 +18,7 @@ from vpn_leaks.auto_connection import (
     find_prior_run_with_same_exit,
     quick_exit_ip,
 )
+from vpn_leaks.checks.competitor_probes import run_competitor_probes
 from vpn_leaks.checks.dns import run_dns_checks_sync
 from vpn_leaks.checks.fingerprint import run_fingerprint_snapshot
 from vpn_leaks.checks.ip_check import run_ip_check_sync
@@ -241,12 +242,29 @@ def cmd_run(args: argparse.Namespace) -> int:
 
             policies = vpn_pol + u_pol
 
+            competitor_surface = run_competitor_probes(
+                vpn_config,
+                raw_base=raw_base,
+                exit_ip_v4=v4,
+                services_contacted=services_contacted,
+                skip_dns=args.skip_competitor_dns,
+                skip_web=args.skip_competitor_web,
+                skip_portal=args.skip_competitor_portal,
+                skip_transit=args.skip_competitor_transit,
+                skip_stray_json=args.skip_competitor_stray_json,
+            )
+
             if not skip_vpn:
                 log(f"disconnect: {loc_id}")
                 adapter.disconnect()
             else:
                 log("skip_vpn: not invoking adapter.disconnect")
 
+            comp_rel = (
+                str((raw_base / "competitor_probe").relative_to(repo_root()))
+                if (raw_base / "competitor_probe").is_dir()
+                else None
+            )
             artifacts = ArtifactIndex(
                 connect_log=str((run_root / "raw" / "connect.log").relative_to(repo_root())),
                 ip_check_json=str((raw_base / "ip-check.json").relative_to(repo_root())),
@@ -256,6 +274,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 fingerprint_dir=str((raw_base / "fingerprint").relative_to(repo_root())),
                 attribution_json=str((raw_base / "attribution.json").relative_to(repo_root())),
                 policy_dir=str(policy_dir.relative_to(repo_root())),
+                competitor_probe_dir=comp_rel,
             )
 
             normalized = NormalizedRun(
@@ -288,6 +307,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 policies=policies,
                 services_contacted=sorted(set(services_contacted)),
                 artifacts=artifacts,
+                competitor_surface=competitor_surface,
             )
 
             norm_path.parent.mkdir(parents=True, exist_ok=True)
@@ -352,6 +372,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     pr.add_argument("--dry-run", action="store_true", help="Skip VPN connect/disconnect")
     pr.add_argument("--skip-vpn", action="store_true", help="Alias for --dry-run")
+    pr.add_argument(
+        "--skip-competitor-dns",
+        action="store_true",
+        help="Skip competitor_probe provider DNS (NS/A/AAAA) lookups",
+    )
+    pr.add_argument(
+        "--skip-competitor-web",
+        action="store_true",
+        help="Skip competitor_probe Playwright web/HAR probes",
+    )
+    pr.add_argument(
+        "--skip-competitor-portal",
+        action="store_true",
+        help="Skip competitor_probe portal DNS + HTTPS checks",
+    )
+    pr.add_argument(
+        "--skip-competitor-transit",
+        action="store_true",
+        help="Skip competitor_probe traceroute toward exit IP",
+    )
+    pr.add_argument(
+        "--skip-competitor-stray-json",
+        action="store_true",
+        help="Skip competitor_probe stray JSON path GETs",
+    )
     pr.set_defaults(func=cmd_run, auto_location=True)
 
     rep = sub.add_parser("report", help="Regenerate markdown reports")
