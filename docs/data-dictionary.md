@@ -13,17 +13,25 @@
 
 ## `runs/<run_id>/raw/` layout
 
+Top-level files under `raw/`:
+
 | Path | Content |
 |------|---------|
+| `preflight.json` | Preflight exit IPv4, `preflight_services`, `auto_location` (whether ids came from ipwho auto-detect) |
 | `connect.log` | Adapter / orchestrator log |
+
+Per **location** (under `raw/<location_id>/`):
+
+| Path | Content |
+|------|---------|
 | `ip-check.json` | Raw multi-source IP responses |
 | `dnsleak/` | Resolver snapshots, external test HTML |
-| `webrtc/` | ICE candidate JSON, optional screenshots |
-| `ipv6/` | curl/dig outputs, external page HTML |
+| `webrtc/` | ICE candidate JSON |
+| `ipv6/` | curl output, external page HTML |
 | `fingerprint/` | Optional fingerprint JSON |
 | `pcap/` | Optional (gated) |
 | `attribution.json` | Raw RIPEstat/Cymru/PeeringDB responses |
-| `policy/` | `vpn_policy.html`, `underlay_*.html` |
+| `policy/` | `vpn_policy_*.html`, underlay HTML |
 
 ## `runs/<run_id>/locations/<location_id>/normalized.json`
 
@@ -35,9 +43,10 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `timestamp_utc` | Location run start/end |
 | `runner_env` | OS, kernel, browser, vpn_protocol |
 | `vpn_provider` | Provider slug |
-| `vpn_location_id` / `vpn_location_label` | From adapter/config |
+| `vpn_location_id` / `vpn_location_label` | From YAML/adapter, **or** auto-detect (ipwho.is + derived id) |
+| `extra` | Optional bag; **`extra.exit_geo`** when auto-location (ipwho snapshot, derived id/label) |
 | `connection_mode` | e.g. `wireguard`, `manual_gui` |
-| `exit_ip_v4` / `exit_ip_v6` | Best-effort canonical |
+| `exit_ip_v4` / `exit_ip_v6` | Best-effort canonical (full suite; may match preflight IPv4) |
 | `exit_ip_sources` | List of `{url, ipv4, ipv6, error}` |
 | `dns_servers_observed` | Tier local + external observations |
 | `dns_leak_flag` | Boolean + `dns_leak_notes` |
@@ -48,7 +57,9 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `fingerprint_snapshot` | Anonymous summary |
 | `attribution` | ASN, holder, confidence, sources, disclaimers |
 | `policies` | vpn + underlay policy records |
-| `services_contacted` | Third-party URLs used in tests |
+| `services_contacted` | Third-party URLs used in tests (includes preflight + ipwho when auto) |
 | `artifacts` | Relative paths into `raw/` |
+
+**Duplicate detection (operational):** The CLI compares the **preflight** IPv4 against all prior `normalized.json` files for the same `vpn_provider` before creating a new run. That logic is not stored as a single field; it prevents duplicate **runs** for the same exit IP unless `--force`.
 
 Append-only: add fields with new `schema_version` rather than renaming.

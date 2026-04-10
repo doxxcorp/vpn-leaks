@@ -1,0 +1,25 @@
+provider_name: NordVPN
+slug: nordvpn
+connection_mode: manual_gui
+locations:
+- id: sf-usa
+  label: NordVPN — edit label to match active server (app)
+- id: us-california-san-francisco-67
+  label: San Francisco, California, United States
+- id: gb-england-london-102
+  label: London, England, United Kingdom
+- id: ca-british-columbia-vancouver-153
+  label: Vancouver, British Columbia, Canada
+- id: de-hamburg-hamburg-127
+  label: Hamburg, Hamburg, Germany
+- id: us-new-mexico-albuquerque-136
+  label: Albuquerque, New Mexico, United States
+credentials:
+  username_env: null
+  password_env: null
+# Canonical marketing URL https://nordvpn.com/privacy-policy/ often returns 403 or
+# Cloudflare interstitials to automated clients; Nord Account legal hosts the same policy
+# text and loads reliably via Playwright in this harness.
+policy_urls:
+- https://my.nordaccount.com/legal/privacy-policy/
+underlay_policy_urls: []

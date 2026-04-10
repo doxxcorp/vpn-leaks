@@ -1,16 +1,38 @@
 # Methodology
 
-## Standard run loop (one location)
+## Order of operations (`vpn-leaks run`)
 
-1. Account ready (credentials via env/secrets; not stored in repo).
-2. Connect — vendor client, WireGuard/OpenVPN config, or official CLI; or manual GUI with orchestrator prompts.
-3. Stabilize — short cooldown; optional route/interface checks (logged).
-4. Exit IP — multiple independent endpoints; store all responses.
-5. Leak suite — DNS (local + external), WebRTC (Playwright ICE gather), IPv6 (local + external), optional fingerprint.
-6. Underlay attribution — RIPEstat primary; Team Cymru cross-check; PeeringDB + optional GeoLite ASN; confidence and sources stored.
-7. Policy fetch — VPN URL + underlay URLs when known; raw HTML + SHA-256 hash.
-8. Disconnect — adapter disconnect; DNS flush best-effort; close browser contexts.
-9. Repeat for each location.
+The live harness runs steps in this order (see [`vpn_leaks/cli.py`](../vpn_leaks/cli.py)):
+
+1. **Preflight** — Resolve exit IPv4 once using the first endpoint in [`configs/tools/leak-tests.yaml`](../configs/tools/leak-tests.yaml) (same machinery as the full IP check, minimal disk use). Record summary under `runs/<run_id>/raw/preflight.json` after the run directory is created (see below).
+
+2. **Duplicate guard** — Search all existing `runs/*/locations/*/normalized.json` for the same `vpn_provider` slug. If any row has the same `exit_ip_v4` as preflight, **stop** (exit 0) unless **`--force`**. This avoids re-benchmarking the same tunnel exit without meaning to.
+
+3. **Location resolution**
+   - **Auto (default):** If **`--locations` is omitted**, call **ipwho.is** for the preflight IP, derive `vpn_location_id` (e.g. `cc-region-city-lastOctet`) and label, optionally **append** to `configs/vpns/<slug>.yaml` (unless `--no-persist-locations`). Snapshot stored in **`extra.exit_geo`** on `normalized.json`.
+   - **Manual:** If **`--locations id …`** is passed, use entries from YAML (and append unknown ids when persisting), or require **`--no-auto-location`** when you must not use auto-detect.
+
+4. **Run directory** — Create `runs/<run_id>/`, write `run.json`, then `raw/preflight.json`, then proceed per location.
+
+5. **Per location (tunnel must already match your intent)**  
+   - **Connect** — Unless **`--skip-vpn` / `--dry-run`**, adapter connect (or manual GUI prompt).  
+   - **Stabilize** — Cooldown from config.  
+   - **Exit IP** — Full multi-endpoint capture to `raw/<location_id>/ip-check.json`.  
+   - **Leak suite** — DNS, IPv6, WebRTC, optional fingerprint.  
+   - **Attribution** — RIPEstat, Team Cymru, PeeringDB, optional GeoLite.  
+   - **Policy** — Fetch VPN (and optional underlay) URLs; hash + store HTML.  
+   - **Disconnect** — Unless skipped.  
+   - **Write** — `locations/<location_id>/normalized.json`.
+
+6. **Repeat** — Next location in the resolved list (often one location per run when using auto + GUI VPN).
+
+7. **Summary** — `runs/<run_id>/summary.md`.
+
+For **vendor GUI only** (e.g. NordVPN macOS app), connect **before** running and use **`--skip-vpn`** so the harness does not prompt for connect/disconnect; preflight still reflects the active tunnel.
+
+## Standard run loop (conceptual — one location)
+
+Aligned with [vpn-leaks.md](../vpn-leaks.md): account ready → connect → stabilize → exit IP → leak suite → attribution → policy → disconnect → repeat. The numbered sequence above is how the **implemented** CLI orders work, including preflight and duplicate detection before heavy I/O.
 
 ## Isolation and reproducibility
 
@@ -26,5 +48,9 @@
 ## Manual vs automated boundaries
 
 - Signup/payment: manual by default.
-- GUI: use **prompted manual connect** when configs/CLI are unavailable; do not rely on brittle GUI scripting for MVP.
+- GUI: **prompted manual connect** or **you connect first + `--skip-vpn`** when the vendor app cannot be scripted.
 - ToS-risk automation (scraping): explicit config opt-in only.
+
+## Third-party services (auto location)
+
+Auto mode uses **ipwho.is** (and records it in `services_contacted`). That implies an HTTP request from your machine; see [README](../README.md) security notes.

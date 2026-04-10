@@ -1,6 +1,11 @@
 # VPN Leaks
 
-Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, and policy capture. See [docs/spec.md](docs/spec.md) and the full [vpn-leaks.md](vpn-leaks.md) specification.
+Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, and policy capture.
+
+- **Operational overview:** [docs/spec.md](docs/spec.md)  
+- **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
+- **Fields & paths:** [docs/data-dictionary.md](docs/data-dictionary.md)  
+- **Full product spec:** [vpn-leaks.md](vpn-leaks.md)
 
 ## Ethics and legal
 
@@ -28,22 +33,38 @@ Copy `.env.example` to `.env` and set variables referenced by your VPN config (c
 
 ## Configuration
 
-- `configs/vpns/<slug>.yaml` — provider, connection mode, credential env names.
+- `configs/vpns/<slug>.yaml` — provider, connection mode, credential env names (see `nordvpn.yaml` for GUI-app workflow).
 - `configs/tools/leak-tests.yaml` — endpoints, timeouts, STUN servers for WebRTC.
 - `configs/tools/attribution.yaml` — RIPEstat, Team Cymru, PeeringDB, optional GeoLite path.
 
 ## Run
 
+Every `run` starts with a **preflight** check (quick exit IPv4):
+
+1. **Duplicate guard:** If that IPv4 was already recorded in any prior `runs/*/locations/*/normalized.json` for this **same `--provider`**, the command **exits without running tests** (no new run folder). Use **`--force`** to run the full suite anyway (also overwrites an existing `normalized.json` in the current run when reusing a run id).
+2. **Location:** If you **omit `--locations`**, the tool calls **ipwho.is** on your exit IP, builds a **`location_id`** (country/region/city + last octet) and **label**, appends them to `configs/vpns/<slug>.yaml` (unless **`--no-persist-locations`**), and stores geo metadata under **`extra.exit_geo`** in `normalized.json`. Pass **`--locations id ...`** for manual ids instead (**`--no-auto-location`** requires explicit locations).
+
 ```bash
-vpn-leaks run --provider example --locations us-east
-vpn-leaks run --provider example --resume
-vpn-leaks report --provider example
+# Auto location (default): connect VPN, then:
+vpn-leaks run --provider nordvpn --skip-vpn
+vpn-leaks report --provider nordvpn
+
+# Manual location id (still runs preflight + duplicate check):
+vpn-leaks run --provider nordvpn --skip-vpn --locations uk --location-label "United Kingdom"
+
+# Repeat benchmark on same exit IP (e.g. second dry run):
+vpn-leaks run --provider example --dry-run --force
 ```
 
-- **`--force`**: re-run locations even if outputs exist.
-- Adapters with `manual_gui` pause for you to connect in the vendor app before tests proceed.
+- Adapters with `manual_gui` pause for connect/disconnect unless you use **`--skip-vpn`**.
 
-Artifacts are written under `runs/<run_id>/` (gitignored).
+### NordVPN (macOS app or other GUI)
+
+Connect in the **NordVPN app** first, then run with **`--skip-vpn`** so the harness does not drive the adapter. Prefer **omitting `--locations`** so the active server is reflected via **geo + exit IP** in the config and report.
+
+**Manual ids:** You can still pass **`--locations <id>`**; new ids are **appended** to the YAML by default (**`--no-persist-locations`** to skip). YAML rewrites may drop comments (PyYAML).
+
+Artifacts: `runs/<run_id>/` (gitignored), including `raw/preflight.json`.
 
 ## Reports
 

@@ -312,3 +312,13 @@ When you document underlay provider risk, keep claims precise:
 - It’s accurate that NetFlow is used for operational monitoring/statistics on flows through routers. citeturn3search0  
 - It is **not** accurate to claim a specific ASN “definitely retains netflow” unless their policy explicitly says so. That’s why the policy capture step is a first-class deliverable.
 
+## Implementation notes (repository)
+
+The following reflects the **current** tree as implemented in this repo; it extends the proposed layout above without replacing the original design goals.
+
+- **Python package:** Source lives under `vpn_leaks/` (checks, `adapters/`, `attribution/`, `policy/`, `reporting/`, CLI). Entry points: console script `vpn-leaks`, or `python scripts/vpn_leaks.py`.
+- **Normalized output path:** Per location: `runs/<run_id>/locations/<location_id>/normalized.json` (not a single `normalized.json` at the run root).
+- **Preflight:** Each `vpn-leaks run` performs a quick exit-IPv4 check, then skips the full suite if that IPv4 was already recorded for the same `vpn_provider` (unless `--force`). See `runs/<run_id>/raw/preflight.json` when a new run is created.
+- **Auto location:** Omitting `--locations` triggers ipwho.is–based id/label derivation and optional YAML append; see [docs/methodology.md](docs/methodology.md) and [README.md](README.md).
+- **Leak test modules:** Implemented as `vpn_leaks/checks/` (named to avoid clashing with pytest’s `tests/` directory).
+

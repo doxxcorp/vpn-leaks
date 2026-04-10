@@ -12,6 +12,12 @@ from pathlib import Path
 
 from vpn_leaks.adapters.registry import get_adapter
 from vpn_leaks.attribution.merge import merge_attribution
+from vpn_leaks.auto_connection import (
+    build_location_from_geo,
+    fetch_geo_sync,
+    find_prior_run_with_same_exit,
+    quick_exit_ip,
+)
 from vpn_leaks.checks.dns import run_dns_checks_sync
 from vpn_leaks.checks.fingerprint import run_fingerprint_snapshot
 from vpn_leaks.checks.ip_check import run_ip_check_sync
@@ -31,6 +37,7 @@ from vpn_leaks.reporting.generate_reports import (
     write_run_summary,
 )
 from vpn_leaks.run_manifest import build_manifest, manifest_to_json
+from vpn_leaks.vpn_config_locations import append_location_if_missing, resolve_run_locations
 
 
 def _utc_run_id(slug: str) -> str:
@@ -43,6 +50,64 @@ def cmd_run(args: argparse.Namespace) -> int:
     vpn_config = load_vpn_config(slug)
     leak_cfg = load_leak_tests_config()
     attr_cfg = load_attribution_config()
+
+    v4, preflight_services = quick_exit_ip(leak_cfg)
+    if not v4:
+        print("Preflight failed: could not determine exit IPv4.", file=sys.stderr)
+        return 1
+
+    if not args.force:
+        prior = find_prior_run_with_same_exit(vpn_provider=slug, exit_ip_v4=v4)
+        if prior is not None:
+            print(
+                f"Skipping: this exit IPv4 ({v4}) was already benchmarked for provider {slug!r}.",
+                file=sys.stderr,
+            )
+            print(f"Prior result: {prior}", file=sys.stderr)
+            print("Use --force to run the full suite again anyway.", file=sys.stderr)
+            return 0
+
+    persist_locs = not args.no_persist_locations
+    run_extra: dict[str, object] = {}
+
+    if args.locations is None:
+        if not args.auto_location:
+            print(
+                "Use auto location (default) or pass explicit --locations id [...].",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            geo = fetch_geo_sync(v4)
+        except Exception as e:
+            print(
+                f"Geo lookup failed ({e}); using exit-IP fallback for location id.",
+                file=sys.stderr,
+            )
+            geo = {"success": False, "error": str(e)}
+        lid, label, geo_snap = build_location_from_geo(geo, v4)
+        if persist_locs:
+            append_location_if_missing(slug, {"id": lid, "label": label})
+        locations = [{"id": lid, "label": label}]
+        run_extra["exit_geo"] = geo_snap
+    else:
+        if not args.locations:
+            print(
+                "Pass at least one id after --locations, or omit --locations for auto-detect.",
+                file=sys.stderr,
+            )
+            return 1
+        locations = resolve_run_locations(
+            slug=slug,
+            vpn_config=vpn_config,
+            requested_ids=args.locations,
+            location_label=args.location_label,
+            persist=persist_locs,
+        )
+
+    if not locations:
+        print("No locations selected.", file=sys.stderr)
+        return 1
 
     runs_root = repo_root() / "runs"
     runs_root.mkdir(parents=True, exist_ok=True)
@@ -57,14 +122,21 @@ def cmd_run(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
 
+    preflight_path = run_root / "raw" / "preflight.json"
+    preflight_path.parent.mkdir(parents=True, exist_ok=True)
+    preflight_path.write_text(
+        json.dumps(
+            {
+                "exit_ip_v4": v4,
+                "preflight_services": preflight_services,
+                "auto_location": args.locations is None,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
     adapter = get_adapter(slug, vpn_config)
-    locations = adapter.list_locations(vpn_config)
-    if args.locations:
-        want = set(args.locations)
-        locations = [x for x in locations if str(x.get("id")) in want]
-    if not locations:
-        print("No locations selected.", file=sys.stderr)
-        return 1
 
     stabilize = float(leak_cfg.get("stabilize_seconds") or 3)
     skip_vpn = bool(args.skip_vpn or args.dry_run)
@@ -79,6 +151,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         log_fp.flush()
         print(msg, file=sys.stderr)
 
+    preflight_ip = v4
     try:
         for loc in locations:
             loc_id = str(loc.get("id") or "default")
@@ -93,6 +166,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             raw_base.mkdir(parents=True, exist_ok=True)
             policy_dir = raw_base / "policy"
             services_contacted: list[str] = []
+            services_contacted.extend(preflight_services)
+            if run_extra.get("exit_geo"):
+                services_contacted.append(f"https://ipwho.is/{preflight_ip}")
 
             mode = str(vpn_config.get("connection_mode") or "manual_gui")
 
@@ -194,6 +270,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 vpn_location_id=loc_id,
                 vpn_location_label=loc_label,
                 connection_mode=mode,
+                extra=dict(run_extra),
                 exit_ip_v4=v4,
                 exit_ip_v6=v6,
                 exit_ip_sources=exit_sources,
@@ -243,13 +320,39 @@ def build_parser() -> argparse.ArgumentParser:
 
     pr = sub.add_parser("run", help="Run leak tests for a provider")
     pr.add_argument("--provider", required=True, help="VPN slug (configs/vpns/<slug>.yaml)")
-    pr.add_argument("--locations", nargs="*", help="Subset of location ids")
+    pr.add_argument(
+        "--locations",
+        nargs="*",
+        default=None,
+        metavar="ID",
+        help="Explicit location ids; omit for auto-detect from exit IP + geo (ipwho.is)",
+    )
+    pr.add_argument(
+        "--no-auto-location",
+        action="store_false",
+        dest="auto_location",
+        help="Require --locations (disables auto-detect from exit IP + ipwho.is)",
+    )
+    pr.add_argument(
+        "--location-label",
+        default=None,
+        help="Human-readable label when exactly one --locations id is used (default: id as label)",
+    )
+    pr.add_argument(
+        "--no-persist-locations",
+        action="store_true",
+        help="Do not append new location ids to the provider YAML",
+    )
     pr.add_argument("--run-id", help="Existing run id folder under runs/")
     pr.add_argument("--resume", action="store_true", help="Continue using --run-id")
-    pr.add_argument("--force", action="store_true", help="Overwrite per-location normalized.json")
+    pr.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-run even if this exit IP was benchmarked before; overwrite normalized.json",
+    )
     pr.add_argument("--dry-run", action="store_true", help="Skip VPN connect/disconnect")
     pr.add_argument("--skip-vpn", action="store_true", help="Alias for --dry-run")
-    pr.set_defaults(func=cmd_run)
+    pr.set_defaults(func=cmd_run, auto_location=True)
 
     rep = sub.add_parser("report", help="Regenerate markdown reports")
     rep.add_argument("--provider", required=True)
