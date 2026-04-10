@@ -41,7 +41,3 @@ playwright-state/
 
 # OS
 .DS_Store
-
-# Generated reports (`vpn-leaks report`)
-VPNs/*.md
-PROVIDERS/*.md
