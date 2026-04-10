@@ -10,6 +10,7 @@ Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, 
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
 - **Fields & paths:** [docs/data-dictionary.md](docs/data-dictionary.md)  
 - **Full product spec:** [vpn-leaks.md](vpn-leaks.md)
+- **Agent handoff (context for AI/humans):** [HANDOFF.md](HANDOFF.md)
 
 ## Directory index
 
