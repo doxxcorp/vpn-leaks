@@ -85,4 +85,4 @@ ruff check vpn_leaks tests
 pytest tests -q
 ```
 
-CI runs lint and tests without a live VPN (mocks only).
+CI is not checked in under `.github/workflows/` (GitHub OAuth requires the `workflow` scope to push workflow files). Copy [docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example) to `.github/workflows/ci.yml` locally or after refreshing `gh auth refresh -s workflow`. It runs lint and tests without a live VPN (mocks only).
