@@ -24,6 +24,7 @@ from vpn_leaks.checks.fingerprint import run_fingerprint_snapshot
 from vpn_leaks.checks.ip_check import run_ip_check_sync
 from vpn_leaks.checks.ipv6 import run_ipv6_checks_sync
 from vpn_leaks.checks.webrtc import run_webrtc_check
+from vpn_leaks.checks.yourinfo_probe import run_yourinfo_probe
 from vpn_leaks.config_loader import (
     load_attribution_config,
     load_leak_tests_config,
@@ -242,6 +243,12 @@ def cmd_run(args: argparse.Namespace) -> int:
 
             policies = vpn_pol + u_pol
 
+            yourinfo_snapshot = run_yourinfo_probe(
+                raw_dir=raw_base,
+                services_contacted=services_contacted,
+                skip=args.skip_yourinfo,
+            )
+
             competitor_surface = run_competitor_probes(
                 vpn_config,
                 raw_base=raw_base,
@@ -265,6 +272,11 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if (raw_base / "competitor_probe").is_dir()
                 else None
             )
+            yi_rel = (
+                str((raw_base / "yourinfo_probe").relative_to(repo_root()))
+                if (raw_base / "yourinfo_probe").is_dir()
+                else None
+            )
             artifacts = ArtifactIndex(
                 connect_log=str((run_root / "raw" / "connect.log").relative_to(repo_root())),
                 ip_check_json=str((raw_base / "ip-check.json").relative_to(repo_root())),
@@ -275,6 +287,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 attribution_json=str((raw_base / "attribution.json").relative_to(repo_root())),
                 policy_dir=str(policy_dir.relative_to(repo_root())),
                 competitor_probe_dir=comp_rel,
+                yourinfo_probe_dir=yi_rel,
             )
 
             normalized = NormalizedRun(
@@ -308,6 +321,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 services_contacted=sorted(set(services_contacted)),
                 artifacts=artifacts,
                 competitor_surface=competitor_surface,
+                yourinfo_snapshot=yourinfo_snapshot,
             )
 
             norm_path.parent.mkdir(parents=True, exist_ok=True)
@@ -396,6 +410,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-competitor-stray-json",
         action="store_true",
         help="Skip competitor_probe stray JSON path GETs",
+    )
+    pr.add_argument(
+        "--skip-yourinfo",
+        action="store_true",
+        help="Skip loading yourinfo.ai benchmark (Playwright HAR + excerpt)",
     )
     pr.set_defaults(func=cmd_run, auto_location=True)
 

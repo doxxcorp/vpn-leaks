@@ -14,30 +14,27 @@ locations:
   label: Hamburg, Hamburg, Germany
 - id: us-new-mexico-albuquerque-136
   label: Albuquerque, New Mexico, United States
+- id: us-california-santa-clara-160
+  label: Santa Clara, California, United States
 credentials:
   username_env: null
   password_env: null
-# Canonical marketing URL https://nordvpn.com/privacy-policy/ often returns 403 or
-# Cloudflare interstitials to automated clients; Nord Account legal hosts the same policy
-# text and loads reliably via Playwright in this harness.
 policy_urls:
 - https://my.nordaccount.com/legal/privacy-policy/
 underlay_policy_urls: []
-
-# Competitor-surface probes (DNS, CDN/HAR, portals, transit, stray JSON). See vpn_leaks/checks/competitor_probes.py
 competitor_probe:
   provider_domains:
-    - nordvpn.com
-    - nordaccount.com
+  - nordvpn.com
+  - nordaccount.com
   probe_urls:
-    - https://nordvpn.com/
-    - https://api.nordvpn.com/v1/servers/count
+  - https://nordvpn.com/
+  - https://api.nordvpn.com/v1/servers/count
   portal_hosts:
-    - my.nordaccount.com
+  - my.nordaccount.com
   stray_json:
     origins:
-      - https://nordvpn.com
-      - https://my.nordaccount.com
+    - https://nordvpn.com
+    - https://my.nordaccount.com
     paths:
-      - /data.json
-      - /config.json
+    - /data.json
+    - /config.json

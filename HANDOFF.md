@@ -2,13 +2,13 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-10._
+_Last updated: 2026-04-10 (reports / preview note)._
 
 ---
 
 ## What this project is
 
-**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional browser fingerprint, **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, and optional **competitor-surface** probes (provider apex DNS, Playwright web/HAR + CDN headers, HTTPS portal checks, traceroute toward exit, bounded stray JSON GETs)—driven by `competitor_probe` in each provider YAML.
+**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional browser fingerprint, **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, **always-on yourinfo.ai** capture (third-party benchmark page: HAR + text excerpt; **`--skip-yourinfo`** to omit), and optional **competitor-surface** probes (provider apex DNS, Playwright web/HAR + CDN headers, HTTPS portal checks, traceroute toward exit, bounded stray JSON GETs)—driven by `competitor_probe` in each provider YAML.
 
 - **Package name:** `vpn-leaks` (import: `vpn_leaks`).
 - **Python:** 3.12+ ([pyproject.toml](pyproject.toml)).
@@ -24,14 +24,14 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Area | Path | Role |
 |------|------|------|
 | CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run`, `report`, preflight, duplicate guard, per-location suite |
-| Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (`schema_version` 1.1+ adds `competitor_surface`), policies, attribution, artifacts index |
+| Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, artifacts index |
 | Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading |
 | VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs, `manual_gui`, `policy_urls`, location list |
 | Auto location (ipwho) | [vpn_leaks/auto_connection.py](vpn_leaks/auto_connection.py) | When `--locations` omitted: build `location_id` / label, optional YAML persist |
-| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `competitor_probes` |
+| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes` |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
-| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), Jinja templates under `vpn_leaks/reporting/templates/` | `VPNs/<SLUG>.md`, `PROVIDERS/AS<n>.md` |
+| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), Jinja templates under `vpn_leaks/reporting/templates/` | `VPNs/<SLUG>.md` (per-run detail + summary), `PROVIDERS/AS<n>.md` |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
 | Tests | [tests/](tests/) | pytest, mocks for network where applicable |
 
@@ -57,7 +57,9 @@ vpn-leaks report --provider nordvpn --asn <asn_integer>
 
 **Locations:** Omitting `--locations` triggers **auto** `location_id` / label (ipwho.is) and can append to `configs/vpns/<slug>.yaml` unless `--no-persist-locations`.
 
-**Competitor probes:** If `competitor_probe` is set in the provider YAML, `vpn-leaks run` performs those phases after policy fetch (same VPN session). Skip flags: `--skip-competitor-dns`, `--skip-competitor-web`, `--skip-competitor-portal`, `--skip-competitor-transit`, `--skip-competitor-stray-json`.
+**YourInfo:** After policy fetch, **`vpn-leaks run`** loads **https://yourinfo.ai/** in Playwright (unless **`--skip-yourinfo`**).
+
+**Competitor probes:** If `competitor_probe` is set in the provider YAML, `vpn-leaks run` performs those phases after YourInfo (same VPN session). Skip flags: `--skip-competitor-dns`, `--skip-competitor-web`, `--skip-competitor-portal`, `--skip-competitor-transit`, `--skip-competitor-stray-json`.
 
 ---
 
@@ -65,9 +67,11 @@ vpn-leaks report --provider nordvpn --asn <asn_integer>
 
 | Output | Location |
 |--------|----------|
-| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, optional **competitor_probe/**) |
-| Per-provider rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` (slug uppercased, `-` → `_`) |
+| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, optional **competitor_probe/**) |
+| Per-provider rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` (summary + **detailed per-run sections** from `normalized.json`; slug uppercased, `-` → `_`) |
 | Per-ASN rollup | `PROVIDERS/AS<n>.md` |
+
+**Viewing `VPNs/<SLUG>.md`:** The file starts with a **short summary** (matrix, leak table, ASN list). The bulk of the data is under **`## Detailed runs`** (exit/DNS/WebRTC/IPv6, attribution, policies, services, YourInfo, competitor surface, and a **verbatim** `normalized.json` block). In an editor **Markdown preview**, it is easy to assume content is missing if you only see the first screen — **scroll down** or open the file as **plain text**. The canonical copy is always `runs/<run_id>/locations/<id>/normalized.json`.
 
 **`normalized.json`** is the canonical structured record for tooling and reports; see [docs/data-dictionary.md](docs/data-dictionary.md).
 

@@ -2,11 +2,12 @@
 
 - **Report generated:** {{ generated_utc }}
 - **Runs included:** {{ run_ids | join(", ") }}
+- **Normalized locations:** {{ run_count }}
 
 ## Matrix
 
 | Field | Value |
-|-------|--------|
+|-------|-------|
 | Connection modes observed | {{ connection_modes | join(", ") }} |
 | Locations covered | {{ locations | length }} |
 
@@ -26,6 +27,148 @@
 - No ASN data aggregated.
 {% endfor %}
 
+---
+
+## Detailed runs
+
+Each section mirrors `normalized.json`. Large API blobs (**attribution**, **competitor_surface**) use generous caps; if anything still hits the safety limit, see **Complete normalized record** at the bottom of each run (verbatim JSON, up to ~2 MiB).
+
+{% for dr in detailed_runs %}
+
+### {{ dr.run_id }} / {{ dr.location_id }}
+
+- **vpn_provider:** {{ dr.vpn_provider | default("—") }}
+- **Label:** {{ dr.location_label }}
+- **Path:** `{{ dr.normalized_path }}`
+- **schema_version:** {{ dr.schema_version | default("—") }}
+- **timestamp_utc:** {{ dr.timestamp_utc | default("—") }}
+- **connection_mode:** {{ dr.connection_mode | default("—") }}
+
+#### Runner environment
+
+{{ dr.runner_env_block }}
+
+#### Exit IP
+
+| Field | Value |
+|-------|-------|
+| exit_ip_v4 | {{ dr.exit_ip_v4 | default("—") }} |
+| exit_ip_v6 | {{ dr.exit_ip_v6 | default("—") }} |
+
+**exit_ip_sources**
+
+{{ dr.exit_ip_sources_block }}
+
+#### DNS
+
+| Field | Value |
+|-------|-------|
+| dns_leak_flag | {{ dr.dns_leak_flag }} |
+| dns_leak_notes | {{ dr.dns_leak_notes | default("—") }} |
+
+**dns_servers_observed**
+
+{{ dr.dns_servers_observed_block }}
+
+#### WebRTC
+
+| Field | Value |
+|-------|-------|
+| webrtc_leak_flag | {{ dr.webrtc_leak_flag }} |
+| webrtc_notes | {{ dr.webrtc_notes | default("—") }} |
+
+{% if dr.webrtc_candidates_more > 0 %}
+*(Showing {{ dr.webrtc_candidates_show | length }} of {{ dr.webrtc_candidates_show | length + dr.webrtc_candidates_more }} candidates; +{{ dr.webrtc_candidates_more }} more in normalized.json)*
+{% endif %}
+
+| type | protocol | address | port | raw (truncated) |
+|------|----------|---------|------|-----------------|
+{% for c in dr.webrtc_candidates_show -%}
+| {{ c.candidate_type | default("—") }} | {{ c.protocol | default("—") }} | {{ c.address | default("—") }} | {{ c.port | default("—") }} | `{{ c.raw_cell | default("") }}` |
+{% endfor %}
+
+#### IPv6
+
+| Field | Value |
+|-------|-------|
+| ipv6_status | {{ dr.ipv6_status | default("—") }} |
+| ipv6_leak_flag | {{ dr.ipv6_leak_flag }} |
+| ipv6_notes | {{ dr.ipv6_notes | default("—") }} |
+
+#### Fingerprint
+
+{% if dr.fingerprint_block %}
+{{ dr.fingerprint_block }}
+{% else %}
+*(empty)*
+{% endif %}
+
+#### Attribution
+
+{{ dr.attribution_block }}
+
+#### Policies
+
+{{ dr.policies_block }}
+
+#### Services contacted
+
+{% if dr.services_contacted_note %}
+*{{ dr.services_contacted_note }}*
+{% endif %}
+
+{% for u in dr.services_contacted %}
+- `{{ u }}`
+{% else %}
+- *(none)*
+{% endfor %}
+
+#### Artifacts (paths)
+
+{{ dr.artifacts_block }}
+
+#### YourInfo (yourinfo.ai benchmark)
+
+{% if dr.yourinfo_snapshot_block %}
+{{ dr.yourinfo_snapshot_block }}
+{% if dr.yourinfo_text_report %}
+**Visible text excerpt** (may be truncated in this report):
+
+~~~
+{{ dr.yourinfo_text_report }}
+~~~
+{% if dr.yourinfo_text_truncated %}
+*(Excerpt truncated; full text in raw `yourinfo_probe/yourinfo.json` / normalized `yourinfo_snapshot`.)*
+{% endif %}
+{% endif %}
+{% else %}
+*(skipped or not captured — e.g. `--skip-yourinfo`)*
+{% endif %}
+
+#### Competitor surface (provider YAML probes)
+
+{% if dr.competitor_surface_block %}
+{{ dr.competitor_surface_block }}
+{% else %}
+*(none — no `competitor_probe` config or empty run)*
+{% endif %}
+
+#### Extra
+
+{{ dr.extra_block }}
+
+#### Complete normalized record (verbatim)
+
+Full JSON for this location (same as `normalized.json`; capped only at ~2 MiB for safety).
+
+{{ dr.full_normalized_block }}
+
+---
+
+{% endfor %}
+
 ## Appendix
 
-- Normalized JSON paths: `runs/<run_id>/locations/<id>/normalized.json`
+- Canonical JSON per location: `runs/<run_id>/locations/<location_id>/normalized.json`
+- Raw captures: `runs/<run_id>/raw/<location_id>/` (including `yourinfo_probe/`, `competitor_probe/` when present)
+- Regenerate this file: `vpn-leaks report --provider {{ vpn_slug }}`

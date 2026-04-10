@@ -33,6 +33,7 @@ Per **location** (under `raw/<location_id>/`):
 | `attribution.json` | Raw RIPEstat/Cymru/PeeringDB responses |
 | `policy/` | `vpn_policy_*.html`, underlay HTML |
 | `competitor_probe/` | If `competitor_probe` is set in `configs/vpns/<slug>.yaml`: `provider_dns.json`, `transit.json`, `web_probes.json`, `har/*.har`, `portal_probes.json`, `stray_json.json` |
+| `yourinfo_probe/` | Always-on unless `--skip-yourinfo`: `yourinfo.json`, `yourinfo.har` (third-party benchmark page) |
 
 ## `runs/<run_id>/locations/<location_id>/normalized.json`
 
@@ -40,7 +41,7 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 
 | Field | Notes |
 |-------|--------|
-| `schema_version` | `1.1` adds `competitor_surface` and `artifacts.competitor_probe_dir` |
+| `schema_version` | `1.1`: `competitor_surface`; **1.2**: `yourinfo_snapshot`, `artifacts.yourinfo_probe_dir` |
 | `run_id` | Parent run |
 | `timestamp_utc` | Location run start/end |
 | `runner_env` | OS, kernel, browser, vpn_protocol |
@@ -60,9 +61,11 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `attribution` | ASN, holder, confidence, sources, disclaimers |
 | `policies` | vpn + underlay policy records |
 | `competitor_surface` | Optional summary: provider DNS, web/CDN probes, portal probes, transit, stray JSON paths (`null` if no `competitor_probe` config) |
+| `yourinfo_snapshot` | Capture from **yourinfo.ai** (HAR path, headers, title, text excerpt); `null` if `--skip-yourinfo` |
 | `services_contacted` | Third-party URLs used in tests (includes preflight + ipwho when auto) |
 | `artifacts` | Relative paths into `raw/` |
 | `artifacts.competitor_probe_dir` | When present, `raw/<location_id>/competitor_probe/` |
+| `artifacts.yourinfo_probe_dir` | When present, `raw/<location_id>/yourinfo_probe/` |
 
 **Duplicate detection (operational):** The CLI compares the **preflight** IPv4 against all prior `normalized.json` files for the same `vpn_provider` before creating a new run. That logic is not stored as a single field; it prevents duplicate **runs** for the same exit IP unless `--force`.
 

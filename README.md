@@ -4,7 +4,7 @@
 
 # VPN Leaks
 
-Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, policy capture, and optional **competitor-surface** probes (provider DNS, web/CDN/HAR, portals, traceroute transit, stray JSON paths) configured per provider in `configs/vpns/<slug>.yaml` under `competitor_probe`.
+Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, policy capture, always-on **yourinfo.ai** load (Playwright HAR + excerpt; skip with `--skip-yourinfo`), and optional **competitor-surface** probes (provider DNS, web/CDN/HAR, portals, transit, stray JSON) via `competitor_probe` in `configs/vpns/<slug>.yaml`. The **`vpn-leaks report`** rollup mirrors normalized fields per run (large JSON may be truncated; see each `normalized.json` for full fidelity).
 
 - **Operational overview:** [docs/spec.md](docs/spec.md)  
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
@@ -90,6 +90,7 @@ vpn-leaks run --provider example --dry-run --force
 ```
 
 - Adapters with `manual_gui` pause for connect/disconnect unless you use **`--skip-vpn`**.
+- **`--skip-yourinfo`** skips the third-party yourinfo.ai benchmark (saves time if the page is slow).
 
 ### NordVPN (macOS app or other GUI)
 

@@ -11,6 +11,18 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from vpn_leaks.config_loader import repo_root
 
+# Default cap for medium-sized fenced JSON (DNS, exit sources, policies, artifacts).
+REPORT_JSON_BLOCK_MAX = 120_000
+# Attribution / competitor payloads include large API `raw` blobs — use high caps.
+REPORT_ATTRIBUTION_JSON_MAX = 500_000
+REPORT_COMPETITOR_JSON_MAX = 500_000
+# Full copy of each normalized.json at end of each detailed section (safety cap ~2 MiB).
+REPORT_FULL_NORMALIZED_MAX = 2_000_000
+REPORT_YOURINFO_TEXT_MAX = 3500
+WEBRTC_CANDIDATES_MAX = 20
+SERVICES_CONTACTED_MAX = 250
+WEBRTC_RAW_CELL_MAX = 200
+
 
 def _jinja_env() -> Environment:
     tpl_dir = Path(__file__).resolve().parent / "templates"
@@ -46,10 +58,140 @@ def collect_normalized_for_provider(provider_slug: str) -> list[tuple[str, Path,
     return out
 
 
+def _fence_json(label: str, obj: Any, max_chars: int = REPORT_JSON_BLOCK_MAX) -> str:
+    body = json.dumps(obj, indent=2, ensure_ascii=False, default=str)
+    if len(body) > max_chars:
+        body = body[:max_chars] + "\n… (truncated for report; see normalized.json)"
+    return f"```{label}\n{body}\n```"
+
+
+def build_detailed_runs(
+    rows: list[tuple[str, Path, dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Per-location sections for the VPN markdown report."""
+    detailed: list[dict[str, Any]] = []
+    root = repo_root()
+    for run_id, path, data in rows:
+        rel = path.relative_to(root)
+        loc_id = data.get("vpn_location_id") or ""
+        label = data.get("vpn_location_label") or loc_id
+
+        exit_sources = data.get("exit_ip_sources") or []
+        dns_obs = data.get("dns_servers_observed") or []
+        webrtc = data.get("webrtc_candidates") or []
+        webrtc_show = webrtc[:WEBRTC_CANDIDATES_MAX]
+        webrtc_more = max(0, len(webrtc) - len(webrtc_show))
+
+        svc = data.get("services_contacted") or []
+        if isinstance(svc, list) and len(svc) > SERVICES_CONTACTED_MAX:
+            svc_trim = svc[:SERVICES_CONTACTED_MAX]
+            svc_note = f"+ {len(svc) - SERVICES_CONTACTED_MAX} more (see normalized.json)"
+        else:
+            svc_trim = svc
+            svc_note = None
+
+        yi = data.get("yourinfo_snapshot")
+        yi_text_report = None
+        yi_trunc = False
+        if isinstance(yi, dict) and yi.get("text_excerpt"):
+            t = str(yi["text_excerpt"])
+            if len(t) > REPORT_YOURINFO_TEXT_MAX:
+                yi_text_report = t[:REPORT_YOURINFO_TEXT_MAX] + "…"
+                yi_trunc = True
+            else:
+                yi_text_report = t
+
+        cs = data.get("competitor_surface")
+
+        fp = data.get("fingerprint_snapshot") or {}
+        fingerprint_block = _fence_json("json", fp) if fp else None
+
+        webrtc_show_rows: list[dict[str, Any]] = []
+        for c in webrtc_show:
+            if not isinstance(c, dict):
+                continue
+            raw = c.get("raw")
+            raw_s = str(raw) if raw is not None else ""
+            if len(raw_s) > WEBRTC_RAW_CELL_MAX:
+                raw_s = raw_s[:WEBRTC_RAW_CELL_MAX] + "…"
+            webrtc_show_rows.append({**c, "raw_cell": raw_s})
+
+        detailed.append(
+            {
+                "run_id": run_id,
+                "location_id": loc_id,
+                "location_label": label,
+                "vpn_provider": data.get("vpn_provider"),
+                "normalized_path": str(rel),
+                "timestamp_utc": data.get("timestamp_utc"),
+                "schema_version": data.get("schema_version"),
+                "runner_env_block": _fence_json(
+                    "json",
+                    data.get("runner_env") or {},
+                    max_chars=20_000,
+                ),
+                "connection_mode": data.get("connection_mode"),
+                "exit_ip_v4": data.get("exit_ip_v4"),
+                "exit_ip_v6": data.get("exit_ip_v6"),
+                "exit_ip_sources_block": _fence_json("json", exit_sources),
+                "dns_servers_observed_block": _fence_json("json", dns_obs),
+                "dns_leak_flag": data.get("dns_leak_flag"),
+                "dns_leak_notes": data.get("dns_leak_notes"),
+                "webrtc_leak_flag": data.get("webrtc_leak_flag"),
+                "webrtc_notes": data.get("webrtc_notes"),
+                "webrtc_candidates_show": webrtc_show_rows,
+                "webrtc_candidates_more": webrtc_more,
+                "ipv6_status": data.get("ipv6_status"),
+                "ipv6_leak_flag": data.get("ipv6_leak_flag"),
+                "ipv6_notes": data.get("ipv6_notes"),
+                "fingerprint_block": fingerprint_block,
+                "attribution_block": _fence_json(
+                    "json",
+                    data.get("attribution") or {},
+                    max_chars=REPORT_ATTRIBUTION_JSON_MAX,
+                ),
+                "policies_block": _fence_json("json", data.get("policies") or []),
+                "services_contacted": svc_trim,
+                "services_contacted_note": svc_note,
+                "artifacts_block": _fence_json("json", data.get("artifacts") or {}),
+                "competitor_surface_block": (
+                    _fence_json("json", cs, max_chars=REPORT_COMPETITOR_JSON_MAX)
+                    if cs is not None
+                    else None
+                ),
+                "extra_block": _fence_json("json", data.get("extra") or {}),
+                "yourinfo_snapshot_block": (
+                    _fence_json("json", yi, max_chars=REPORT_JSON_BLOCK_MAX) if yi else None
+                ),
+                "yourinfo_text_report": yi_text_report,
+                "yourinfo_text_truncated": yi_trunc or bool(
+                    isinstance(yi, dict) and yi.get("text_excerpt_truncated"),
+                ),
+                "full_normalized_block": _fence_json(
+                    "json",
+                    data,
+                    max_chars=REPORT_FULL_NORMALIZED_MAX,
+                ),
+            },
+        )
+    return detailed
+
+
 def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> Path:
     rows = collect_normalized_for_provider(provider_slug)
     if not rows:
-        raise FileNotFoundError(f"No normalized runs for provider {provider_slug!r}")
+        runs = repo_root() / "runs"
+        hint = (
+            f"No files matched runs/*/locations/*/normalized.json with "
+            f'vpn_provider={provider_slug!r}. '
+            f"Run a benchmark first: "
+            f"`vpn-leaks run --provider {provider_slug} --skip-vpn` "
+            f"(only `run` accepts --skip-vpn; then use "
+            f"`vpn-leaks report --provider {provider_slug}`). "
+            f"Add --force on run if this exit IP was already captured. "
+            f"Runs directory: {runs}"
+        )
+        raise FileNotFoundError(hint)
 
     connection_modes = sorted({r[2].get("connection_mode") or "unknown" for r in rows})
     table_rows: list[dict[str, Any]] = []
@@ -71,6 +213,8 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         if isinstance(asn, int):
             asn_notes.setdefault(asn, att.get("holder") or "")
 
+    detailed_runs = build_detailed_runs(rows)
+
     env = _jinja_env()
     tpl = env.get_template("vpn_report.md.j2")
     text = tpl.render(
@@ -82,6 +226,8 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         locations=[r[2].get("vpn_location_id") for r in rows],
         table_rows=table_rows,
         asn_notes=[(a, asn_notes[a]) for a in sorted(asn_notes.keys())],
+        detailed_runs=detailed_runs,
+        run_count=len(rows),
     )
     out_dir = repo_root() / "VPNs"
     out_dir.mkdir(parents=True, exist_ok=True)

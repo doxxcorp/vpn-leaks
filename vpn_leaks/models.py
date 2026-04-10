@@ -82,6 +82,10 @@ class ArtifactIndex(BaseModel):
         default=None,
         description="Raw JSON/HAR from competitor-surface probes (DNS, web, portal, transit)",
     )
+    yourinfo_probe_dir: str | None = Field(
+        default=None,
+        description="Raw JSON/HAR from yourinfo.ai benchmark load",
+    )
 
 
 class CompetitorSurfaceSnapshot(BaseModel):
@@ -98,7 +102,7 @@ class CompetitorSurfaceSnapshot(BaseModel):
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.1"
+    schema_version: str = "1.2"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)
@@ -138,4 +142,8 @@ class NormalizedRun(BaseModel):
 
     artifacts: ArtifactIndex = Field(default_factory=ArtifactIndex)
     competitor_surface: CompetitorSurfaceSnapshot | None = None
+    yourinfo_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="yourinfo.ai page capture (HAR + excerpt); see raw/.../yourinfo_probe/",
+    )
     extra: dict[str, Any] = Field(default_factory=dict)

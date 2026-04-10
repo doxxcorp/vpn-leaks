@@ -2,6 +2,11 @@
 
 _Last updated: 2026-04-10._
 
+## 2026-04-10 — YourInfo capture + comprehensive `VPNs/` reports
+
+- **yourinfo.ai:** Each location run loads the third-party benchmark page in Playwright after policy fetch ([`vpn_leaks/checks/yourinfo_probe.py`](vpn_leaks/checks/yourinfo_probe.py)); writes `raw/<loc>/yourinfo_probe/yourinfo.json` + `yourinfo.har`; **`normalized.json` `schema_version` 1.2** adds `yourinfo_snapshot` and `artifacts.yourinfo_probe_dir`. Opt out: **`--skip-yourinfo`**.
+- **Reports:** [`vpn_leaks/reporting/templates/vpn_report.md.j2`](vpn_leaks/reporting/templates/vpn_report.md.j2) now includes a **Detailed runs** section per `normalized.json` (exit, DNS, WebRTC, IPv6, fingerprint, attribution, policies, services, artifacts, YourInfo, competitor_surface, extra). Large JSON blocks are capped; verbatim data remains in `normalized.json`.
+
 ## 2026-04-10 — Competitor-surface probes in `vpn-leaks run`
 
 - **Decision:** Fold competitive-intelligence probes into the same **`vpn-leaks run`** invocation (not a separate subcommand). Config lives under **`competitor_probe`** in [`configs/vpns/<slug>.yaml`](configs/vpns/nordvpn.yaml).
@@ -16,7 +21,7 @@ The **VPN Leaks harness is implemented and usable end-to-end** in this repositor
 - **CLI:** `vpn-leaks run` and `vpn-leaks report` (install with `pip install -e ".[dev]"`, Playwright Chromium for WebRTC and web probes).
 - **Preflight:** Each run resolves exit IPv4 first, skips duplicate benchmarks for the same provider + exit IP unless `--force`, and (by default) **auto-detects** location id/label via ipwho.is when `--locations` is omitted.
 - **Suite per location:** Multi-source exit IP, DNS (local + IPLeak HTML), IPv6 (curl + test-ipv6 page), WebRTC (Playwright ICE), optional fingerprint, **RIPEstat + Team Cymru + PeeringDB** attribution, **privacy policy** fetch + SHA-256 + keyword summary ([vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py): browser-like httpx headers; **Playwright** when the response is a Cloudflare interstitial or a thin JS shell such as Nord Account; Nord config uses [my.nordaccount.com legal privacy URL](https://my.nordaccount.com/legal/privacy-policy/) because `nordvpn.com/privacy-policy/` is often blocked for automated clients), and optional **competitor_probe** phases when configured (see section above).
-- **Artifacts:** Under `runs/<run_id>/` (gitignored): `run.json`, `raw/preflight.json`, per-location `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy HTML), and `locations/<location_id>/normalized.json`.
+- **Artifacts:** Under `runs/<run_id>/` (gitignored): `run.json`, `raw/preflight.json`, per-location `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy HTML, **yourinfo_probe**, optional **competitor_probe**), and `locations/<location_id>/normalized.json`.
 - **Docs:** [README.md](README.md), [HANDOFF.md](HANDOFF.md) (full context for future agents), [docs/spec.md](docs/spec.md), [docs/methodology.md](docs/methodology.md), [docs/data-dictionary.md](docs/data-dictionary.md), canonical [vpn-leaks.md](vpn-leaks.md).
 
 **Not in scope for the harness itself:** Proving what NordVPN stores on servers; automating the Nord macOS app (you connect manually, then `vpn-leaks run --provider nordvpn --skip-vpn`).
