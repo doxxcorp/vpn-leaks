@@ -21,6 +21,7 @@ Generated and local benchmark data live under three top-level folders (each may 
 | **[VPNs/](VPNs/)** | Aggregated per-provider markdown from `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` (slug uppercased; `-` → `_`). |
 | **[PROVIDERS/](PROVIDERS/)** | Per-underlay ASN markdown from `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md`. |
 | **[runs/](runs/)** | One directory per `vpn-leaks run` (gitignored if you add `runs/` to `.gitignore`; contains raw captures and `normalized.json`). |
+| **[viewer/](viewer/)** | Static **3D exposure graph** (loads JSON from `vpn-leaks graph-export`); see [viewer/README.md](viewer/README.md). |
 
 **VPNs** (checked in when present):
 
@@ -40,11 +41,9 @@ Generated and local benchmark data live under three top-level folders (each may 
 
 Inside each run: `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, and `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy).
 
-## Ethics and legal
+## Purpose
 
-- Only test services you have paid access to.
-- Do not bypass access controls, exploit vulnerabilities, or load-test infrastructure.
-- Automated signups and vendor API scraping are **opt-in** (ToS risk).
+This project measures **client-observable** privacy exposure—leaks, attribution, policy text—to assess how far competitor VPN offerings can be trusted with user traffic. It is normal security and competitive benchmarking: observe what the tunnel and related surfaces reveal, not attacks on vendor systems.
 
 ## Security
 
@@ -109,6 +108,7 @@ Artifacts: `runs/<run_id>/` (gitignored), including `raw/preflight.json`.
 |--------|---------|
 | Per-VPN rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` |
 | Underlay (ASN) | `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md` |
+| Exposure graph (nodes/edges JSON) | `vpn-leaks graph-export [--provider <slug>] [-o exposure-graph.json]` — then open [viewer/](viewer/) (see [viewer/README.md](viewer/README.md)) |
 
 Add `runs/` (and optionally `VPNs/` / `PROVIDERS/`) to `.gitignore` if you do not want local reports or run artifacts in version control.
 

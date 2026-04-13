@@ -102,7 +102,7 @@ class CompetitorSurfaceSnapshot(BaseModel):
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.2"
+    schema_version: str = "1.3"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)

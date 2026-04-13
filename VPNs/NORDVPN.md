@@ -1,8 +1,14 @@
 # NordVPN (nordvpn)
 
-- **Report generated:** 2026-04-10T23:16:49.726379+00:00
+- **Report generated:** 2026-04-10T23:24:56.548298+00:00
 - **Runs included:** nordvpn-20260410T221659Z-5dfe011f
 - **Normalized locations:** 1
+
+> **How to read this report**
+>
+> - The **Matrix**, **Leak summary**, and **Underlay (ASNs)** sections below are a **high-level rollup only**.
+> - **Per-location benchmarks** (exit IP, DNS, WebRTC, IPv6, fingerprint, attribution, policies, services, artifacts, YourInfo, competitor probes, and the full JSON record) are in **`## Detailed runs`** — they are **not omitted**; scroll or open this file as plain text if the preview shows only the first screen.
+> - The **canonical** machine-readable record for each location is always `runs/<run_id>/locations/<location_id>/normalized.json` (paths are repeated under each run). For very large JSON, use your editor or a JSON viewer rather than Markdown preview alone.
 
 ## Matrix
 
@@ -28,11 +34,19 @@
 
 ## Detailed runs
 
-Each section mirrors `normalized.json`. Large API blobs (**attribution**, **competitor_surface**) use generous caps; if anything still hits the safety limit, see **Complete normalized record** at the bottom of each run (verbatim JSON, up to ~2 MiB).
+**Included in this report** (each subsection below mirrors one `normalized.json`):
+
+
+1. `nordvpn-20260410T221659Z-5dfe011f` / `us-california-santa-clara-160` — `runs/nordvpn-20260410T221659Z-5dfe011f/locations/us-california-santa-clara-160/normalized.json`
+
+
+Large JSON fields use size caps in this markdown file; when an excerpt hits a cap, a **note** appears at the start of that run’s section listing what was capped. **On-disk `normalized.json` is always complete.**
 
 
 
 ### nordvpn-20260410T221659Z-5dfe011f / us-california-santa-clara-160
+
+
 
 - **vpn_provider:** nordvpn
 - **Label:** Santa Clara, California, United States
@@ -133,8 +147,8 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 
 
 
-| type | protocol | address | port | raw (truncated) |
-|------|----------|---------|------|-----------------|
+| type | protocol | address | port | raw (may be shortened in table) |
+|------|----------|---------|------|--------------------------------|
 | host | udp | 3a9dc72f-16c2-4ed4-b37a-1599824e6884.local | 60346 | `candidate:1711279333 1 udp 2113937151 3a9dc72f-16c2-4ed4-b37a-1599824e6884.local 60346 typ host generation 0 ufrag CHPW network-cost 999` |
 | srflx | udp | 185.169.0.160 | 45967 | `candidate:1937844965 1 udp 1677729535 185.169.0.160 45967 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag CHPW network-cost 999` |
 
@@ -150,7 +164,7 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 #### Fingerprint
 
 
-*(empty)*
+*No fingerprint snapshot in this run (fingerprint check disabled, skipped, or empty capture).*
 
 
 #### Attribution
@@ -401,7 +415,7 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 }
 ```
 
-**Visible text excerpt** (may be truncated in this report):
+**Visible text excerpt** (length may be capped in this report):
 
 ~~~
 RESEARCHING YOUR INFORMATION...
@@ -551,6 +565,7 @@ doxx.net - Secure networking for humans
 ```
 
 
+
 #### Extra
 
 ```json
@@ -575,7 +590,7 @@ doxx.net - Secure networking for humans
 
 #### Complete normalized record (verbatim)
 
-Full JSON for this location (same as `normalized.json`; capped only at ~2 MiB for safety).
+Same content as `normalized.json` for this location; only a ~2 MiB safety cap can shorten this fenced block.
 
 ```json
 {

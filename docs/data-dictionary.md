@@ -32,7 +32,7 @@ Per **location** (under `raw/<location_id>/`):
 | `pcap/` | Optional (gated) |
 | `attribution.json` | Raw RIPEstat/Cymru/PeeringDB responses |
 | `policy/` | `vpn_policy_*.html`, underlay HTML |
-| `competitor_probe/` | If `competitor_probe` is set in `configs/vpns/<slug>.yaml`: `provider_dns.json`, `transit.json`, `web_probes.json`, `har/*.har`, `portal_probes.json`, `stray_json.json` |
+| `competitor_probe/` | If `competitor_probe` is set in `configs/vpns/<slug>.yaml`: `provider_dns.json` (apex NS/A/AAAA plus **`ns_hosts`** glue + attribution), `transit.json`, `web_probes.json`, `har/*.har`, `portal_probes.json`, `stray_json.json` |
 | `yourinfo_probe/` | Always-on unless `--skip-yourinfo`: `yourinfo.json`, `yourinfo.har` (third-party benchmark page) |
 
 ## `runs/<run_id>/locations/<location_id>/normalized.json`
@@ -41,7 +41,7 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 
 | Field | Notes |
 |-------|--------|
-| `schema_version` | `1.1`: `competitor_surface`; **1.2**: `yourinfo_snapshot`, `artifacts.yourinfo_probe_dir` |
+| `schema_version` | `1.1`: `competitor_surface`; **1.2**: `yourinfo_snapshot`, `artifacts.yourinfo_probe_dir`; **1.3**: default schema; `competitor_surface.provider_dns` may include **`ns_hosts`** (per-NS glue A/AAAA + **`ip_attribution`** per address) |
 | `run_id` | Parent run |
 | `timestamp_utc` | Location run start/end |
 | `runner_env` | OS, kernel, browser, vpn_protocol |
@@ -60,7 +60,7 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `fingerprint_snapshot` | Anonymous summary |
 | `attribution` | ASN, holder, confidence, sources, disclaimers |
 | `policies` | vpn + underlay policy records |
-| `competitor_surface` | Optional summary: provider DNS, web/CDN probes, portal probes, transit, stray JSON paths (`null` if no `competitor_probe` config) |
+| `competitor_surface` | Optional summary: provider DNS, web/CDN probes, portal probes, transit, stray JSON paths (`null` if no `competitor_probe` config). **`provider_dns`** includes `domains` (apex NS/A/AAAA) and **`ns_hosts`**: each NS hostname → `a`, `aaaa`, **`ip_attribution`** (map IP → `AttributionResult` JSON for DNS NS glue, same pipeline as exit attribution with `[provider_ns_glue]` notes on `confidence_notes`) |
 | `yourinfo_snapshot` | Capture from **yourinfo.ai** (HAR path, headers, title, text excerpt); `null` if `--skip-yourinfo` |
 | `services_contacted` | Third-party URLs used in tests (includes preflight + ipwho when auto) |
 | `artifacts` | Relative paths into `raw/` |

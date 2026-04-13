@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ from urllib.parse import urljoin
 
 import httpx
 
+from vpn_leaks.attribution.merge import merge_attribution_for_ip
 from vpn_leaks.config_loader import repo_root
 from vpn_leaks.models import CompetitorSurfaceSnapshot
 
@@ -40,13 +42,14 @@ def run_provider_dns(
     *,
     raw_dir: Path,
     services_contacted: list[str],
+    attr_cfg: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Resolve NS (and SOA hint) for apex domains."""
+    """Resolve NS for apex domains; resolve NS hostnames (glue) and optional attribution."""
     from dns import resolver as dns_resolver
     from dns.exception import DNSException
     from dns.rdatatype import RdataType
 
-    out: dict[str, Any] = {"domains": {}}
+    out: dict[str, Any] = {"domains": {}, "ns_hosts": {}}
     res = dns_resolver.Resolver()
     res.timeout = 5
     res.lifetime = 10
@@ -73,6 +76,42 @@ def run_provider_dns(
         except DNSException:
             pass
         out["domains"][domain] = entry
+
+    ip_attr_cache: dict[str, dict[str, Any]] = {}
+
+    def attribution_for_ip(ip: str) -> dict[str, Any]:
+        if ip in ip_attr_cache:
+            return ip_attr_cache[ip]
+        if not attr_cfg:
+            ip_attr_cache[ip] = {}
+            return ip_attr_cache[ip]
+        time.sleep(0.25)
+        services_contacted.append(f"attribution:ns_glue:{ip}")
+        merged = merge_attribution_for_ip(ip, attr_cfg, role="provider_ns_glue")
+        ip_attr_cache[ip] = merged.model_dump(mode="json")
+        return ip_attr_cache[ip]
+
+    all_ns: set[str] = set()
+    for entry in out["domains"].values():
+        for ns in entry.get("ns") or []:
+            all_ns.add(ns)
+
+    for host in sorted(all_ns):
+        row: dict[str, Any] = {"a": [], "aaaa": [], "ip_attribution": {}, "error": None}
+        services_contacted.append(f"dns:ns_glue:{host}")
+        try:
+            aa = res.resolve(host, RdataType.A)
+            row["a"] = sorted({str(r) for r in aa})
+        except DNSException as e:
+            row["error"] = f"A: {e}"
+        try:
+            aaaa = res.resolve(host, RdataType.AAAA)
+            row["aaaa"] = sorted({str(r) for r in aaaa})
+        except DNSException:
+            pass
+        for ip in row["a"] + row["aaaa"]:
+            row["ip_attribution"][ip] = attribution_for_ip(ip)
+        out["ns_hosts"][host] = row
 
     raw_dir.mkdir(parents=True, exist_ok=True)
     p = raw_dir / "provider_dns.json"
@@ -315,6 +354,7 @@ def run_competitor_probes(
     raw_base: Path,
     exit_ip_v4: str | None,
     services_contacted: list[str],
+    attr_cfg: dict[str, Any] | None = None,
     skip_dns: bool = False,
     skip_web: bool = False,
     skip_portal: bool = False,
@@ -352,6 +392,7 @@ def run_competitor_probes(
                 domains,
                 raw_dir=probe_root,
                 services_contacted=services_contacted,
+                attr_cfg=attr_cfg,
             )
 
         if not skip_transit and exit_ip_v4:

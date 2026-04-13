@@ -33,6 +33,7 @@ from vpn_leaks.config_loader import (
 )
 from vpn_leaks.models import ArtifactIndex, NormalizedRun, RunnerEnv
 from vpn_leaks.policy.fetch_policy import fetch_policies
+from vpn_leaks.reporting.exposure_graph import write_exposure_graph
 from vpn_leaks.reporting.generate_reports import (
     generate_provider_report,
     generate_vpn_report,
@@ -254,6 +255,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 raw_base=raw_base,
                 exit_ip_v4=v4,
                 services_contacted=services_contacted,
+                attr_cfg=attr_cfg,
                 skip_dns=args.skip_competitor_dns,
                 skip_web=args.skip_competitor_web,
                 skip_portal=args.skip_competitor_portal,
@@ -333,6 +335,18 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     write_run_summary(run_root, normalized_paths)
     print(f"Run complete: {run_root}", file=sys.stderr)
+    return 0
+
+
+def cmd_graph_export(args: argparse.Namespace) -> int:
+    out = (
+        Path(args.output).resolve()
+        if args.output
+        else repo_root() / "exposure-graph.json"
+    )
+    slug: str | None = args.provider
+    write_exposure_graph(out, provider_slug=slug)
+    print(str(out))
     return 0
 
 
@@ -423,6 +437,24 @@ def build_parser() -> argparse.ArgumentParser:
     rep.add_argument("--asn", help="Also emit PROVIDERS/AS<asn>.md")
     rep.add_argument("--asn-title", default=None)
     rep.set_defaults(func=cmd_report)
+
+    gx = sub.add_parser(
+        "graph-export",
+        help="Export exposure graph JSON (nodes/edges) from normalized runs",
+    )
+    gx.add_argument(
+        "--provider",
+        default=None,
+        metavar="SLUG",
+        help="Limit to one VPN slug; omit to include all providers under runs/",
+    )
+    gx.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Output file (default: exposure-graph.json in repo root)",
+    )
+    gx.set_defaults(func=cmd_graph_export)
 
     return p
 

@@ -49,8 +49,50 @@ Aligned with [vpn-leaks.md](../vpn-leaks.md): account ready → connect → stab
 
 - Signup/payment: manual by default.
 - GUI: **prompted manual connect** or **you connect first + `--skip-vpn`** when the vendor app cannot be scripted.
-- ToS-risk automation (scraping): explicit config opt-in only.
+- Vendor scraping / API automation: explicit config opt-in only.
 
 ## Third-party services (auto location)
 
 Auto mode uses **ipwho.is** (and records it in `services_contacted`). That implies an HTTP request from your machine; see [README](../README.md) security notes.
+
+## Systematic research (matrix and checklist)
+
+Use this when comparing providers or publishing results so benchmarks are **comparable** and **reproducible**.
+
+### Dimensions
+
+Each benchmark is a point in a space you should record explicitly:
+
+| Dimension | Where it lives |
+|-----------|----------------|
+| VPN provider | `vpn_provider` (slug), `configs/vpns/<slug>.yaml` |
+| Exit / location | `vpn_location_id`, `vpn_location_label`, `extra.exit_geo` when auto |
+| Run identity | `run_id`, folder `runs/<run_id>/` |
+| Time | `timestamp_utc`, `run.json` `created_utc` |
+
+### Minimum probe set (typical “full” run)
+
+Align questions to probes; not every question needs every probe.
+
+1. **Tunnel / exit** — `exit_ip_v4` / `exit_ip_v6`, `exit_ip_sources` (multi-endpoint).
+2. **Leak heuristics** — DNS (`dns_servers_observed`, `dns_leak_flag`), WebRTC, IPv6.
+3. **Exit attribution** — `attribution` (RIPEstat, Team Cymru, PeeringDB, optional GeoLite).
+4. **Policies** — `policies` (VPN + optional underlay URLs), hashes and summaries.
+5. **Optional** — `competitor_surface` (apex DNS, NS glue attribution, web/CDN, portals, transit) when `competitor_probe` is configured.
+6. **Optional** — `yourinfo_snapshot` unless `--skip-yourinfo`.
+
+### Reproducibility
+
+- **Code state:** `run.json` should record `git_sha` when available.
+- **Environment:** `runner_env` (OS, kernel, Python, VPN mode).
+- **Canonical record:** `runs/<run_id>/locations/<location_id>/normalized.json` is the single structured artifact for tooling and reports.
+
+### Interpretation
+
+- Leak flags are **heuristics** from client-observable tests; **“no leak”** means the harness did not flag an issue under those conditions, not a proof of privacy against all adversaries or all traffic paths.
+- Provider apex DNS and **NS glue** attribution (see [data-dictionary](data-dictionary.md)) describe **public DNS/routing relationships**, not VPN tunnel contents.
+
+### Aggregates and graphs
+
+- Rollup markdown: `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md`.
+- Exposure graph export (nodes/edges for analysis or 3D viewer): `vpn-leaks graph-export` — see [README](../README.md).

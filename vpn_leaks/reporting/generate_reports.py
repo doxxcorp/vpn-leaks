@@ -32,8 +32,10 @@ def _jinja_env() -> Environment:
     )
 
 
-def collect_normalized_for_provider(provider_slug: str) -> list[tuple[str, Path, dict[str, Any]]]:
-    """Return list of (run_id, path, data) for all normalized.json under runs/."""
+def collect_normalized_runs(
+    provider_slug: str | None = None,
+) -> list[tuple[str, Path, dict[str, Any]]]:
+    """Return list of (run_id, path, data) for normalized.json under runs/. Filter by provider or all."""
     runs = repo_root() / "runs"
     if not runs.is_dir():
         return []
@@ -52,17 +54,26 @@ def collect_normalized_for_provider(provider_slug: str) -> list[tuple[str, Path,
                 data = json.loads(p.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 continue
-            if data.get("vpn_provider") != provider_slug:
+            if provider_slug is not None and data.get("vpn_provider") != provider_slug:
                 continue
             out.append((run_dir.name, p, data))
     return out
 
 
-def _fence_json(label: str, obj: Any, max_chars: int = REPORT_JSON_BLOCK_MAX) -> str:
+def collect_normalized_for_provider(provider_slug: str) -> list[tuple[str, Path, dict[str, Any]]]:
+    """Return list of (run_id, path, data) for all normalized.json under runs/ for one provider."""
+    return collect_normalized_runs(provider_slug)
+
+
+def _fence_json(
+    label: str, obj: Any, max_chars: int = REPORT_JSON_BLOCK_MAX
+) -> tuple[str, bool]:
+    """Return fenced markdown and whether the JSON was truncated to max_chars."""
     body = json.dumps(obj, indent=2, ensure_ascii=False, default=str)
-    if len(body) > max_chars:
-        body = body[:max_chars] + "\n… (truncated for report; see normalized.json)"
-    return f"```{label}\n{body}\n```"
+    truncated = len(body) > max_chars
+    if truncated:
+        body = body[:max_chars] + "\n…"
+    return f"```{label}\n{body}\n```", truncated
 
 
 def build_detailed_runs(
@@ -101,10 +112,30 @@ def build_detailed_runs(
             else:
                 yi_text_report = t
 
-        cs = data.get("competitor_surface")
+        cs_raw = data.get("competitor_surface")
+        cs_trunc = False
+        if "competitor_surface" not in data:
+            competitor_surface_kind = "absent"
+            competitor_surface_block: str | None = None
+        elif cs_raw is None:
+            competitor_surface_kind = "null"
+            competitor_surface_block = None
+        else:
+            cs = cs_raw
+            competitor_surface_block, cs_trunc = _fence_json(
+                "json", cs, max_chars=REPORT_COMPETITOR_JSON_MAX
+            )
+            if isinstance(cs, dict) and len(cs) == 0:
+                competitor_surface_kind = "empty"
+            else:
+                competitor_surface_kind = "data"
 
         fp = data.get("fingerprint_snapshot") or {}
-        fingerprint_block = _fence_json("json", fp) if fp else None
+        if fp:
+            fingerprint_block, fp_trunc = _fence_json("json", fp)
+        else:
+            fingerprint_block = None
+            fp_trunc = False
 
         webrtc_show_rows: list[dict[str, Any]] = []
         for c in webrtc_show:
@@ -116,6 +147,105 @@ def build_detailed_runs(
                 raw_s = raw_s[:WEBRTC_RAW_CELL_MAX] + "…"
             webrtc_show_rows.append({**c, "raw_cell": raw_s})
 
+        truncation_notes: list[str] = []
+
+        runner_env_block, t = _fence_json(
+            "json", data.get("runner_env") or {}, max_chars=20_000
+        )
+        if t:
+            truncation_notes.append(
+                "`runner_env` excerpt exceeded size cap; full object in `normalized.json`."
+            )
+
+        exit_ip_sources_block, t = _fence_json("json", exit_sources)
+        if t:
+            truncation_notes.append(
+                "`exit_ip_sources` excerpt exceeded size cap; full array in `normalized.json`."
+            )
+
+        dns_servers_observed_block, t = _fence_json("json", dns_obs)
+        if t:
+            truncation_notes.append(
+                "`dns_servers_observed` excerpt exceeded size cap; full array in `normalized.json`."
+            )
+
+        if fp and fp_trunc:
+            truncation_notes.append(
+                "`fingerprint_snapshot` excerpt exceeded size cap; full object in `normalized.json`."
+            )
+
+        attribution_block, t = _fence_json(
+            "json",
+            data.get("attribution") or {},
+            max_chars=REPORT_ATTRIBUTION_JSON_MAX,
+        )
+        if t:
+            truncation_notes.append(
+                "`attribution` excerpt exceeded size cap (large API `raw` blobs); full object in `normalized.json`."
+            )
+
+        policies_block, t = _fence_json("json", data.get("policies") or [])
+        if t:
+            truncation_notes.append(
+                "`policies` excerpt exceeded size cap; full array in `normalized.json`."
+            )
+
+        artifacts_block, t = _fence_json("json", data.get("artifacts") or {})
+        if t:
+            truncation_notes.append(
+                "`artifacts` excerpt exceeded size cap; full object in `normalized.json`."
+            )
+
+        if cs_trunc:
+            truncation_notes.append(
+                "`competitor_surface` excerpt exceeded size cap; full object in `normalized.json`."
+            )
+
+        extra_block, t = _fence_json("json", data.get("extra") or {})
+        if t:
+            truncation_notes.append(
+                "`extra` excerpt exceeded size cap; full object in `normalized.json`."
+            )
+
+        yourinfo_snapshot_block: str | None
+        if yi:
+            yourinfo_snapshot_block, t = _fence_json(
+                "json", yi, max_chars=REPORT_JSON_BLOCK_MAX
+            )
+            if t:
+                truncation_notes.append(
+                    "`yourinfo_snapshot` JSON excerpt exceeded size cap; full object in `normalized.json`."
+                )
+        else:
+            yourinfo_snapshot_block = None
+
+        if yi_trunc or (
+            isinstance(yi, dict) and yi.get("text_excerpt_truncated")
+        ):
+            truncation_notes.append(
+                "YourInfo **visible text excerpt** below is length-capped; full text in raw `yourinfo_probe/` and `normalized.json`."
+            )
+
+        full_normalized_block, t = _fence_json(
+            "json", data, max_chars=REPORT_FULL_NORMALIZED_MAX
+        )
+        if t:
+            truncation_notes.append(
+                "**Complete normalized record** below exceeded ~2 MiB cap; open `normalized.json` on disk for the full file."
+            )
+
+        if svc_note:
+            truncation_notes.append(
+                "`services_contacted` list shows the first "
+                f"{SERVICES_CONTACTED_MAX} entries; full list in `normalized.json`."
+            )
+
+        if webrtc_more > 0:
+            truncation_notes.append(
+                f"WebRTC table lists {len(webrtc_show_rows)} of "
+                f"{len(webrtc_show_rows) + webrtc_more} candidates; remainder in `normalized.json`."
+            )
+
         detailed.append(
             {
                 "run_id": run_id,
@@ -125,16 +255,12 @@ def build_detailed_runs(
                 "normalized_path": str(rel),
                 "timestamp_utc": data.get("timestamp_utc"),
                 "schema_version": data.get("schema_version"),
-                "runner_env_block": _fence_json(
-                    "json",
-                    data.get("runner_env") or {},
-                    max_chars=20_000,
-                ),
+                "runner_env_block": runner_env_block,
                 "connection_mode": data.get("connection_mode"),
                 "exit_ip_v4": data.get("exit_ip_v4"),
                 "exit_ip_v6": data.get("exit_ip_v6"),
-                "exit_ip_sources_block": _fence_json("json", exit_sources),
-                "dns_servers_observed_block": _fence_json("json", dns_obs),
+                "exit_ip_sources_block": exit_ip_sources_block,
+                "dns_servers_observed_block": dns_servers_observed_block,
                 "dns_leak_flag": data.get("dns_leak_flag"),
                 "dns_leak_notes": data.get("dns_leak_notes"),
                 "webrtc_leak_flag": data.get("webrtc_leak_flag"),
@@ -145,33 +271,22 @@ def build_detailed_runs(
                 "ipv6_leak_flag": data.get("ipv6_leak_flag"),
                 "ipv6_notes": data.get("ipv6_notes"),
                 "fingerprint_block": fingerprint_block,
-                "attribution_block": _fence_json(
-                    "json",
-                    data.get("attribution") or {},
-                    max_chars=REPORT_ATTRIBUTION_JSON_MAX,
-                ),
-                "policies_block": _fence_json("json", data.get("policies") or []),
+                "attribution_block": attribution_block,
+                "policies_block": policies_block,
                 "services_contacted": svc_trim,
                 "services_contacted_note": svc_note,
-                "artifacts_block": _fence_json("json", data.get("artifacts") or {}),
-                "competitor_surface_block": (
-                    _fence_json("json", cs, max_chars=REPORT_COMPETITOR_JSON_MAX)
-                    if cs is not None
-                    else None
-                ),
-                "extra_block": _fence_json("json", data.get("extra") or {}),
-                "yourinfo_snapshot_block": (
-                    _fence_json("json", yi, max_chars=REPORT_JSON_BLOCK_MAX) if yi else None
-                ),
+                "artifacts_block": artifacts_block,
+                "competitor_surface_block": competitor_surface_block,
+                "competitor_surface_kind": competitor_surface_kind,
+                "extra_block": extra_block,
+                "yourinfo_snapshot_block": yourinfo_snapshot_block,
                 "yourinfo_text_report": yi_text_report,
                 "yourinfo_text_truncated": yi_trunc or bool(
                     isinstance(yi, dict) and yi.get("text_excerpt_truncated"),
                 ),
-                "full_normalized_block": _fence_json(
-                    "json",
-                    data,
-                    max_chars=REPORT_FULL_NORMALIZED_MAX,
-                ),
+                "full_normalized_block": full_normalized_block,
+                "truncation_notes": truncation_notes,
+                "has_truncated_blocks": bool(truncation_notes),
             },
         )
     return detailed
@@ -300,6 +415,27 @@ def write_run_summary(run_root: Path, normalized_paths: list[Path]) -> Path:
     ]
     for p in normalized_paths:
         lines.append(f"- `{p.relative_to(repo_root())}`")
+
+    slug: str | None = None
+    if normalized_paths:
+        try:
+            first = json.loads(normalized_paths[0].read_text(encoding="utf-8"))
+            slug = first.get("vpn_provider")
+        except (OSError, json.JSONDecodeError, TypeError):
+            slug = None
+
+    if slug:
+        safe = slug.upper().replace("-", "_")
+        lines.extend(
+            [
+                "",
+                "## Aggregated report",
+                "",
+                f"- Markdown rollup (matrix plus **Detailed runs** for each location): `VPNs/{safe}.md` — regenerate with `vpn-leaks report --provider {slug}`",
+                "- Canonical JSON for each location: `runs/<run_id>/locations/<location_id>/normalized.json` (paths listed above).",
+            ],
+        )
+
     out = run_root / "summary.md"
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out

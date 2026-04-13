@@ -23,15 +23,16 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 
 | Area | Path | Role |
 |------|------|------|
-| CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run`, `report`, preflight, duplicate guard, per-location suite |
-| Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, artifacts index |
+| CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run`, `report`, `graph-export`, preflight, duplicate guard, per-location suite |
+| Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (1.3 default; 1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, artifacts index |
 | Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading |
 | VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs, `manual_gui`, `policy_urls`, location list |
 | Auto location (ipwho) | [vpn_leaks/auto_connection.py](vpn_leaks/auto_connection.py) | When `--locations` omitted: build `location_id` / label, optional YAML persist |
 | Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes` |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
-| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), Jinja templates under `vpn_leaks/reporting/templates/` | `VPNs/<SLUG>.md` (per-run detail + summary), `PROVIDERS/AS<n>.md` |
+| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates | `VPNs/<SLUG>.md`, `PROVIDERS/AS<n>.md`, `graph-export` JSON |
+| Viewer | [viewer/](viewer/) | 3D graph of `graph-export` output (static HTML + CDN) |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
 | Tests | [tests/](tests/) | pytest, mocks for network where applicable |
 
@@ -51,6 +52,9 @@ vpn-leaks report --provider nordvpn
 
 # Per-ASN underlay report:
 vpn-leaks report --provider nordvpn --asn <asn_integer>
+
+# Exposure graph JSON (all runs or one provider); open viewer/index.html via local HTTP server:
+vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 ```
 
 **Preflight:** resolves exit IPv4; **skips** a full run if that IPv4 was already recorded for the same `--provider` in any `runs/*/locations/*/normalized.json` unless **`--force`**.
@@ -71,7 +75,7 @@ vpn-leaks report --provider nordvpn --asn <asn_integer>
 | Per-provider rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` (summary + **detailed per-run sections** from `normalized.json`; slug uppercased, `-` → `_`) |
 | Per-ASN rollup | `PROVIDERS/AS<n>.md` |
 
-**Viewing `VPNs/<SLUG>.md`:** The file starts with a **short summary** (matrix, leak table, ASN list). The bulk of the data is under **`## Detailed runs`** (exit/DNS/WebRTC/IPv6, attribution, policies, services, YourInfo, competitor surface, and a **verbatim** `normalized.json` block). In an editor **Markdown preview**, it is easy to assume content is missing if you only see the first screen — **scroll down** or open the file as **plain text**. The canonical copy is always `runs/<run_id>/locations/<id>/normalized.json`.
+**Viewing `VPNs/<SLUG>.md`:** The report opens with **How to read** (rollup vs **Detailed runs**), then a **numbered index** of runs. The bulk of the data is under **`## Detailed runs`**. If a JSON excerpt is capped, a **note** at the top of that run lists what was shortened; **on-disk `normalized.json` is always complete**. In **Markdown preview**, still **scroll** or open as **plain text** for very large sections.
 
 **`normalized.json`** is the canonical structured record for tooling and reports; see [docs/data-dictionary.md](docs/data-dictionary.md).
 
@@ -97,7 +101,7 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 
 | Doc | Use |
 |-----|-----|
-| [README.md](README.md) | Setup, commands, ethics, directory index |
+| [README.md](README.md) | Setup, commands, purpose, directory index |
 | [vpn-leaks.md](vpn-leaks.md) | Long-form product / research spec |
 | [docs/spec.md](docs/spec.md) | Operational spec |
 | [docs/methodology.md](docs/methodology.md) | Run order |
@@ -110,14 +114,6 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 
 - Workflow is **not** committed under `.github/workflows/` (OAuth `workflow` scope can block pushes). Copy **[docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example)** to `.github/workflows/ci.yml` locally or after `gh auth refresh -s workflow`.
 - Remote repo: **doxxcorp/vpn-leaks** on GitHub. Commit authorship is **g4lr0n &lt;g4lr0n@doxx.net&gt;**; local repo `user.name` / `user.email` should match for new commits.
-
----
-
-## Ethics and security (do not weaken)
-
-- Only test services the operator is entitled to use; do not bypass controls or load-test third parties.
-- **Never commit** VPN credentials; use env vars / secrets.
-- `runs/` may contain sensitive exit-IP and test artifacts; **add `runs/` to `.gitignore`** if clones should not ship local benchmarks (README mentions this).
 
 ---
 

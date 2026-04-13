@@ -16,6 +16,7 @@ Client-side observable privacy: leaks, fingerprints, exit attribution, and polic
 | Tool configs | [`configs/tools/leak-tests.yaml`](../configs/tools/leak-tests.yaml), [`configs/tools/attribution.yaml`](../configs/tools/attribution.yaml) |
 | Run artifacts | `runs/<run_id>/` (gitignored): [`run.json`](data-dictionary.md#runsrun_idrunjson), [`raw/preflight.json`](data-dictionary.md#runsrun_idraw-layout), per-location [`raw/<location_id>/`](data-dictionary.md#runsrun_idraw-layout), [`locations/<location_id>/normalized.json`](data-dictionary.md#runsrun_idlocationslocation_idnormalizedjson), `summary.md` |
 | Aggregated reports | `VPNs/*.md`, `PROVIDERS/*.md` (generated; gitignored by default) |
+| Exposure graph | `vpn-leaks graph-export` → JSON (`exposure-graph.json` by default); optional [viewer/README.md](../viewer/README.md) |
 
 ## Run behavior (summary)
 

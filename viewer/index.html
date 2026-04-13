@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>VPN exposure graph</title>
+  <style>
+    html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+    #graph { width: 100vw; height: 100vh; }
+    #err {
+      position: fixed; top: 0; left: 0; right: 0; padding: 12px;
+      background: #2a1515; color: #f8d7da; font-size: 14px; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="err" hidden></div>
+  <div id="graph"></div>
+  <script type="module">
+    import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3";
+
+    const params = new URLSearchParams(location.search);
+    const url = params.get("url") || "exposure-graph.json";
+    const errEl = document.getElementById("err");
+
+    function showErr(msg) {
+      errEl.hidden = false;
+      errEl.textContent = msg;
+    }
+
+    const fg = ForceGraph3D()(document.getElementById("graph"))
+      .nodeLabel((n) => `[${n.type}] ${n.label || n.id}`)
+      .nodeAutoColorBy("type")
+      .linkDirectionalParticles(0);
+
+    fetch(url)
+      .then((r) => {
+        if (!r.ok) throw new Error(r.status + " " + r.statusText);
+        return r.json();
+      })
+      .then((data) => {
+        const nodes = (data.nodes || []).map((n) => ({ ...n }));
+        const links = (data.edges || []).map((e) => ({
+          source: e.source,
+          target: e.target,
+          relation: e.relation,
+        }));
+        fg.graphData({ nodes, links });
+      })
+      .catch((e) => showErr("Failed to load " + url + " — " + e + "\n\nServe this folder (python3 -m http.server) and use ?url=…"));
+  </script>
+</body>
+</html>

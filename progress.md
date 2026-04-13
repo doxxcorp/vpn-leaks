@@ -2,6 +2,17 @@
 
 _Last updated: 2026-04-10._
 
+## 2026-04-10 — Systematic methodology, NS glue attribution, exposure graph
+
+- **Docs:** [docs/methodology.md](docs/methodology.md) adds a **systematic research** section (dimensions, probe checklist, reproducibility, interpretation). [docs/data-dictionary.md](docs/data-dictionary.md) documents **`schema_version` 1.3** and `provider_dns.ns_hosts` with per-IP **`ip_attribution`** (NS glue).
+- **DNS:** [`run_provider_dns`](vpn_leaks/checks/competitor_probes.py) resolves each NS hostname’s A/AAAA and runs [`merge_attribution_for_ip`](vpn_leaks/attribution/merge.py) (refactored `collect_attribution_sources`; IPv6 skips Team Cymru TXT). **`services_contacted`** includes `dns:ns_glue:` and `attribution:ns_glue:` entries; ~250 ms between uncached glue IPs to reduce API pressure.
+- **CLI:** `vpn-leaks graph-export [--provider SLUG] [-o file]` writes nodes/edges JSON via [`exposure_graph.py`](vpn_leaks/reporting/exposure_graph.py).
+- **Viewer:** [viewer/](viewer/) — static **3D** page (3d-force-graph via CDN) + [viewer/README.md](viewer/README.md).
+
+## 2026-04-10 — VPN rollup report readability
+
+- **Templates / code:** [`vpn_report.md.j2`](vpn_leaks/reporting/templates/vpn_report.md.j2) now starts with a **How to read** block, lists each included run **before** **Detailed runs**, and shows a **blockquote** of `truncation_notes` when any fenced JSON or list is size-capped ([`generate_reports.py`](vpn_leaks/reporting/generate_reports.py): `_fence_json` returns `(fence, truncated)`; `competitor_surface` gets `absent` / `null` / `empty` / `data`). Empty sections use explanatory text instead of bare `*(none)*`. Each run’s `summary.md` (via `write_run_summary`) includes pointers to `VPNs/<SLUG>.md` and canonical `normalized.json`.
+
 ## 2026-04-10 — YourInfo capture + comprehensive `VPNs/` reports
 
 - **yourinfo.ai:** Each location run loads the third-party benchmark page in Playwright after policy fetch ([`vpn_leaks/checks/yourinfo_probe.py`](vpn_leaks/checks/yourinfo_probe.py)); writes `raw/<loc>/yourinfo_probe/yourinfo.json` + `yourinfo.har`; **`normalized.json` `schema_version` 1.2** adds `yourinfo_snapshot` and `artifacts.yourinfo_probe_dir`. Opt out: **`--skip-yourinfo`**.

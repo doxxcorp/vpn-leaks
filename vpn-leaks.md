@@ -248,7 +248,7 @@ This project benefits from separate “build agents” with crisp inputs/outputs
 ### Automation boundaries
 
 Some steps will remain manual or semi-automated:
-- **Signup/payment**: realistic, but brittle to automate and often hostile to automation. Treat as manual by default with an option to use a headless browser runner if you explicitly decide the ToS risk is acceptable.
+- **Signup/payment**: realistic, but brittle to automate and often hostile to automation. Treat as manual by default with an option to use a headless browser runner when you explicitly opt in.
 - **2FA/CAPTCHAs**: assume manual.
 - **Vendor GUI clients**: automating GUI reliably across OS versions is painful; prefer config-based connections when possible.
 
@@ -286,12 +286,9 @@ MVP is complete when:
 
 ## Operational considerations and guardrails
 
-### Legal, ToS, and ethics
+### Purpose and scope
 
-This project should stay in “consumer-side measurement” territory:
-- Only test services you have paid access to.
-- Do not attempt to bypass access controls, exploit vulnerabilities, or load-test infrastructure.
-- Treat automated signups and scraping of vendor APIs as a ToS-risk decision; make it an explicit opt-in.
+Benchmarking stays in **consumer-side measurement**: what leaks, fingerprints, exit attribution, and published policies reveal from the client—not claims about undisclosed server-side logging or data resale. Optional vendor scraping or heavier automation remains an explicit config opt-in (see [docs/methodology.md](docs/methodology.md)).
 
 ### Security of credentials and test artifacts
 

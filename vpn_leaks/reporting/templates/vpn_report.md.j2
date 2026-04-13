@@ -4,6 +4,12 @@
 - **Runs included:** {{ run_ids | join(", ") }}
 - **Normalized locations:** {{ run_count }}
 
+> **How to read this report**
+>
+> - The **Matrix**, **Leak summary**, and **Underlay (ASNs)** sections below are a **high-level rollup only**.
+> - **Per-location benchmarks** (exit IP, DNS, WebRTC, IPv6, fingerprint, attribution, policies, services, artifacts, YourInfo, competitor probes, and the full JSON record) are in **`## Detailed runs`** — they are **not omitted**; scroll or open this file as plain text if the preview shows only the first screen.
+> - The **canonical** machine-readable record for each location is always `runs/<run_id>/locations/<location_id>/normalized.json` (paths are repeated under each run). For very large JSON, use your editor or a JSON viewer rather than Markdown preview alone.
+
 ## Matrix
 
 | Field | Value |
@@ -24,18 +30,33 @@
 {% for asn, note in asn_notes %}
 - **AS{{ asn }}:** {{ note }}
 {% else %}
-- No ASN data aggregated.
+- *No ASN in the summary table for these runs (see **Detailed runs** → **Attribution** per location).*
 {% endfor %}
 
 ---
 
 ## Detailed runs
 
-Each section mirrors `normalized.json`. Large API blobs (**attribution**, **competitor_surface**) use generous caps; if anything still hits the safety limit, see **Complete normalized record** at the bottom of each run (verbatim JSON, up to ~2 MiB).
+**Included in this report** (each subsection below mirrors one `normalized.json`):
+
+{% for dr in detailed_runs %}
+{{ loop.index }}. `{{ dr.run_id }}` / `{{ dr.location_id }}` — `{{ dr.normalized_path }}`
+{% endfor %}
+
+Large JSON fields use size caps in this markdown file; when an excerpt hits a cap, a **note** appears at the start of that run’s section listing what was capped. **On-disk `normalized.json` is always complete.**
 
 {% for dr in detailed_runs %}
 
 ### {{ dr.run_id }} / {{ dr.location_id }}
+
+{% if dr.has_truncated_blocks %}
+> **Excerpts in this section:** some JSON or tables below are size-capped for this report. **`{{ dr.normalized_path }}` on disk is complete.** Details:
+>
+{% for note in dr.truncation_notes %}
+> - {{ note }}
+{% endfor %}
+
+{% endif %}
 
 - **vpn_provider:** {{ dr.vpn_provider | default("—") }}
 - **Label:** {{ dr.location_label }}
@@ -78,11 +99,11 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 | webrtc_notes | {{ dr.webrtc_notes | default("—") }} |
 
 {% if dr.webrtc_candidates_more > 0 %}
-*(Showing {{ dr.webrtc_candidates_show | length }} of {{ dr.webrtc_candidates_show | length + dr.webrtc_candidates_more }} candidates; +{{ dr.webrtc_candidates_more }} more in normalized.json)*
+*(Table lists the first {{ dr.webrtc_candidates_show | length }} of {{ dr.webrtc_candidates_show | length + dr.webrtc_candidates_more }} candidates; see `normalized.json` for the full list.)*
 {% endif %}
 
-| type | protocol | address | port | raw (truncated) |
-|------|----------|---------|------|-----------------|
+| type | protocol | address | port | raw (may be shortened in table) |
+|------|----------|---------|------|--------------------------------|
 {% for c in dr.webrtc_candidates_show -%}
 | {{ c.candidate_type | default("—") }} | {{ c.protocol | default("—") }} | {{ c.address | default("—") }} | {{ c.port | default("—") }} | `{{ c.raw_cell | default("") }}` |
 {% endfor %}
@@ -100,7 +121,7 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 {% if dr.fingerprint_block %}
 {{ dr.fingerprint_block }}
 {% else %}
-*(empty)*
+*No fingerprint snapshot in this run (fingerprint check disabled, skipped, or empty capture).*
 {% endif %}
 
 #### Attribution
@@ -120,7 +141,7 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 {% for u in dr.services_contacted %}
 - `{{ u }}`
 {% else %}
-- *(none)*
+*No `services_contacted` entries recorded for this run.*
 {% endfor %}
 
 #### Artifacts (paths)
@@ -132,25 +153,30 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 {% if dr.yourinfo_snapshot_block %}
 {{ dr.yourinfo_snapshot_block }}
 {% if dr.yourinfo_text_report %}
-**Visible text excerpt** (may be truncated in this report):
+**Visible text excerpt** (length may be capped in this report):
 
 ~~~
 {{ dr.yourinfo_text_report }}
 ~~~
 {% if dr.yourinfo_text_truncated %}
-*(Excerpt truncated; full text in raw `yourinfo_probe/yourinfo.json` / normalized `yourinfo_snapshot`.)*
+*(Excerpt shortened here; full text in raw `yourinfo_probe/` and in `yourinfo_snapshot` inside `normalized.json`.)*
 {% endif %}
 {% endif %}
 {% else %}
-*(skipped or not captured — e.g. `--skip-yourinfo`)*
+*No YourInfo snapshot on this record — e.g. `--skip-yourinfo`, probe not run, or capture empty.*
 {% endif %}
 
 #### Competitor surface (provider YAML probes)
 
-{% if dr.competitor_surface_block %}
+{% if dr.competitor_surface_kind == "absent" %}
+*Field `competitor_surface` not present on this `normalized.json` (older schema or competitor phase not stored).*
+{% elif dr.competitor_surface_kind == "null" %}
+*`competitor_surface` is null; no competitor data for this run.*
+{% elif dr.competitor_surface_block %}
 {{ dr.competitor_surface_block }}
-{% else %}
-*(none — no `competitor_probe` config or empty run)*
+{% if dr.competitor_surface_kind == "empty" %}
+*(Object is present but empty `{}` — no probe results stored.)*
+{% endif %}
 {% endif %}
 
 #### Extra
@@ -159,7 +185,7 @@ Each section mirrors `normalized.json`. Large API blobs (**attribution**, **comp
 
 #### Complete normalized record (verbatim)
 
-Full JSON for this location (same as `normalized.json`; capped only at ~2 MiB for safety).
+Same content as `normalized.json` for this location; only a ~2 MiB safety cap can shorten this fenced block.
 
 {{ dr.full_normalized_block }}
 
