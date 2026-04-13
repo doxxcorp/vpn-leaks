@@ -17,3 +17,8 @@ credentials:
 
 policy_urls:
   - "https://example.com/privacy"
+
+# Optional: extra pages for third-party / CDN inventory (SPEC §13.5)
+# surface_urls:
+#   - page_type: home
+#     url: "https://example.com/"

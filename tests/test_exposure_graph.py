@@ -23,7 +23,10 @@ def test_build_exposure_graph_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert g["edges"] == []
 
 
-def test_build_exposure_graph_exit_and_policy(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_build_exposure_graph_exit_and_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     loc = tmp_path / "runs" / "run-a" / "locations" / "loc1"
     loc.mkdir(parents=True)
     norm = {
@@ -46,7 +49,10 @@ def test_build_exposure_graph_exit_and_policy(monkeypatch: pytest.MonkeyPatch, t
     assert "policy_document" in rels
 
 
-def test_build_exposure_graph_provider_filter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_build_exposure_graph_provider_filter(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     for slug, rid in [("a", "r1"), ("b", "r2")]:
         loc = tmp_path / "runs" / rid / "locations" / "loc"
         loc.mkdir(parents=True)

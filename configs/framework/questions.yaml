@@ -1,0 +1,196 @@
+# Question bank (SPEC §8). IDs are stable; add new IDs append-only.
+version: "1"
+questions:
+  # Identity / correlation (§8.1)
+  - id: IDENTITY-001
+    category: identity_correlation
+    text: What identifiers are assigned to the user, app install, browser session, and device?
+    testability: DYNAMIC_PARTIAL
+  - id: IDENTITY-006
+    category: identity_correlation
+    text: Are there long-lived client identifiers transmitted during auth or app startup?
+    testability: DYNAMIC_PARTIAL
+  - id: IDENTITY-009
+    category: identity_correlation
+    text: Is the browser fingerprinting surface strong enough to re-identify the same user across sessions?
+    testability: DYNAMIC_PARTIAL
+
+  # Signup / payment (§8.2)
+  - id: SIGNUP-001
+    category: signup_payment
+    text: What third parties are involved during signup?
+    testability: DYNAMIC_PARTIAL
+  - id: SIGNUP-004
+    category: signup_payment
+    text: Are analytics or marketing scripts loaded during signup or checkout?
+    testability: DYNAMIC_PARTIAL
+  - id: SIGNUP-010
+    category: signup_payment
+    text: Are these surfaces behind a CDN/WAF?
+    testability: DYNAMIC_PARTIAL
+
+  # Website / portal / hosting (§8.3)
+  - id: WEB-001
+    category: website_portal
+    text: Where is the marketing site hosted (DNS/routing level)?
+    testability: DYNAMIC_PARTIAL
+  - id: WEB-004
+    category: website_portal
+    text: What CDN/WAF is used?
+    testability: DYNAMIC_PARTIAL
+  - id: WEB-008
+    category: website_portal
+    text: Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs?
+    testability: DYNAMIC_PARTIAL
+
+  # DNS (§8.4)
+  - id: DNS-001
+    category: dns
+    text: Which DNS resolvers are used while connected?
+    testability: DYNAMIC_FULL
+  - id: DNS-002
+    category: dns
+    text: Are DNS requests tunneled (consistent with VPN exit)?
+    testability: DYNAMIC_PARTIAL
+  - id: DNS-003
+    category: dns
+    text: Is there DNS fallback to ISP/router/public resolvers?
+    testability: DYNAMIC_PARTIAL
+  - id: DNS-004
+    category: dns
+    text: Does DNS leak during connect/disconnect/reconnect?
+    testability: DYNAMIC_PARTIAL
+  - id: DNS-009
+    category: dns
+    text: Are DoH or DoT endpoints used?
+    testability: DYNAMIC_PARTIAL
+  - id: DNS-011
+    category: dns
+    text: Are resolvers first-party or third-party?
+    testability: DYNAMIC_PARTIAL
+
+  # Real IP leak (§8.5)
+  - id: IP-001
+    category: real_ip_leak
+    text: Is the real public IPv4 exposed while connected?
+    testability: DYNAMIC_FULL
+  - id: IP-002
+    category: real_ip_leak
+    text: Is the real public IPv6 exposed while connected?
+    testability: DYNAMIC_FULL
+  - id: IP-006
+    category: real_ip_leak
+    text: Is the real IP exposed through WebRTC?
+    testability: DYNAMIC_FULL
+  - id: IP-007
+    category: real_ip_leak
+    text: Is the local LAN IP exposed through WebRTC or browser APIs?
+    testability: DYNAMIC_FULL
+  - id: IP-014
+    category: real_ip_leak
+    text: Do leak-check sites disagree about observed IP identity?
+    testability: DYNAMIC_PARTIAL
+
+  # Control plane (§8.6)
+  - id: CTRL-002
+    category: control_plane
+    text: Which domains and IPs are contacted after the tunnel is up?
+    testability: DYNAMIC_PARTIAL
+  - id: CTRL-003
+    category: control_plane
+    text: Which control-plane endpoints are used for auth/config/session management?
+    testability: DOCUMENT_RESEARCH
+  - id: CTRL-004
+    category: control_plane
+    text: Which telemetry endpoints are contacted during connection?
+    testability: DYNAMIC_PARTIAL
+  - id: CTRL-009
+    category: control_plane
+    text: Is the control plane behind a CDN/WAF?
+    testability: DYNAMIC_PARTIAL
+
+  # Exit / infra (§8.7)
+  - id: EXIT-001
+    category: exit_infrastructure
+    text: What exit IP is assigned for each region?
+    testability: DYNAMIC_FULL
+  - id: EXIT-002
+    category: exit_infrastructure
+    text: What ASN announces the exit IP?
+    testability: DYNAMIC_FULL
+  - id: EXIT-003
+    category: exit_infrastructure
+    text: What organization owns the IP range?
+    testability: DYNAMIC_FULL
+  - id: EXIT-004
+    category: exit_infrastructure
+    text: What reverse DNS exists for the exit node?
+    testability: DYNAMIC_PARTIAL
+  - id: EXIT-005
+    category: exit_infrastructure
+    text: Does the observed geolocation match the advertised location?
+    testability: DYNAMIC_PARTIAL
+
+  # Third-party web (§8.8)
+  - id: THIRDWEB-001
+    category: third_party_web
+    text: What external JS files are loaded on the site?
+    testability: DYNAMIC_PARTIAL
+  - id: THIRDWEB-003
+    category: third_party_web
+    text: What analytics providers are present?
+    testability: DYNAMIC_PARTIAL
+  - id: THIRDWEB-012
+    category: third_party_web
+    text: What cookies are set by first-party and third-party scripts?
+    testability: DYNAMIC_PARTIAL
+
+  # Browser tracking / FP (§8.9)
+  - id: FP-001
+    category: browser_tracking
+    text: Does the site attempt browser fingerprinting?
+    testability: DYNAMIC_PARTIAL
+  - id: FP-011
+    category: browser_tracking
+    text: Does WebRTC run on provider pages?
+    testability: DYNAMIC_FULL
+
+  # Telemetry / app (§8.10)
+  - id: TELEM-001
+    category: telemetry_app
+    text: Does the app talk to telemetry vendors?
+    testability: INTERNAL_UNVERIFIABLE
+  - id: TELEM-004
+    category: telemetry_app
+    text: Does the app send connection events to telemetry systems?
+    testability: INTERNAL_UNVERIFIABLE
+
+  # OS-specific (§8.11)
+  - id: OS-001
+    category: os_specific
+    text: On macOS/Windows/Linux, do helper processes bypass the tunnel?
+    testability: DYNAMIC_PARTIAL
+
+  # Failure state (§8.12)
+  - id: FAIL-001
+    category: failure_state
+    text: What leaks during initial connection?
+    testability: DYNAMIC_PARTIAL
+  - id: FAIL-003
+    category: failure_state
+    text: What leaks during reconnect?
+    testability: DYNAMIC_PARTIAL
+  - id: FAIL-004
+    category: failure_state
+    text: What leaks if the VPN app crashes?
+    testability: DYNAMIC_PARTIAL
+
+  # Logging / retention (§8.13)
+  - id: LOG-001
+    category: logging_retention
+    text: What is the provider likely able to log based on observed traffic?
+    testability: DYNAMIC_PARTIAL
+  - id: LOG-005
+    category: logging_retention
+    text: Are there contradictions between observed traffic and no-logs marketing claims?
+    testability: DOCUMENT_RESEARCH

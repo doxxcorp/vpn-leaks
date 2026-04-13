@@ -1,0 +1,74 @@
+# Maps question_id → test method & evidence expectations (SPEC §10).
+version: "1"
+matrix:
+  - question_id: DNS-001
+    test_method: resolver_snapshot_plus_external_html
+    automation_level: full
+    tools: [dnspython, curl, leak_test_pages]
+    expected_evidence: [dns_servers_observed, dnsleak_html]
+    outcomes:
+      pass: resolvers consistent with tunnel/exit
+      fail: obvious public ISP resolvers in external tier
+      unknown: inconclusive HTML
+    repetition_strategy: per_location_run
+    environment_dependencies: [connected_vpn]
+
+  - question_id: IP-001
+    test_method: multi_endpoint_ip_echo
+    automation_level: full
+    tools: [httpx, ip_endpoints]
+    expected_evidence: [exit_ip_sources, ip_check_json]
+    outcomes:
+      pass: single stable exit identity
+      fail: disagreement suggesting leak
+      unknown: partial endpoint failures
+    repetition_strategy: per_location_run
+    environment_dependencies: [connected_vpn]
+
+  - question_id: IP-006
+    test_method: playwright_webrtc_ice
+    automation_level: full
+    tools: [playwright, stun]
+    expected_evidence: [webrtc_candidates, webrtc_leak_flag]
+    outcomes:
+      pass: srflx matches exit; no host leak beyond expected
+      fail: public IP or LAN not matching tunnel expectation
+      unknown: ice_timeout
+    repetition_strategy: per_location_run
+    environment_dependencies: [connected_vpn, chromium]
+
+  - question_id: EXIT-002
+    test_method: asn_merge_ripe_cymru_peeringdb
+    automation_level: full
+    tools: [httpx, attribution_endpoints]
+    expected_evidence: [attribution, attribution_json]
+    outcomes:
+      pass: asn resolved with confidence
+      fail: no asn
+      unknown: conflicting_sources
+    repetition_strategy: per_location_run
+    environment_dependencies: [exit_ip_known]
+
+  - question_id: WEB-004
+    test_method: competitor_web_headers_har
+    automation_level: partial
+    tools: [playwright, httpx]
+    expected_evidence: [competitor_surface.web_probes, har]
+    outcomes:
+      pass: cdn_headers_identified
+      fail: no_probe_data
+      unknown: blocked_or_cf
+    repetition_strategy: on_demand
+    environment_dependencies: [competitor_probe_config]
+
+  - question_id: TELEM-001
+    test_method: not_observable_without_app_instrumentation
+    automation_level: none
+    tools: []
+    expected_evidence: []
+    outcomes:
+      pass: n_a
+      fail: n_a
+      unknown: default
+    repetition_strategy: manual
+    environment_dependencies: [app_binary_analysis]

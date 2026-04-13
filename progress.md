@@ -1,6 +1,12 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-10._
+_Last updated: 2026-04-12._
+
+## 2026-04-12 — SPEC framework (question bank, coverage, findings)
+
+- **`schema_version` 1.4:** optional **`framework`** on `normalized.json` (findings, per-question coverage, risk scores, classified hosts). Synthesis in [`vpn_leaks/framework/`](vpn_leaks/framework/); config in [`configs/framework/`](configs/framework/). Opt out: **`--no-framework`**.
+- **CLI:** `--capture-baseline` writes `raw/baseline.json`; **`--transition-tests`** writes `raw/<loc>/transitions.json` (skipped for `manual_gui`). Provider YAML may define **`surface_urls`** for extra HAR under `surface_probe/` ([`vpn_leaks/checks/surface_probe.py`](vpn_leaks/checks/surface_probe.py)).
+- **Reports:** [`vpn_report.md.j2`](vpn_leaks/reporting/templates/vpn_report.md.j2) adds an **Executive summary (SPEC framework)** rollup; per-run **SPEC framework** subsection. Docs: [docs/framework.md](docs/framework.md).
 
 ## 2026-04-10 — Systematic methodology, NS glue attribution, exposure graph
 

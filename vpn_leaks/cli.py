@@ -18,11 +18,14 @@ from vpn_leaks.auto_connection import (
     find_prior_run_with_same_exit,
     quick_exit_ip,
 )
+from vpn_leaks.checks.baseline import write_baseline_json
 from vpn_leaks.checks.competitor_probes import run_competitor_probes
 from vpn_leaks.checks.dns import run_dns_checks_sync
 from vpn_leaks.checks.fingerprint import run_fingerprint_snapshot
 from vpn_leaks.checks.ip_check import run_ip_check_sync
 from vpn_leaks.checks.ipv6 import run_ipv6_checks_sync
+from vpn_leaks.checks.surface_probe import run_surface_probes
+from vpn_leaks.checks.transition_tests import run_transition_tests
 from vpn_leaks.checks.webrtc import run_webrtc_check
 from vpn_leaks.checks.yourinfo_probe import run_yourinfo_probe
 from vpn_leaks.config_loader import (
@@ -31,6 +34,7 @@ from vpn_leaks.config_loader import (
     load_vpn_config,
     repo_root,
 )
+from vpn_leaks.framework import apply_framework
 from vpn_leaks.models import ArtifactIndex, NormalizedRun, RunnerEnv
 from vpn_leaks.policy.fetch_policy import fetch_policies
 from vpn_leaks.reporting.exposure_graph import write_exposure_graph
@@ -118,6 +122,13 @@ def cmd_run(args: argparse.Namespace) -> int:
     run_id = args.run_id or _utc_run_id(slug)
     run_root = runs_root / run_id
     run_root.mkdir(parents=True, exist_ok=True)
+
+    baseline_rel: str | None = None
+    if args.capture_baseline:
+        bp = run_root / "raw" / "baseline.json"
+        write_baseline_json(bp, leak_cfg)
+        baseline_rel = str(bp.relative_to(repo_root()))
+        run_extra["baseline_path"] = baseline_rel
 
     manifest = build_manifest(run_id=run_id, vpn_provider=slug)
     (run_root / "run.json").write_text(
@@ -263,6 +274,28 @@ def cmd_run(args: argparse.Namespace) -> int:
                 skip_stray_json=args.skip_competitor_stray_json,
             )
 
+            loc_extra: dict[str, object] = dict(run_extra)
+            surface_data = run_surface_probes(
+                vpn_config,
+                raw_base=raw_base,
+                services_contacted=services_contacted,
+            )
+            if surface_data:
+                loc_extra["surface_probe"] = surface_data
+
+            if args.transition_tests and not skip_vpn:
+                tr = run_transition_tests(
+                    leak_cfg=leak_cfg,
+                    raw_dir=raw_base,
+                    connection_mode=mode,
+                    adapter=adapter,
+                    loc=loc,
+                    stabilize=stabilize,
+                    log=log,
+                )
+                if tr is not None:
+                    loc_extra["transition_tests"] = tr
+
             if not skip_vpn:
                 log(f"disconnect: {loc_id}")
                 adapter.disconnect()
@@ -279,6 +312,16 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if (raw_base / "yourinfo_probe").is_dir()
                 else None
             )
+            surf_rel = (
+                str((raw_base / "surface_probe").relative_to(repo_root()))
+                if (raw_base / "surface_probe").is_dir()
+                else None
+            )
+            trans_rel = (
+                str((raw_base / "transitions.json").relative_to(repo_root()))
+                if (raw_base / "transitions.json").is_file()
+                else None
+            )
             artifacts = ArtifactIndex(
                 connect_log=str((run_root / "raw" / "connect.log").relative_to(repo_root())),
                 ip_check_json=str((raw_base / "ip-check.json").relative_to(repo_root())),
@@ -290,6 +333,9 @@ def cmd_run(args: argparse.Namespace) -> int:
                 policy_dir=str(policy_dir.relative_to(repo_root())),
                 competitor_probe_dir=comp_rel,
                 yourinfo_probe_dir=yi_rel,
+                baseline_json=baseline_rel,
+                surface_probe_dir=surf_rel,
+                transitions_json=trans_rel,
             )
 
             normalized = NormalizedRun(
@@ -304,7 +350,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 vpn_location_id=loc_id,
                 vpn_location_label=loc_label,
                 connection_mode=mode,
-                extra=dict(run_extra),
+                extra=loc_extra,
                 exit_ip_v4=v4,
                 exit_ip_v6=v6,
                 exit_ip_sources=exit_sources,
@@ -325,6 +371,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                 competitor_surface=competitor_surface,
                 yourinfo_snapshot=yourinfo_snapshot,
             )
+            if not args.no_framework:
+                normalized = apply_framework(normalized)
 
             norm_path.parent.mkdir(parents=True, exist_ok=True)
             norm_path.write_text(normalized.model_dump_json(indent=2), encoding="utf-8")
@@ -429,6 +477,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-yourinfo",
         action="store_true",
         help="Skip loading yourinfo.ai benchmark (Playwright HAR + excerpt)",
+    )
+    pr.add_argument(
+        "--no-framework",
+        action="store_true",
+        help="Skip SPEC framework synthesis (findings, coverage, risk in normalized.json)",
+    )
+    pr.add_argument(
+        "--capture-baseline",
+        action="store_true",
+        help=(
+            "Write raw/baseline.json at run start; disconnect VPN first for a true ISP baseline"
+        ),
+    )
+    pr.add_argument(
+        "--transition-tests",
+        action="store_true",
+        help="After probes, poll exit IP across disconnect/reconnect (non-manual_gui only)",
     )
     pr.set_defaults(func=cmd_run, auto_location=True)
 

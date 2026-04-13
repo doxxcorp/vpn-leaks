@@ -32,6 +32,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
 | Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates | `VPNs/<SLUG>.md`, `PROVIDERS/AS<n>.md`, `graph-export` JSON |
+| SPEC framework | [vpn_leaks/framework/](vpn_leaks/framework/), [configs/framework/](configs/framework/) | Question bank, coverage, findings, risk scores embedded as `normalized.json` → `framework` (skip with `--no-framework`); see [docs/framework.md](docs/framework.md) |
 | Viewer | [viewer/](viewer/) | 3D graph of `graph-export` output (static HTML + CDN) |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
 | Tests | [tests/](tests/) | pytest, mocks for network where applicable |
@@ -106,6 +107,7 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 | [docs/spec.md](docs/spec.md) | Operational spec |
 | [docs/methodology.md](docs/methodology.md) | Run order |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
+| [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
 | [progress.md](progress.md) | Project progress, Nord run table, policy notes |
 
 ---

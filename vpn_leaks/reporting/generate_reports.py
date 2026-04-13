@@ -22,6 +22,7 @@ REPORT_YOURINFO_TEXT_MAX = 3500
 WEBRTC_CANDIDATES_MAX = 20
 SERVICES_CONTACTED_MAX = 250
 WEBRTC_RAW_CELL_MAX = 200
+REPORT_FRAMEWORK_JSON_MAX = 400_000
 
 
 def _jinja_env() -> Environment:
@@ -35,7 +36,10 @@ def _jinja_env() -> Environment:
 def collect_normalized_runs(
     provider_slug: str | None = None,
 ) -> list[tuple[str, Path, dict[str, Any]]]:
-    """Return list of (run_id, path, data) for normalized.json under runs/. Filter by provider or all."""
+    """Return (run_id, path, data) for each normalized.json under runs/.
+
+    Filter by provider slug or include all.
+    """
     runs = repo_root() / "runs"
     if not runs.is_dir():
         return []
@@ -74,6 +78,53 @@ def _fence_json(
     if truncated:
         body = body[:max_chars] + "\n…"
     return f"```{label}\n{body}\n```", truncated
+
+
+def build_framework_rollup(
+    rows: list[tuple[str, Path, dict[str, Any]]],
+) -> dict[str, Any]:
+    """Aggregate SPEC framework coverage and risk across runs."""
+    cov = {
+        "answered": 0,
+        "partially_answered": 0,
+        "unanswered": 0,
+        "not_testable_dynamically": 0,
+    }
+    top_findings: list[dict[str, Any]] = []
+    order = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
+    def mx(a: str, b: str) -> str:
+        try:
+            return a if order.index(a) >= order.index(b) else b
+        except ValueError:
+            return b
+
+    max_overall = "INFO"
+    has_fw = False
+    for _rid, _p, data in rows:
+        fw = data.get("framework")
+        if not fw:
+            continue
+        has_fw = True
+        rs = fw.get("risk_scores") or {}
+        max_overall = mx(max_overall, str(rs.get("overall_severity") or "INFO"))
+        for qc in fw.get("question_coverage") or []:
+            if not isinstance(qc, dict):
+                continue
+            st = qc.get("answer_status")
+            if st in cov:
+                cov[str(st)] += 1
+        for f in fw.get("findings") or []:
+            if not isinstance(f, dict):
+                continue
+            if f.get("severity") in ("HIGH", "CRITICAL"):
+                top_findings.append(f)
+    return {
+        "has_framework": has_fw,
+        "coverage_counts": cov,
+        "max_overall_severity": max_overall,
+        "top_findings": top_findings[:25],
+    }
 
 
 def build_detailed_runs(
@@ -171,7 +222,8 @@ def build_detailed_runs(
 
         if fp and fp_trunc:
             truncation_notes.append(
-                "`fingerprint_snapshot` excerpt exceeded size cap; full object in `normalized.json`."
+                "`fingerprint_snapshot` excerpt exceeded size cap; "
+                "full object in `normalized.json`."
             )
 
         attribution_block, t = _fence_json(
@@ -181,7 +233,8 @@ def build_detailed_runs(
         )
         if t:
             truncation_notes.append(
-                "`attribution` excerpt exceeded size cap (large API `raw` blobs); full object in `normalized.json`."
+                "`attribution` excerpt exceeded size cap (large API `raw` blobs); "
+                "full object in `normalized.json`."
             )
 
         policies_block, t = _fence_json("json", data.get("policies") or [])
@@ -214,7 +267,8 @@ def build_detailed_runs(
             )
             if t:
                 truncation_notes.append(
-                    "`yourinfo_snapshot` JSON excerpt exceeded size cap; full object in `normalized.json`."
+                    "`yourinfo_snapshot` JSON excerpt exceeded size cap; "
+                    "full object in `normalized.json`."
                 )
         else:
             yourinfo_snapshot_block = None
@@ -223,15 +277,40 @@ def build_detailed_runs(
             isinstance(yi, dict) and yi.get("text_excerpt_truncated")
         ):
             truncation_notes.append(
-                "YourInfo **visible text excerpt** below is length-capped; full text in raw `yourinfo_probe/` and `normalized.json`."
+                "YourInfo **visible text excerpt** below is length-capped; "
+                "full text in raw `yourinfo_probe/` and `normalized.json`."
             )
+
+        fw_raw = data.get("framework")
+        framework_block: str | None = None
+        framework_risk_line = ""
+        if fw_raw:
+            framework_block, fw_t = _fence_json(
+                "json",
+                fw_raw,
+                max_chars=REPORT_FRAMEWORK_JSON_MAX,
+            )
+            if fw_t:
+                truncation_notes.append(
+                    "`framework` excerpt exceeded size cap; full object in `normalized.json`."
+                )
+            rs_fw = fw_raw.get("risk_scores") or {}
+            if isinstance(rs_fw, dict):
+                o = rs_fw.get("overall_severity", "—")
+                lk = rs_fw.get("leak_severity", "—")
+                tp = rs_fw.get("third_party_exposure", "—")
+                cr = rs_fw.get("correlation_risk", "—")
+                framework_risk_line = (
+                    f"Overall **{o}** · leak **{lk}** · third-party **{tp}** · correlation **{cr}**"
+                )
 
         full_normalized_block, t = _fence_json(
             "json", data, max_chars=REPORT_FULL_NORMALIZED_MAX
         )
         if t:
             truncation_notes.append(
-                "**Complete normalized record** below exceeded ~2 MiB cap; open `normalized.json` on disk for the full file."
+                "**Complete normalized record** below exceeded ~2 MiB cap; "
+                "open `normalized.json` on disk for the full file."
             )
 
         if svc_note:
@@ -284,6 +363,9 @@ def build_detailed_runs(
                 "yourinfo_text_truncated": yi_trunc or bool(
                     isinstance(yi, dict) and yi.get("text_excerpt_truncated"),
                 ),
+                "framework_block": framework_block,
+                "framework_risk_line": framework_risk_line,
+                "has_framework": bool(fw_raw),
                 "full_normalized_block": full_normalized_block,
                 "truncation_notes": truncation_notes,
                 "has_truncated_blocks": bool(truncation_notes),
@@ -329,6 +411,7 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
             asn_notes.setdefault(asn, att.get("holder") or "")
 
     detailed_runs = build_detailed_runs(rows)
+    framework_rollup = build_framework_rollup(rows)
 
     env = _jinja_env()
     tpl = env.get_template("vpn_report.md.j2")
@@ -343,6 +426,7 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         asn_notes=[(a, asn_notes[a]) for a in sorted(asn_notes.keys())],
         detailed_runs=detailed_runs,
         run_count=len(rows),
+        framework_rollup=framework_rollup,
     )
     out_dir = repo_root() / "VPNs"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -426,15 +510,15 @@ def write_run_summary(run_root: Path, normalized_paths: list[Path]) -> Path:
 
     if slug:
         safe = slug.upper().replace("-", "_")
-        lines.extend(
-            [
-                "",
-                "## Aggregated report",
-                "",
-                f"- Markdown rollup (matrix plus **Detailed runs** for each location): `VPNs/{safe}.md` — regenerate with `vpn-leaks report --provider {slug}`",
-                "- Canonical JSON for each location: `runs/<run_id>/locations/<location_id>/normalized.json` (paths listed above).",
-            ],
+        rollup = (
+            f"- Markdown rollup (matrix plus **Detailed runs** per location): "
+            f"`VPNs/{safe}.md` — regenerate with `vpn-leaks report --provider {slug}`"
         )
+        canon = (
+            "- Canonical JSON per location: "
+            "`runs/<run_id>/locations/<location_id>/normalized.json` (paths above)."
+        )
+        lines.extend(["", "## Aggregated report", "", rollup, canon])
 
     out = run_root / "summary.md"
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")

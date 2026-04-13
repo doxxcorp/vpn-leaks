@@ -1,0 +1,35 @@
+# Domain/host → endpoint class (SPEC §12). Longest suffix match wins; overrides first.
+version: "1"
+overrides:
+  api.ipify.org: third_party_analytics
+  ipwho.is: unknown
+  yourinfo.ai: unknown
+
+suffix_rules:
+  - suffix: google-analytics.com
+    classification: third_party_analytics
+    confidence: 0.9
+  - suffix: googletagmanager.com
+    classification: third_party_tag_manager
+    confidence: 0.9
+  - suffix: cloudflare.com
+    classification: third_party_cdn
+    confidence: 0.75
+  - suffix: cloudflare.net
+    classification: third_party_cdn
+    confidence: 0.75
+  - suffix: fastly.net
+    classification: third_party_cdn
+    confidence: 0.75
+  - suffix: akamai.net
+    classification: third_party_cdn
+    confidence: 0.75
+  - suffix: amazonaws.com
+    classification: cloud_host
+    confidence: 0.6
+  - suffix: sentry.io
+    classification: third_party_crash
+    confidence: 0.85
+  - suffix: segment.io
+    classification: third_party_telemetry
+    confidence: 0.8

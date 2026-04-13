@@ -32,5 +32,7 @@ def test_build_detailed_runs_minimal() -> None:
     assert dr[0]["yourinfo_snapshot_block"] is None
     assert dr[0]["competitor_surface_kind"] == "absent"
     assert dr[0]["competitor_surface_block"] is None
+    assert dr[0]["has_framework"] is False
+    assert dr[0]["framework_block"] is None
     assert isinstance(dr[0]["truncation_notes"], list)
     assert dr[0]["has_truncated_blocks"] is False

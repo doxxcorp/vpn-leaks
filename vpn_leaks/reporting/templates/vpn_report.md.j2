@@ -17,6 +17,30 @@
 | Connection modes observed | {{ connection_modes | join(", ") }} |
 | Locations covered | {{ locations | length }} |
 
+## Executive summary (SPEC framework)
+
+{% if framework_rollup.has_framework %}
+- **Rollup severity (max across runs):** `{{ framework_rollup.max_overall_severity }}`
+- **Question coverage (aggregated across all benchmark rows):**
+  - answered: {{ framework_rollup.coverage_counts.answered }}
+  - partially answered: {{ framework_rollup.coverage_counts.partially_answered }}
+  - unanswered: {{ framework_rollup.coverage_counts.unanswered }}
+  - not testable dynamically: {{ framework_rollup.coverage_counts.not_testable_dynamically }}
+
+**Top severity findings (HIGH/CRITICAL)**
+
+{% if framework_rollup.top_findings | length == 0 %}
+- *None flagged in this rollup.*
+{% else %}
+{% for f in framework_rollup.top_findings %}
+- **[{{ f.severity }}]** {{ f.title }} — {{ f.kind }} ({{ f.category }})
+{% endfor %}
+{% endif %}
+
+{% else %}
+*No `framework` block on these `normalized.json` files — regenerate runs without `--no-framework` (default) or re-run `vpn-leaks run` on a current build.*
+{% endif %}
+
 ## Leak summary
 
 | Location | DNS leak | WebRTC leak | IPv6 leak |
@@ -164,6 +188,16 @@ Large JSON fields use size caps in this markdown file; when an excerpt hits a ca
 {% endif %}
 {% else %}
 *No YourInfo snapshot on this record — e.g. `--skip-yourinfo`, probe not run, or capture empty.*
+{% endif %}
+
+#### SPEC framework (findings, coverage, risk)
+
+{% if dr.has_framework %}
+{{ dr.framework_risk_line }}
+
+{{ dr.framework_block }}
+{% else %}
+*No framework synthesis on this record (older run or `--no-framework`).*
 {% endif %}
 
 #### Competitor surface (provider YAML probes)

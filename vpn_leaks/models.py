@@ -86,6 +86,18 @@ class ArtifactIndex(BaseModel):
         default=None,
         description="Raw JSON/HAR from yourinfo.ai benchmark load",
     )
+    baseline_json: str | None = Field(
+        default=None,
+        description="Pre-VPN baseline snapshot under raw/baseline.json",
+    )
+    surface_probe_dir: str | None = Field(
+        default=None,
+        description="HAR/JSON from surface URL matrix under raw/.../surface_probe/",
+    )
+    transitions_json: str | None = Field(
+        default=None,
+        description="Optional transition poll log raw/.../transitions.json",
+    )
 
 
 class CompetitorSurfaceSnapshot(BaseModel):
@@ -99,10 +111,81 @@ class CompetitorSurfaceSnapshot(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+class EvidenceRef(BaseModel):
+    """Pointer to raw artifact and/or normalized field (SPEC §11)."""
+
+    artifact_path: str | None = None
+    normalized_pointer: str | None = None
+    note: str | None = None
+
+
+class Finding(BaseModel):
+    """Structured assessment row (SPEC §6.4, §17)."""
+
+    id: str
+    category: str
+    title: str
+    description: str
+    severity: str = Field(description="INFO | LOW | MEDIUM | HIGH | CRITICAL")
+    confidence: str = Field(description="LOW | MEDIUM | HIGH")
+    kind: str = Field(description="observed | inferred | hypothesis")
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    affected_data_types: list[str] = Field(default_factory=list)
+    recipients: list[str] = Field(default_factory=list)
+    test_conditions: str | None = None
+    reproducibility_notes: str | None = None
+
+
+class QuestionCoverageRecord(BaseModel):
+    """Per-question coverage (SPEC §6.5, §19)."""
+
+    question_id: str
+    question_text: str = ""
+    category: str = ""
+    testability: str = ""
+    answer_status: str = Field(
+        description="answered | partially_answered | unanswered | not_testable_dynamically",
+    )
+    answer_summary: str = ""
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    notes: str | None = None
+
+
+class RiskScores(BaseModel):
+    """Aggregate scoring (SPEC §17)."""
+
+    overall_severity: str = "INFO"
+    leak_severity: str = "INFO"
+    correlation_risk: str = "LOW"
+    third_party_exposure: str = "LOW"
+    notes: list[str] = Field(default_factory=list)
+
+
+class ObservedEndpoint(BaseModel):
+    """Classified host (SPEC §6.3, §12)."""
+
+    host: str
+    classification: str = "unknown"
+    confidence: float = Field(ge=0.0, le=1.0, default=0.5)
+    source: str = ""
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+
+
+class FrameworkResult(BaseModel):
+    """Synthesized framework output embedded in normalized.json (SPEC §18.2)."""
+
+    question_bank_version: str = ""
+    test_matrix_version: str = ""
+    findings: list[Finding] = Field(default_factory=list)
+    question_coverage: list[QuestionCoverageRecord] = Field(default_factory=list)
+    risk_scores: RiskScores = Field(default_factory=RiskScores)
+    observed_endpoints: list[ObservedEndpoint] = Field(default_factory=list)
+
+
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.3"
+    schema_version: str = "1.4"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)
@@ -145,5 +228,9 @@ class NormalizedRun(BaseModel):
     yourinfo_snapshot: dict[str, Any] | None = Field(
         default=None,
         description="yourinfo.ai page capture (HAR + excerpt); see raw/.../yourinfo_probe/",
+    )
+    framework: FrameworkResult | None = Field(
+        default=None,
+        description="Findings, coverage, risk scores (SPEC framework)",
     )
     extra: dict[str, Any] = Field(default_factory=dict)

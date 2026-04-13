@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import time
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin

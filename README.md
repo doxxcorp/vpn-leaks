@@ -7,6 +7,7 @@
 Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, WebRTC, underlay ASN attribution, policy capture, always-on **yourinfo.ai** load (Playwright HAR + excerpt; skip with `--skip-yourinfo`), and optional **competitor-surface** probes (provider DNS, web/CDN/HAR, portals, transit, stray JSON) via `competitor_probe` in `configs/vpns/<slug>.yaml`. The **`vpn-leaks report`** rollup mirrors normalized fields per run (large JSON may be truncated; see each `normalized.json` for full fidelity).
 
 - **Operational overview:** [docs/spec.md](docs/spec.md)  
+- **SPEC framework (question bank, coverage):** [docs/framework.md](docs/framework.md)  
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
 - **Fields & paths:** [docs/data-dictionary.md](docs/data-dictionary.md)  
 - **Full product spec:** [vpn-leaks.md](vpn-leaks.md)
