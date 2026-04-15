@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-10 (reports / preview note)._
+_Last updated: 2026-04-15 (HTML dashboard + SPEC coverage handoff)._
 
 ---
 
@@ -31,7 +31,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes` |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
-| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates | `VPNs/<SLUG>.md`, `PROVIDERS/AS<n>.md`, `graph-export` JSON |
+| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (visual-first dashboard; full markdown in collapsible appendix), `PROVIDERS/AS<n>.md`, `graph-export` JSON |
 | SPEC framework | [vpn_leaks/framework/](vpn_leaks/framework/), [configs/framework/](configs/framework/) | Question bank, coverage, findings, risk scores embedded as `normalized.json` → `framework` (skip with `--no-framework`); see [docs/framework.md](docs/framework.md) |
 | Viewer | [viewer/](viewer/) | 3D graph of `graph-export` output (static HTML + CDN) |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
@@ -48,7 +48,7 @@ playwright install chromium
 # After VPN is connected (manual app) — auto location via ipwho.is:
 vpn-leaks run --provider nordvpn --skip-vpn
 
-# Aggregated markdown from all runs for that provider under runs/:
+# Aggregated markdown + HTML dashboard from all runs for that provider under runs/:
 vpn-leaks report --provider nordvpn
 
 # Per-ASN underlay report:
@@ -73,10 +73,12 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 | Output | Location |
 |--------|----------|
 | Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, optional **competitor_probe/**) |
-| Per-provider rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` (summary + **detailed per-run sections** from `normalized.json`; slug uppercased, `-` → `_`) |
+| Per-provider rollup | `vpn-leaks report --provider <slug>` → **`VPNs/<SLUG>.md`** (full narrative) and **`VPNs/<SLUG>.html`** (dashboard: risk strip, location cards, third-party signals, SPEC by category, coverage bar, embedded 3D exposure graph; slug uppercased, `-` → `_`) |
 | Per-ASN rollup | `PROVIDERS/AS<n>.md` |
 
-**Viewing `VPNs/<SLUG>.md`:** The report opens with **How to read** (rollup vs **Detailed runs**), then a **numbered index** of runs. The bulk of the data is under **`## Detailed runs`**. If a JSON excerpt is capped, a **note** at the top of that run lists what was shortened; **on-disk `normalized.json` is always complete**. In **Markdown preview**, still **scroll** or open as **plain text** for very large sections.
+**Viewing `VPNs/<SLUG>.html`:** Prefer the **HTML** file for a **visual-first** read: severity, leak chips, per-location cards, optional competitor/third-party panel, SPEC accordions, coverage visualization, and the same **exposure graph** as `graph-export`. The complete markdown-derived report lives in a **collapsed** section (“Full narrative export”). Styles and logo ship from [`vpn_leaks/reporting/static/`](vpn_leaks/reporting/static/) (embedded at render time; aligned with the org **style** repo / doxx design tokens).
+
+**Viewing `VPNs/<SLUG>.md`:** The markdown file opens with **How to read** (rollup vs **Detailed runs**), then a **numbered index** of runs. The bulk of the data is under **`## Detailed runs`**. If a JSON excerpt is capped, a **note** at the top of that run lists what was shortened; **on-disk `normalized.json` is always complete**. In **Markdown preview**, still **scroll** or open as **plain text** for very large sections.
 
 **`normalized.json`** is the canonical structured record for tooling and reports; see [docs/data-dictionary.md](docs/data-dictionary.md).
 
@@ -87,6 +89,12 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 - **NordVPN** ([configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml)): `policy_urls` points at **`https://my.nordaccount.com/legal/privacy-policy/`** because the marketing site `https://nordvpn.com/privacy-policy/` often returns **403** or Cloudflare interstitials to simple HTTP clients.
 - Implementation: browser-like **httpx** headers; **Playwright** fallback for Cloudflare challenges or thin SPA shells (e.g. Nord Account). Successful runs add `policy:playwright_chromium` to `services_contacted`.
 - **Older runs (2026-04-10)** may still show `fetch error: 403` in `policies` for the *previous* URL; new runs after the config change should have `sha256` and summary bullets. Re-run benchmarks if you need on-disk policy HTML under `raw/.../policy/`.
+
+---
+
+## SPEC coverage and `framework` rows
+
+[`vpn_leaks/framework/coverage.py`](vpn_leaks/framework/coverage.py) maps the question bank to per-run **answer_status** / summaries. Recent alignment work: **portal** and **web** probes both count for WEB/CTRL/SIGNUP/THIRDWEB-style questions; **BrowserLeaks** snapshots count toward fingerprint-style IDs; **EXIT-004** / **EXIT-005** / **IP-014** use structured summaries from `exit_dns.json`, `extra.exit_geo`, and `exit_ip_sources` when present. Provider YAML example with **`competitor_probe`** and **`policy_urls`**: [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml).
 
 ---
 
@@ -109,6 +117,7 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
 | [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
 | [progress.md](progress.md) | Project progress, Nord run table, policy notes |
+| [HANDOFF.md](HANDOFF.md) | This file: repo map, CLI, artifacts, agent next steps |
 
 ---
 
@@ -125,7 +134,7 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 2. Before changing behavior, skim **docs/spec.md** and **data-dictionary.md** so JSON fields stay consistent.
 3. After edits, run **`ruff check vpn_leaks tests`** and **`pytest tests -q`**.
 4. **Policy / fetch changes:** touch [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py) and consider Nord + one generic provider in tests.
-5. **Reporting changes:** [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py) and templates under `vpn_leaks/reporting/templates/`.
+5. **Reporting changes:** [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [static/report.css](vpn_leaks/reporting/static/report.css), and templates under `vpn_leaks/reporting/templates/` (especially `vpn_report_document.html.j2`).
 
 ---
 

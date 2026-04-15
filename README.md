@@ -67,7 +67,7 @@ Copy `.env.example` to `.env` and set variables referenced by your VPN config (c
 
 ## Configuration
 
-- `configs/vpns/<slug>.yaml` — provider, connection mode, credential env names (see `nordvpn.yaml` for GUI-app workflow).
+- `configs/vpns/<slug>.yaml` — provider, connection mode, credential env names (see `example.yaml`). If the file is missing, **`vpn-leaks run`** and **`vpn-leaks report`** create a minimal default YAML (slug must be `a-z0-9`, hyphens, underscores; lowercased for the filename) so you can edit and re-run.
 - `configs/tools/leak-tests.yaml` — endpoints, timeouts, STUN servers for WebRTC.
 - `configs/tools/attribution.yaml` — RIPEstat, Team Cymru, PeeringDB, optional GeoLite path.
 

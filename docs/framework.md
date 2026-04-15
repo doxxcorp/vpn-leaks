@@ -34,3 +34,7 @@ Implementations: [`vpn_leaks/framework/`](../vpn_leaks/framework/).
 ## Reports
 
 `vpn-leaks report --provider <slug>` includes an **Executive summary (SPEC framework)** section when any included `normalized.json` has a `framework` block.
+
+### HTML dashboard
+
+`VPNs/<SLUG>.html` is generated as a **visual-first** page: risk strip, per-location cards, leak summary chips, third-party / competitor signals when present, SPEC questions grouped by category (expandable), the coverage bar and **exposure graph** (same data as `vpn-leaks graph-export`), and the full markdown-derived narrative **collapsed** under **Full narrative export (markdown-derived)**. Styles and the doxx.net isotype are bundled from [`vpn_leaks/reporting/static/`](../vpn_leaks/reporting/static/) (design tokens aligned with the sibling [`style`](https://github.com/doxxcorp/style) repo; no Keystone fetch at report time).

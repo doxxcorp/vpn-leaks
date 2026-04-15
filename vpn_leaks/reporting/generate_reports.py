@@ -12,6 +12,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
 from vpn_leaks.config_loader import repo_root
+from vpn_leaks.reporting.coverage_rollup import build_framework_rollup_payload
+from vpn_leaks.reporting.html_dashboard import build_html_dashboard_context
 
 # Default cap for medium-sized fenced JSON (DNS, exit sources, policies, artifacts).
 REPORT_JSON_BLOCK_MAX = 120_000
@@ -33,6 +35,13 @@ def _jinja_env() -> Environment:
         loader=FileSystemLoader(str(tpl_dir)),
         autoescape=select_autoescape(enabled_extensions=(".html",)),
     )
+
+
+def _load_report_static_file(name: str) -> str:
+    p = Path(__file__).resolve().parent / "static" / name
+    if not p.is_file():
+        return ""
+    return p.read_text(encoding="utf-8")
 
 
 def _markdown_extensions() -> list[str]:
@@ -103,48 +112,8 @@ def _fence_json(
 def build_framework_rollup(
     rows: list[tuple[str, Path, dict[str, Any]]],
 ) -> dict[str, Any]:
-    """Aggregate SPEC framework coverage and risk across runs."""
-    cov = {
-        "answered": 0,
-        "partially_answered": 0,
-        "unanswered": 0,
-        "not_testable_dynamically": 0,
-    }
-    top_findings: list[dict[str, Any]] = []
-    order = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
-
-    def mx(a: str, b: str) -> str:
-        try:
-            return a if order.index(a) >= order.index(b) else b
-        except ValueError:
-            return b
-
-    max_overall = "INFO"
-    has_fw = False
-    for _rid, _p, data in rows:
-        fw = data.get("framework")
-        if not fw:
-            continue
-        has_fw = True
-        rs = fw.get("risk_scores") or {}
-        max_overall = mx(max_overall, str(rs.get("overall_severity") or "INFO"))
-        for qc in fw.get("question_coverage") or []:
-            if not isinstance(qc, dict):
-                continue
-            st = qc.get("answer_status")
-            if st in cov:
-                cov[str(st)] += 1
-        for f in fw.get("findings") or []:
-            if not isinstance(f, dict):
-                continue
-            if f.get("severity") in ("HIGH", "CRITICAL"):
-                top_findings.append(f)
-    return {
-        "has_framework": has_fw,
-        "coverage_counts": cov,
-        "max_overall_severity": max_overall,
-        "top_findings": top_findings[:25],
-    }
+    """Aggregate SPEC framework coverage and risk across runs (merged per question ID)."""
+    return build_framework_rollup_payload(rows)
 
 
 def build_detailed_runs(
@@ -460,6 +429,13 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
 
     exposure_payload = build_exposure_graph(provider_slug)
     html_tpl = env.get_template("vpn_report_document.html.j2")
+    report_css = _load_report_static_file("report.css")
+    logo_raw = _load_report_static_file("logo-isotype.svg")
+    dashboard = build_html_dashboard_context(
+        rows,
+        framework_rollup,
+        markdown_basename=f"{safe}.md",
+    )
     html_doc = html_tpl.render(
         document_title=f"{display_name} ({provider_slug})",
         generated_utc=generated_utc,
@@ -467,6 +443,9 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         framework_rollup=framework_rollup,
         exposure_graph_json=_json_for_html_script(exposure_payload),
         report_html=Markup(markdown_to_html_body(text)),
+        report_css=Markup(report_css) if report_css else Markup(""),
+        logo_svg=Markup(logo_raw) if logo_raw else Markup(""),
+        dashboard=dashboard,
     )
     html_path = out_dir / f"{safe}.html"
     html_path.write_text(html_doc, encoding="utf-8")

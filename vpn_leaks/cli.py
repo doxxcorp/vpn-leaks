@@ -33,6 +33,7 @@ from vpn_leaks.config_loader import (
     load_attribution_config,
     load_leak_tests_config,
     load_vpn_config,
+    normalize_provider_slug,
     repo_root,
 )
 from vpn_leaks.framework import apply_framework
@@ -54,8 +55,16 @@ def _utc_run_id(slug: str) -> str:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    slug = args.provider
-    vpn_config = load_vpn_config(slug)
+    try:
+        slug = normalize_provider_slug(args.provider)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    cfg_path = repo_root() / "configs" / "vpns" / f"{slug}.yaml"
+    missing_cfg = not cfg_path.is_file()
+    vpn_config = load_vpn_config(slug, create_if_missing=True)
+    if missing_cfg:
+        print(f"Created default VPN config: {cfg_path}", file=sys.stderr)
     leak_cfg = load_leak_tests_config()
     attr_cfg = load_attribution_config()
 
@@ -427,8 +436,16 @@ def cmd_graph_export(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    slug = args.provider
-    vpn_config = load_vpn_config(slug)
+    try:
+        slug = normalize_provider_slug(args.provider)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    cfg_path = repo_root() / "configs" / "vpns" / f"{slug}.yaml"
+    missing_cfg = not cfg_path.is_file()
+    vpn_config = load_vpn_config(slug, create_if_missing=True)
+    if missing_cfg:
+        print(f"Created default VPN config: {cfg_path}", file=sys.stderr)
     name = vpn_config.get("provider_name") or slug
     p = generate_vpn_report(slug, vpn_name=str(name))
     print(str(p))

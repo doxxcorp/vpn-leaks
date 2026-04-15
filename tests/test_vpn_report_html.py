@@ -79,10 +79,16 @@ def test_generate_vpn_report_writes_html(
     html_path = md_path.with_suffix(".html")
     assert md_path.is_file()
     assert html_path.is_file()
+    md_text = md_path.read_text(encoding="utf-8")
+    assert "## SPEC question coverage (full table)" in md_text
+    assert "one row per SPEC ID" in md_text
     html = html_path.read_text(encoding="utf-8")
-    assert "Visualizations" in html
+    assert "Coverage and graph" in html
     assert "SPEC framework coverage" in html
     assert "Exposure graph" in html
     assert "graph_schema" in html
     assert "stacked-bar" in html
-    assert "<article" in html or "report-body" in html
+    assert "report-appendix" in html
+    assert "Full narrative export" in html
+    assert "Benchmark locations" in html
+    assert "loc-grid" in html

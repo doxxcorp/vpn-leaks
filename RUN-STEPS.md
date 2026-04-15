@@ -335,7 +335,7 @@ runs/<run_id>/summary.md
 
 ## Aggregated report
 
-- Markdown rollup ... `VPNs/NORDVPN.md` — regenerate with `vpn-leaks report --provider nordvpn`
+- Markdown rollup `VPNs/NORDVPN.md` and the **dashboard HTML** `VPNs/NORDVPN.html` (visual-first layout, full narrative in a collapsible section) — regenerate with `vpn-leaks report --provider nordvpn`
 - Canonical JSON per location: `runs/<run_id>/locations/<location_id>/normalized.json`
 ```
 

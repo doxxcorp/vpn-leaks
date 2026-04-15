@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
+from vpn_leaks.config_loader import repo_root
 from vpn_leaks.framework.load import QuestionDef
-from vpn_leaks.models import EvidenceRef, NormalizedRun, QuestionCoverageRecord
+from vpn_leaks.models import CompetitorSurfaceSnapshot, EvidenceRef, NormalizedRun, QuestionCoverageRecord
 
 
 def _ev(field: str, note: str | None = None) -> EvidenceRef:
@@ -39,21 +43,122 @@ def _not_dynamic(q: QuestionDef, reason: str) -> QuestionCoverageRecord:
     )
 
 
+def _has_web_or_portal_probes(cs: CompetitorSurfaceSnapshot | None) -> bool:
+    if not cs:
+        return False
+    return bool(cs.web_probes or cs.portal_probes)
+
+
+def _has_browserleaks_data(run: NormalizedRun) -> bool:
+    bl = run.browserleaks_snapshot
+    if not isinstance(bl, dict) or not bl:
+        return False
+    pages = bl.get("pages")
+    if isinstance(pages, list) and len(pages) > 0:
+        return True
+    return bool(bl)
+
+
+def _read_exit_dns_payload(run: NormalizedRun) -> dict[str, Any] | None:
+    art = run.artifacts
+    if not art or not art.exit_dns_json:
+        return None
+    path = repo_root() / art.exit_dns_json
+    if not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return raw if isinstance(raw, dict) else None
+
+
+def _collect_ptr_names(payload: dict[str, Any]) -> list[str]:
+    out: list[str] = []
+    for key in ("ptr_v4", "ptr_v6"):
+        block = payload.get(key)
+        if not isinstance(block, dict):
+            continue
+        ptrs = block.get("ptr")
+        if isinstance(ptrs, list):
+            out.extend(str(p) for p in ptrs if p)
+    return sorted(set(out))
+
+
+def _exit_geo_vs_label_summary(run: NormalizedRun) -> str:
+    extra = run.extra if isinstance(run.extra, dict) else {}
+    geo = extra.get("exit_geo")
+    if not isinstance(geo, dict):
+        return "Use auto-location or manual label vs attribution country."
+    label = (run.vpn_location_label or "").strip()
+    glabel = str(geo.get("location_label") or "").strip()
+    gid = str(geo.get("location_id") or "").strip()
+    loc_id = (run.vpn_location_id or "").strip()
+    if glabel and label and glabel.lower() == label.lower():
+        return (
+            f"Consistent: exit_geo.location_label matches vpn_location_label ({label!r})."
+        )
+    if gid and loc_id and gid == loc_id:
+        return f"Consistent: exit_geo.location_id matches vpn_location_id ({loc_id!r})."
+    city = str(geo.get("city") or "").strip()
+    region = str(geo.get("region") or "").strip()
+    cc = str(geo.get("country_code") or "").strip()
+    if city and label and city.lower() in label.lower():
+        if not region or region.lower() in label.lower():
+            return (
+                f"Likely consistent: exit_geo city/region ({city}, {region}, {cc}) "
+                f"appear in vpn_location_label ({label!r})."
+            )
+    if glabel or city:
+        return (
+            f"Inconclusive or mismatch: exit_geo suggests {glabel or city or 'n/a'}; "
+            f"vpn_location_label={label!r}."
+        )
+    return "Compare extra.exit_geo fields to vpn_location_label."
+
+
+def _ip014_summary(run: NormalizedRun) -> tuple[str, str]:
+    """Return (status, summary) for IP-014."""
+    sources = list(run.exit_ip_sources or [])
+    v4s = [s.ipv4.strip() for s in sources if s.ipv4 and str(s.ipv4).strip()]
+    uniq = sorted(set(v4s))
+    if len(uniq) > 1:
+        return (
+            "partially_answered",
+            f"Disagreement: distinct IPv4 values across echo endpoints: {', '.join(uniq)}.",
+        )
+    if len(sources) <= 1:
+        return (
+            "partially_answered",
+            "Single echo endpoint or no multi-source data.",
+        )
+    ip = uniq[0] if uniq else "n/a"
+    return (
+        "partially_answered",
+        f"All {len(sources)} echo endpoints agree on IPv4 {ip}.",
+    )
+
+
 def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCoverageRecord:
     # Identity
     if q.id == "IDENTITY-001":
         has_fp = bool(run.fingerprint_snapshot)
         yi = run.yourinfo_snapshot or {}
         has_yi = bool(isinstance(yi, dict) and yi)
+        has_bl = _has_browserleaks_data(run)
         return _row(
             q,
             status="partially_answered",
             summary="Browser/session signals captured via fingerprint and optional YourInfo probe.",
-            refs=[_ev("fingerprint_snapshot"), _ev("yourinfo_snapshot")],
+            refs=[
+                _ev("fingerprint_snapshot"),
+                _ev("yourinfo_snapshot"),
+                _ev("browserleaks_snapshot"),
+            ],
             notes=(
                 None
-                if (has_fp or has_yi)
-                else "Limited identifiers without fingerprint/YourInfo data."
+                if (has_fp or has_yi or has_bl)
+                else "Limited identifiers without fingerprint/YourInfo/BrowserLeaks data."
             ),
         )
     if q.id == "IDENTITY-006":
@@ -67,18 +172,30 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
             refs=[_ev("services_contacted")],
         )
     if q.id == "IDENTITY-009":
+        has_fp = bool(run.fingerprint_snapshot)
+        has_bl = _has_browserleaks_data(run)
+        if has_fp and has_bl:
+            summ = (
+                "Fingerprint and BrowserLeaks captures present for re-identification risk assessment."
+            )
+        elif has_fp:
+            summ = "Fingerprint snapshot available for re-identification risk assessment."
+        elif has_bl:
+            summ = "BrowserLeaks probe data available for re-identification risk assessment."
+        else:
+            summ = "No fingerprint or BrowserLeaks snapshot; re-ID risk unassessed."
         return _row(
             q,
             status="partially_answered",
-            summary="Fingerprint snapshot available for re-identification risk assessment.",
-            refs=[_ev("fingerprint_snapshot")],
+            summary=summ,
+            refs=[_ev("fingerprint_snapshot"), _ev("browserleaks_snapshot")],
         )
 
     # Signup
     if q.id in ("SIGNUP-001", "SIGNUP-004", "SIGNUP-010"):
         cs = run.competitor_surface
-        has_web = bool(cs and cs.web_probes)
-        if not has_web:
+        has_surface = _has_web_or_portal_probes(cs)
+        if not has_surface:
             return _row(
                 q,
                 status="partially_answered",
@@ -113,14 +230,27 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
             notes="Configure competitor_probe.provider_domains.",
         )
     if q.id == "WEB-004":
-        if run.competitor_surface and run.competitor_surface.web_probes:
+        cs = run.competitor_surface
+        if cs and cs.web_probes:
             return _row(
                 q,
                 status="partially_answered",
                 summary="Response headers / CDN signatures captured in web probes.",
                 refs=[_ev("competitor_surface.web_probes")],
             )
-        return _row(q, status="unanswered", summary="", notes="No web probes in run.")
+        if cs and cs.portal_probes:
+            return _row(
+                q,
+                status="partially_answered",
+                summary="Response headers / CDN signatures captured in portal HTTPS probes.",
+                refs=[_ev("competitor_surface.portal_probes")],
+            )
+        return _row(
+            q,
+            status="unanswered",
+            summary="",
+            notes="No web or portal probes in run.",
+        )
     if q.id == "WEB-008":
         return _row(
             q,
@@ -222,17 +352,11 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
             notes=run.webrtc_notes,
         )
     if q.id == "IP-014":
-        if len(run.exit_ip_sources or []) > 1:
-            return _row(
-                q,
-                status="partially_answered",
-                summary="Multiple IP echo endpoints; compare exit_ip_sources for disagreement.",
-                refs=[_ev("exit_ip_sources")],
-            )
+        st, summ = _ip014_summary(run)
         return _row(
             q,
-            status="partially_answered",
-            summary="Single endpoint or no disagreement data.",
+            status=st,
+            summary=summ,
             refs=[_ev("exit_ip_sources")],
         )
 
@@ -259,14 +383,22 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
             refs=[_ev("services_contacted")],
         )
     if q.id == "CTRL-009":
-        if run.competitor_surface and run.competitor_surface.web_probes:
+        cs = run.competitor_surface
+        if cs and cs.web_probes:
             return _row(
                 q,
                 status="partially_answered",
                 summary="CDN/WAF hints from web headers.",
                 refs=[_ev("competitor_surface.web_probes")],
             )
-        return _row(q, status="unanswered", summary="", notes="No web probes.")
+        if cs and cs.portal_probes:
+            return _row(
+                q,
+                status="partially_answered",
+                summary="CDN/WAF hints from portal HTTPS probes.",
+                refs=[_ev("competitor_surface.portal_probes")],
+            )
+        return _row(q, status="unanswered", summary="", notes="No web or portal probes.")
 
     # Exit
     if q.id == "EXIT-001":
@@ -293,32 +425,64 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
             refs=[_ev("attribution")],
         )
     if q.id == "EXIT-004":
-        return _row(
-            q,
-            status="partially_answered",
-            summary="rDNS not always in merge; see raw attribution JSON if present.",
-            refs=[_ev("attribution")],
-        )
-    if q.id == "EXIT-005":
-        geo = (run.extra or {}).get("exit_geo") if isinstance(run.extra, dict) else None
-        if geo:
+        payload = _read_exit_dns_payload(run)
+        refs: list[EvidenceRef] = [_ev("artifacts.exit_dns_json")]
+        if payload is None:
             return _row(
                 q,
                 status="partially_answered",
-                summary="Compare extra.exit_geo to advertised location label.",
-                refs=[_ev("extra.exit_geo")],
+                summary="No exit_dns.json path or file not readable; PTR unknown.",
+                refs=[_ev("attribution")],
+            )
+        ptrs = _collect_ptr_names(payload)
+        if ptrs:
+            return _row(
+                q,
+                status="answered",
+                summary=f"PTR for exit: {', '.join(ptrs)}",
+                refs=refs,
+            )
+        err_bits: list[str] = []
+        for key in ("ptr_v4", "ptr_v6"):
+            block = payload.get(key)
+            if isinstance(block, dict) and block.get("error"):
+                err_bits.append(f"{key}: {block.get('error')}")
+        if err_bits:
+            return _row(
+                q,
+                status="partially_answered",
+                summary="PTR lookup errors: " + "; ".join(err_bits),
+                refs=refs,
             )
         return _row(
             q,
             status="partially_answered",
-            summary="Use auto-location or manual label vs attribution country.",
+            summary="PTR lookup completed; no reverse DNS records returned for exit IP(s).",
+            refs=refs,
+        )
+    if q.id == "EXIT-005":
+        geo = (run.extra or {}).get("exit_geo") if isinstance(run.extra, dict) else None
+        summ = _exit_geo_vs_label_summary(run)
+        if geo:
+            return _row(
+                q,
+                status="partially_answered",
+                summary=summ,
+                refs=[_ev("extra.exit_geo"), _ev("vpn_location_label")],
+            )
+        return _row(
+            q,
+            status="partially_answered",
+            summary=summ,
             refs=[_ev("vpn_location_label"), _ev("attribution")],
         )
 
     # Third-party web
     if q.id in ("THIRDWEB-001", "THIRDWEB-003", "THIRDWEB-012"):
         if run.competitor_surface and (
-            run.competitor_surface.web_probes or run.competitor_surface.errors
+            run.competitor_surface.web_probes
+            or run.competitor_surface.portal_probes
+            or run.competitor_surface.errors
         ):
             return _row(
                 q,
@@ -341,6 +505,13 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
                 status="partially_answered",
                 summary="Fingerprint snapshot present.",
                 refs=[_ev("fingerprint_snapshot")],
+            )
+        if _has_browserleaks_data(run):
+            return _row(
+                q,
+                status="partially_answered",
+                summary="BrowserLeaks probe pages captured (canvas/WebGL/tls signals in raw excerpts).",
+                refs=[_ev("browserleaks_snapshot")],
             )
         return _row(q, status="unanswered", summary="", notes="No fingerprint data.")
     if q.id == "FP-011":

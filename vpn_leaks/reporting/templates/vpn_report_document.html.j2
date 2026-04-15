@@ -4,155 +4,121 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>{{ document_title }}</title>
-  <style>
-    :root {
-      --bg: #0f1419;
-      --panel: #1a2332;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --border: #30363d;
-      --answered: #3fb950;
-      --partial: #d29922;
-      --unanswered: #f85149;
-      --nottest: #8b949e;
-    }
-    html { box-sizing: border-box; }
-    *, *::before, *::after { box-sizing: inherit; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-    }
-    .wrap {
-      max-width: 110ch;
-      margin: 0 auto;
-      padding: 1.25rem 1rem 3rem;
-    }
-    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
-    .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    section { margin-bottom: 2rem; }
-    section h2 {
-      font-size: 1.15rem;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0.35rem;
-      margin: 0 0 1rem;
-    }
-    section h3 { font-size: 1rem; margin: 1rem 0 0.5rem; color: var(--muted); font-weight: 600; }
-
-    .viz-panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1rem;
-    }
-    .fw-note { color: var(--muted); font-size: 0.9rem; margin: 0 0 0.75rem; }
-    .fw-severity { margin-bottom: 0.75rem; font-size: 0.95rem; }
-    .stacked-bar {
-      display: flex;
-      height: 28px;
-      border-radius: 4px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    .stacked-bar .seg { min-width: 2px; }
-    .stacked-bar .answered { background: var(--answered); }
-    .stacked-bar .partially_answered { background: var(--partial); }
-    .stacked-bar .unanswered { background: var(--unanswered); }
-    .stacked-bar .not_testable_dynamically { background: var(--nottest); }
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem 1.25rem;
-      margin-top: 0.75rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-    .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-
-    #exposure-graph {
-      width: 100%;
-      min-height: 420px;
-      border-radius: 6px;
-      background: #0d1117;
-      border: 1px solid var(--border);
-    }
-    .graph-blurb {
-      color: var(--muted);
-      font-size: 0.88rem;
-      margin: 0 0 0.75rem;
-      line-height: 1.45;
-    }
-    #graph-err {
-      padding: 12px;
-      background: #2a1515;
-      color: #f8d7da;
-      font-size: 14px;
-      white-space: pre-wrap;
-      border-radius: 6px;
-      margin-bottom: 0.5rem;
-    }
-
-    /* Markdown body */
-    .report-body {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.5rem;
-    }
-    .report-body h1 { font-size: 1.35rem; margin-top: 0; }
-    .report-body h2 { font-size: 1.15rem; border: none; padding: 0; margin: 1.5rem 0 0.75rem; }
-    .report-body h3 { font-size: 1.05rem; color: var(--text); margin: 1.25rem 0 0.5rem; }
-    .report-body h4 { font-size: 1rem; margin: 1rem 0 0.35rem; }
-    .report-body table {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 0.9rem;
-      margin: 0.75rem 0;
-    }
-    .report-body th, .report-body td {
-      border: 1px solid var(--border);
-      padding: 0.35rem 0.5rem;
-      text-align: left;
-    }
-    .report-body th { background: #161b22; }
-    .report-body pre {
-      overflow-x: auto;
-      padding: 0.75rem 1rem;
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.8rem;
-      line-height: 1.4;
-    }
-    .report-body code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; }
-    .report-body pre code { font-size: inherit; }
-    .report-body blockquote {
-      margin: 0.75rem 0;
-      padding: 0.5rem 1rem;
-      border-left: 4px solid var(--border);
-      color: var(--muted);
-    }
-    .report-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
-    .report-body ul, .report-body ol { padding-left: 1.35rem; }
-  </style>
+  <style>{{ report_css }}</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>{{ document_title }}</h1>
-    <p class="meta">Generated {{ generated_utc }} · HTML includes visualizations + full markdown report below.</p>
+  <div class="shell">
+    <header class="report-header anim-in">
+      {% if logo_svg %}
+      <div class="logo-wrap" aria-hidden="true">{{ logo_svg }}</div>
+      {% endif %}
+      <div>
+        <h1>{{ document_title }}</h1>
+        <p class="report-meta">
+          Generated {{ generated_utc }}
+          {% if dashboard.markdown_basename %}
+          · <a href="{{ dashboard.markdown_basename }}">Markdown export</a>
+          {% endif %}
+        </p>
+      </div>
+    </header>
 
-    <section id="visualizations" aria-labelledby="viz-heading">
-      <h2 id="viz-heading">Visualizations</h2>
+    <section class="risk-strip anim-in anim-delay-1" aria-label="Risk summary">
+      {% set sev = dashboard.max_overall_severity %}
+      <span class="severity-pill sev-{% if sev == 'CRITICAL' %}critical{% elif sev == 'HIGH' %}high{% elif sev == 'MEDIUM' %}medium{% elif sev == 'LOW' %}low{% else %}info{% endif %}">
+        Rollup {{ sev }}
+      </span>
+      <div class="leak-chips" aria-label="Leak flags across locations">
+        <span class="leak-chip {% if dashboard.leak_flags.dns %}on{% else %}off{% endif %}">DNS leak: {{ 'yes' if dashboard.leak_flags.dns else 'no' }}</span>
+        <span class="leak-chip {% if dashboard.leak_flags.webrtc %}on{% else %}off{% endif %}">WebRTC leak: {{ 'yes' if dashboard.leak_flags.webrtc else 'no' }}</span>
+        <span class="leak-chip {% if dashboard.leak_flags.ipv6 %}on{% else %}off{% endif %}">IPv6 leak: {{ 'yes' if dashboard.leak_flags.ipv6 else 'no' }}</span>
+      </div>
+      <span style="color:var(--color-muted);font-size:0.85rem;">{{ dashboard.run_count }} location(s)</span>
+    </section>
+
+    {% if dashboard.top_findings %}
+    <section class="viz-panel anim-in anim-delay-2" aria-labelledby="findings-h">
+      <h3 id="findings-h">High / critical findings</h3>
+      <ul class="findings-list">
+        {% for f in dashboard.top_findings %}
+        <li><strong>{{ f.severity }}</strong> — {{ f.title }} <span style="color:var(--color-muted)">({{ f.category }})</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <section aria-labelledby="loc-h" class="anim-in anim-delay-2">
+      <h2 class="section-title" id="loc-h">Benchmark locations</h2>
+      <div class="loc-grid">
+        {% for loc in dashboard.location_cards %}
+        <article class="loc-card">
+          <h3>{{ loc.location_label }}</h3>
+          <p class="loc-sub">{{ loc.run_id }} / {{ loc.location_id }}</p>
+          <dl>
+            <div class="data-row"><dt>Exit IPv4</dt><dd>{{ loc.exit_ip_v4 or '—' }}</dd></div>
+            {% if loc.exit_ip_v6 %}
+            <div class="data-row"><dt>Exit IPv6</dt><dd>{{ loc.exit_ip_v6 }}</dd></div>
+            {% endif %}
+            <div class="data-row"><dt>ASN</dt><dd>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</dd></div>
+            <div class="data-row"><dt>Mode</dt><dd>{{ loc.connection_mode }}</dd></div>
+            <div class="data-row"><dt>Resolvers</dt><dd style="text-align:left;max-width:65%">{{ loc.dns_summary }}</dd></div>
+          </dl>
+          <div class="flag-row">
+            <span class="badge {% if loc.dns_leak == true %}unanswered{% elif loc.dns_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">DNS</span>
+            <span class="badge {% if loc.webrtc_leak == true %}unanswered{% elif loc.webrtc_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">WebRTC</span>
+            <span class="badge {% if loc.ipv6_leak == true %}unanswered{% elif loc.ipv6_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">IPv6</span>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if dashboard.third_party.has_signals %}
+    <section class="tp-panel anim-in anim-delay-3" aria-labelledby="tp-h">
+      <h2 class="section-title" id="tp-h">Third-party and web surface</h2>
+      <p style="color:var(--color-muted);font-size:0.88rem;margin:0;">Signals from competitor / portal probes when present in runs.</p>
+      {% if dashboard.third_party.apex_domains %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Apex domains probed</p>
+      <ul class="mono-list">
+        {% for d in dashboard.third_party.apex_domains %}
+        <li>{{ d }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if dashboard.third_party.portal_hosts %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Portal hosts</p>
+      <ul class="mono-list">
+        {% for h in dashboard.third_party.portal_hosts %}
+        <li>{{ h }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if dashboard.third_party.tracker_candidates %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Tracker / analytics candidates (HAR)</p>
+      <ul class="mono-list">
+        {% for t in dashboard.third_party.tracker_candidates %}
+        <li>{{ t }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if dashboard.third_party.probe_urls_sample %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Web probe URLs (sample)</p>
+      <ul class="mono-list">
+        {% for u in dashboard.third_party.probe_urls_sample %}
+        <li>{{ u }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="viz-section anim-in anim-delay-3" id="visualizations" aria-labelledby="viz-heading">
+      <h2 class="section-title" id="viz-heading">Coverage and graph</h2>
 
       <div class="viz-panel">
         <h3>SPEC framework coverage</h3>
         {% if framework_rollup.has_framework %}
-        <p class="fw-severity">Rollup severity (max across runs): <strong>{{ framework_rollup.max_overall_severity }}</strong></p>
-        <p class="fw-note">Question coverage aggregated across benchmark rows (stacked bar = proportion of answers).</p>
+        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Bar shows share of IDs by status.</p>
         {% set c = framework_rollup.coverage_counts %}
         {% set total = (c.answered + c.partially_answered + c.unanswered + c.not_testable_dynamically) %}
         {% if total > 0 %}
@@ -163,36 +129,60 @@
           <span class="seg not_testable_dynamically" style="width: {{ (100 * c.not_testable_dynamically / total) }}%"></span>
         </div>
         <div class="legend">
-          <span><i class="dot" style="background:var(--answered)"></i> answered: {{ c.answered }}</span>
-          <span><i class="dot" style="background:var(--partial)"></i> partially answered: {{ c.partially_answered }}</span>
-          <span><i class="dot" style="background:var(--unanswered)"></i> unanswered: {{ c.unanswered }}</span>
-          <span><i class="dot" style="background:var(--nottest)"></i> not testable dynamically: {{ c.not_testable_dynamically }}</span>
+          <span><i class="dot" style="background:var(--color-answered)"></i> answered {{ c.answered }}</span>
+          <span><i class="dot" style="background:var(--color-partial)"></i> partial {{ c.partially_answered }}</span>
+          <span><i class="dot" style="background:var(--color-unanswered)"></i> unanswered {{ c.unanswered }}</span>
+          <span><i class="dot" style="background:var(--color-nottest)"></i> N/A dynamic {{ c.not_testable_dynamically }}</span>
         </div>
         {% else %}
-        <p class="fw-note">No question coverage entries found in framework blocks.</p>
+        <p class="graph-blurb">No coverage entries found.</p>
         {% endif %}
         {% else %}
-        <p class="fw-note">No <code>framework</code> block on these <code>normalized.json</code> files — regenerate runs without <code>--no-framework</code> or re-run <code>vpn-leaks run</code> on a current build.</p>
+        <p class="graph-blurb">No <code>framework</code> block on normalized runs. Re-run without <code>--no-framework</code>.</p>
         {% endif %}
       </div>
 
       <div class="viz-panel">
-        <h3>Exposure graph (dependency graph)</h3>
-        <p class="graph-blurb">
-          Interactive 3D view of the same nodes and edges as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>:
-          VPN, exit IP, attributed ASN, provider apex domains, DNS delegation, NS glue, and policy URLs. Rotate with the pointer; scroll to zoom.
-        </p>
+        <h3>Exposure graph</h3>
+        <p class="graph-blurb">Same graph as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>. Rotate and zoom.</p>
         <div id="graph-err" hidden></div>
         <div id="exposure-graph" role="application" aria-label="Exposure graph 3D visualization"></div>
       </div>
     </section>
 
-    <section id="report" aria-labelledby="report-heading">
-      <h2 id="report-heading">Report</h2>
+    {% if dashboard.has_framework and dashboard.spec_by_category %}
+    <section class="spec-zone anim-in anim-delay-4" aria-labelledby="spec-h">
+      <h2 class="section-title" id="spec-h">SPEC questions by category</h2>
+      {% for cat in dashboard.spec_by_category %}
+      <details class="spec-cat">
+        <summary>{{ cat.category | replace('_', ' ') }} <span style="color:var(--color-muted);font-weight:500;font-size:0.8rem;">({{ cat.questions | length }})</span></summary>
+        <div class="spec-table-wrap">
+          <table class="spec-table">
+            <thead>
+              <tr><th>ID</th><th>Status</th><th>Summary</th></tr>
+            </thead>
+            <tbody>
+              {% for q in cat.questions %}
+              <tr>
+                <td><code>{{ q.question_id }}</code></td>
+                <td><span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span></td>
+                <td>{{ q.answer_summary_short or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <details class="report-appendix anim-in anim-delay-4">
+      <summary>Full narrative export (markdown-derived)</summary>
       <article class="report-body">
         {{ report_html }}
       </article>
-    </section>
+    </details>
   </div>
 
   <script type="application/json" id="vpn-leaks-exposure-graph">{{ exposure_graph_json|safe }}</script>

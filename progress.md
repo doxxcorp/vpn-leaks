@@ -1,6 +1,23 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-12._
+_Last updated: 2026-04-15._
+
+## 2026-04-15 — HANDOFF.md refresh
+
+- **[HANDOFF.md](HANDOFF.md):** Updated for the **HTML dashboard** (`VPNs/<SLUG>.html`), [`html_dashboard.py`](vpn_leaks/reporting/html_dashboard.py), [`reporting/static/`](vpn_leaks/reporting/static/), **SPEC coverage** alignment notes, and the reporting table / CLI blurbs.
+
+## 2026-04-15 — VPN HTML report dashboard (visual-first)
+
+- **`vpn_report_document.html.j2`:** Replaced the single long markdown article with a **dashboard**: header + isotype, **risk strip** (rollup severity, leak chips), **location cards** (exit IP, ASN, resolver summary, flags), **third-party panel** when competitor data exists, **SPEC accordions** by category, existing **coverage bar** + **3D exposure graph**, and the full markdown HTML under **`<details class="report-appendix">`**.
+- **Static bundle:** [`vpn_leaks/reporting/static/report.css`](vpn_leaks/reporting/static/report.css) (doxx-aligned tokens, Syne + JetBrains Mono), [`logo-isotype.svg`](vpn_leaks/reporting/static/logo-isotype.svg) from the org style repo; CSS/logo embedded at render time via [`generate_reports.py`](vpn_leaks/reporting/generate_reports.py).
+- **Context:** [`vpn_leaks/reporting/html_dashboard.py`](vpn_leaks/reporting/html_dashboard.py) — `build_html_dashboard_context` for template props.
+- **Docs:** [docs/framework.md](docs/framework.md) HTML subsection; [RUN-STEPS.md](RUN-STEPS.md) aggregated report bullet.
+
+## 2026-04-15 — SPEC coverage parity and NordVPN example config
+
+- **`coverage.py`:** Question handlers align with **`scoring.py`**: **WEB-004**, **CTRL-009**, **SIGNUP-***, and **THIRDWEB-*** treat **`portal_probes`** like **`web_probes`**. **FP-001** / **IDENTITY-001** / **IDENTITY-009** count **`browserleaks_snapshot`** as fingerprint-class evidence. **EXIT-004** reads **`exit_dns.json`** via **`artifacts.exit_dns_json`** (PTR present → `answered`; empty/error → explicit partial summaries). **EXIT-005** and **IP-014** emit deterministic comparison text from **`extra.exit_geo`** / **`exit_ip_sources`**.
+- **`configs/vpns/nordvpn.yaml`:** **`policy_urls`**, **`competitor_probe`** (`provider_domains`, `probe_urls`, `portal_hosts`), and a comment pointing to **`--transition-tests`** for transition-phase questions.
+- **Tests:** [`tests/test_framework.py`](tests/test_framework.py) covers portal-only WEB-004, BrowserLeaks-only FP-001, IP-014 agreement, EXIT-005 consistency, EXIT-004 fixture read; [`tests/fixtures/exit_dns_no_ptr.json`](tests/fixtures/exit_dns_no_ptr.json).
 
 ## 2026-04-12 — SPEC framework (question bank, coverage, findings)
 

@@ -21,7 +21,7 @@
 
 {% if framework_rollup.has_framework %}
 - **Rollup severity (max across runs):** `{{ framework_rollup.max_overall_severity }}`
-- **Question coverage (aggregated across all benchmark rows):**
+- **Question coverage (merged across locations, one row per SPEC ID):** counts below sum to **{{ framework_rollup.merged_question_count }}** question(s) in the bank ({{ framework_rollup.question_bank_count }} total). Status for each ID is the **strictest** across benchmark rows: unanswered > partially answered > answered > not testable dynamically.
   - answered: {{ framework_rollup.coverage_counts.answered }}
   - partially answered: {{ framework_rollup.coverage_counts.partially_answered }}
   - unanswered: {{ framework_rollup.coverage_counts.unanswered }}
@@ -37,8 +37,36 @@
 {% endfor %}
 {% endif %}
 
+## SPEC question coverage (full table)
+
+| ID | Status | Category | Question | Summary | Next steps |
+|----|--------|----------|----------|---------|------------|
+{%- for row in framework_rollup.merged_coverage %}
+| `{{ row.question_id }}` | `{{ row.answer_status }}` | {{ row.category }} | {{ row.question_text_display }} | {{ row.answer_summary_display }} | {{ row.next_steps_display }} |
+{%- endfor %}
+
+## How to close gaps
+
+Questions still **unanswered** or only **partially answered** (merged status). Use **Next steps** above; this list is the same IDs in short form.
+
+{% if framework_rollup.gap_rows | length == 0 %}
+- *None — every question is either fully answered or marked not testable dynamically by the harness.*
+{% else %}
+{% for row in framework_rollup.gap_rows %}
+- **`{{ row.question_id }}`** (`{{ row.answer_status }}`): {{ row.next_steps_display }}
+{% endfor %}
+{% endif %}
+
+## Analysis of collected evidence
+
+{{ framework_rollup.coverage_analysis_md }}
+
 {% else %}
 *No `framework` block on these `normalized.json` files — regenerate runs without `--no-framework` (default) or re-run `vpn-leaks run` on a current build.*
+
+{% if framework_rollup.coverage_analysis_md %}
+{{ framework_rollup.coverage_analysis_md }}
+{% endif %}
 {% endif %}
 
 ## Leak summary
