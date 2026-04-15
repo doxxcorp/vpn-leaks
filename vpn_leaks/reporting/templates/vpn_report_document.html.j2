@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ document_title }}</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --answered: #3fb950;
+      --partial: #d29922;
+      --unanswered: #f85149;
+      --nottest: #8b949e;
+    }
+    html { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: inherit; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 110ch;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 3rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    section { margin-bottom: 2rem; }
+    section h2 {
+      font-size: 1.15rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.35rem;
+      margin: 0 0 1rem;
+    }
+    section h3 { font-size: 1rem; margin: 1rem 0 0.5rem; color: var(--muted); font-weight: 600; }
+
+    .viz-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .fw-note { color: var(--muted); font-size: 0.9rem; margin: 0 0 0.75rem; }
+    .fw-severity { margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .stacked-bar {
+      display: flex;
+      height: 28px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .stacked-bar .seg { min-width: 2px; }
+    .stacked-bar .answered { background: var(--answered); }
+    .stacked-bar .partially_answered { background: var(--partial); }
+    .stacked-bar .unanswered { background: var(--unanswered); }
+    .stacked-bar .not_testable_dynamically { background: var(--nottest); }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+    #exposure-graph {
+      width: 100%;
+      min-height: 420px;
+      border-radius: 6px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+    }
+    .graph-blurb {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin: 0 0 0.75rem;
+      line-height: 1.45;
+    }
+    #graph-err {
+      padding: 12px;
+      background: #2a1515;
+      color: #f8d7da;
+      font-size: 14px;
+      white-space: pre-wrap;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Markdown body */
+    .report-body {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+    .report-body h1 { font-size: 1.35rem; margin-top: 0; }
+    .report-body h2 { font-size: 1.15rem; border: none; padding: 0; margin: 1.5rem 0 0.75rem; }
+    .report-body h3 { font-size: 1.05rem; color: var(--text); margin: 1.25rem 0 0.5rem; }
+    .report-body h4 { font-size: 1rem; margin: 1rem 0 0.35rem; }
+    .report-body table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.9rem;
+      margin: 0.75rem 0;
+    }
+    .report-body th, .report-body td {
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.5rem;
+      text-align: left;
+    }
+    .report-body th { background: #161b22; }
+    .report-body pre {
+      overflow-x: auto;
+      padding: 0.75rem 1rem;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+    .report-body code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; }
+    .report-body pre code { font-size: inherit; }
+    .report-body blockquote {
+      margin: 0.75rem 0;
+      padding: 0.5rem 1rem;
+      border-left: 4px solid var(--border);
+      color: var(--muted);
+    }
+    .report-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .report-body ul, .report-body ol { padding-left: 1.35rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>{{ document_title }}</h1>
+    <p class="meta">Generated {{ generated_utc }} · HTML includes visualizations + full markdown report below.</p>
+
+    <section id="visualizations" aria-labelledby="viz-heading">
+      <h2 id="viz-heading">Visualizations</h2>
+
+      <div class="viz-panel">
+        <h3>SPEC framework coverage</h3>
+        {% if framework_rollup.has_framework %}
+        <p class="fw-severity">Rollup severity (max across runs): <strong>{{ framework_rollup.max_overall_severity }}</strong></p>
+        <p class="fw-note">Question coverage aggregated across benchmark rows (stacked bar = proportion of answers).</p>
+        {% set c = framework_rollup.coverage_counts %}
+        {% set total = (c.answered + c.partially_answered + c.unanswered + c.not_testable_dynamically) %}
+        {% if total > 0 %}
+        <div class="stacked-bar" role="img" aria-label="Framework question coverage stacked by status">
+          <span class="seg answered" style="width: {{ (100 * c.answered / total) }}%"></span>
+          <span class="seg partially_answered" style="width: {{ (100 * c.partially_answered / total) }}%"></span>
+          <span class="seg unanswered" style="width: {{ (100 * c.unanswered / total) }}%"></span>
+          <span class="seg not_testable_dynamically" style="width: {{ (100 * c.not_testable_dynamically / total) }}%"></span>
+        </div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--answered)"></i> answered: {{ c.answered }}</span>
+          <span><i class="dot" style="background:var(--partial)"></i> partially answered: {{ c.partially_answered }}</span>
+          <span><i class="dot" style="background:var(--unanswered)"></i> unanswered: {{ c.unanswered }}</span>
+          <span><i class="dot" style="background:var(--nottest)"></i> not testable dynamically: {{ c.not_testable_dynamically }}</span>
+        </div>
+        {% else %}
+        <p class="fw-note">No question coverage entries found in framework blocks.</p>
+        {% endif %}
+        {% else %}
+        <p class="fw-note">No <code>framework</code> block on these <code>normalized.json</code> files — regenerate runs without <code>--no-framework</code> or re-run <code>vpn-leaks run</code> on a current build.</p>
+        {% endif %}
+      </div>
+
+      <div class="viz-panel">
+        <h3>Exposure graph (dependency graph)</h3>
+        <p class="graph-blurb">
+          Interactive 3D view of the same nodes and edges as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>:
+          VPN, exit IP, attributed ASN, provider apex domains, DNS delegation, NS glue, and policy URLs. Rotate with the pointer; scroll to zoom.
+        </p>
+        <div id="graph-err" hidden></div>
+        <div id="exposure-graph" role="application" aria-label="Exposure graph 3D visualization"></div>
+      </div>
+    </section>
+
+    <section id="report" aria-labelledby="report-heading">
+      <h2 id="report-heading">Report</h2>
+      <article class="report-body">
+        {{ report_html }}
+      </article>
+    </section>
+  </div>
+
+  <script type="application/json" id="vpn-leaks-exposure-graph">{{ exposure_graph_json|safe }}</script>
+  <script type="module">
+    import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3";
+
+    const errEl = document.getElementById("graph-err");
+    const mount = document.getElementById("exposure-graph");
+
+    function showErr(msg) {
+      errEl.hidden = false;
+      errEl.textContent = msg;
+    }
+
+    const rawEl = document.getElementById("vpn-leaks-exposure-graph");
+    let data;
+    try {
+      data = JSON.parse(rawEl.textContent);
+    } catch (e) {
+      showErr("Failed to parse embedded exposure graph JSON — " + e);
+      throw e;
+    }
+
+    const nodes = data.nodes || [];
+    const links = (data.edges || []).map((e) => ({
+      source: e.source,
+      target: e.target,
+      relation: e.relation,
+    }));
+
+    if (nodes.length === 0) {
+      showErr("No graph nodes for this provider (empty exposure graph).");
+    } else {
+      const fg = ForceGraph3D()(mount)
+        .nodeLabel((n) => `[${n.type}] ${n.label || n.id}`)
+        .nodeAutoColorBy("type")
+        .linkDirectionalParticles(0);
+
+      fg.graphData({ nodes, links });
+    }
+  </script>
+</body>
+</html>

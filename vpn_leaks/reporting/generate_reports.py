@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import markdown
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import Markup
 
 from vpn_leaks.config_loader import repo_root
 
@@ -31,6 +33,24 @@ def _jinja_env() -> Environment:
         loader=FileSystemLoader(str(tpl_dir)),
         autoescape=select_autoescape(enabled_extensions=(".html",)),
     )
+
+
+def _markdown_extensions() -> list[str]:
+    return [
+        "markdown.extensions.tables",
+        "markdown.extensions.fenced_code",
+    ]
+
+
+def markdown_to_html_body(text: str) -> str:
+    """Convert markdown report text to HTML (tables + fenced code)."""
+    md = markdown.Markdown(extensions=_markdown_extensions())
+    return md.convert(text)
+
+
+def _json_for_html_script(obj: Any) -> str:
+    """Serialize JSON for embedding in <script type=\"application/json\"> (escape < for HTML)."""
+    return json.dumps(obj, ensure_ascii=False).replace("<", r"\u003c")
 
 
 def collect_normalized_runs(
@@ -412,13 +432,14 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
 
     detailed_runs = build_detailed_runs(rows)
     framework_rollup = build_framework_rollup(rows)
+    generated_utc = datetime.now(UTC).isoformat()
 
     env = _jinja_env()
     tpl = env.get_template("vpn_report.md.j2")
     text = tpl.render(
         vpn_name=vpn_name or provider_slug,
         vpn_slug=provider_slug,
-        generated_utc=datetime.now(UTC).isoformat(),
+        generated_utc=generated_utc,
         run_ids=run_ids,
         connection_modes=connection_modes,
         locations=[r[2].get("vpn_location_id") for r in rows],
@@ -433,6 +454,23 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
     safe = provider_slug.upper().replace("-", "_")
     out_path = out_dir / f"{safe}.md"
     out_path.write_text(text, encoding="utf-8")
+
+    display_name = vpn_name or provider_slug
+    from vpn_leaks.reporting.exposure_graph import build_exposure_graph
+
+    exposure_payload = build_exposure_graph(provider_slug)
+    html_tpl = env.get_template("vpn_report_document.html.j2")
+    html_doc = html_tpl.render(
+        document_title=f"{display_name} ({provider_slug})",
+        generated_utc=generated_utc,
+        vpn_slug=provider_slug,
+        framework_rollup=framework_rollup,
+        exposure_graph_json=_json_for_html_script(exposure_payload),
+        report_html=Markup(markdown_to_html_body(text)),
+    )
+    html_path = out_dir / f"{safe}.html"
+    html_path.write_text(html_doc, encoding="utf-8")
+
     return out_path
 
 

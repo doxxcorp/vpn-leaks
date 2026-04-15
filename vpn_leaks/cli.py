@@ -432,6 +432,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     name = vpn_config.get("provider_name") or slug
     p = generate_vpn_report(slug, vpn_name=str(name))
     print(str(p))
+    print(str(p.with_suffix(".html")))
     if args.asn:
         p2 = generate_provider_report(int(args.asn), title=args.asn_title)
         print(str(p2))

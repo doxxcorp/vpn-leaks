@@ -9,6 +9,7 @@ Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, 
 - **Operational overview:** [docs/spec.md](docs/spec.md)  
 - **SPEC framework (question bank, coverage):** [docs/framework.md](docs/framework.md)  
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
+- **Research questions, evidence map, desk playbook, FD graphs:** [docs/research-questions-and-evidence.md](docs/research-questions-and-evidence.md)  
 - **Fields & paths:** [docs/data-dictionary.md](docs/data-dictionary.md)  
 - **Full product spec:** [vpn-leaks.md](vpn-leaks.md)
 - **Agent handoff (context for AI/humans):** [HANDOFF.md](HANDOFF.md)
@@ -107,7 +108,7 @@ Artifacts: `runs/<run_id>/` (gitignored), including `raw/preflight.json`.
 
 | Report | Command |
 |--------|---------|
-| Per-VPN rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` |
+| Per-VPN rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` and **`VPNs/<SLUG>.html`** (HTML includes SPEC framework coverage bars, embedded **3D exposure graph** from the same data as `graph-export`, plus the full markdown body). For reliable loading of the graph script, serve the folder over HTTP (e.g. `python3 -m http.server` in `VPNs/`) instead of opening the file directly via `file:`. |
 | Underlay (ASN) | `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md` |
 | Exposure graph (nodes/edges JSON) | `vpn-leaks graph-export [--provider <slug>] [-o exposure-graph.json]` — then open [viewer/](viewer/) (see [viewer/README.md](viewer/README.md)) |
 

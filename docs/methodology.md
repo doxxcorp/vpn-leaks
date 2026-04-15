@@ -59,6 +59,8 @@ Auto mode uses **ipwho.is** (and records it in `services_contacted`). That impli
 
 Use this when comparing providers or publishing results so benchmarks are **comparable** and **reproducible**.
 
+**Full mapping:** Every framework question with primary artifact paths, evidence tiers (**O** / **S** / **D** / **I**), systematic `dig`/WHOIS playbook, example answer shapes, Mermaid FD graphs, and how this relates to `graph-export` / the 3D viewer — see [research-questions-and-evidence.md](research-questions-and-evidence.md).
+
 ### Dimensions
 
 Each benchmark is a point in a space you should record explicitly:
