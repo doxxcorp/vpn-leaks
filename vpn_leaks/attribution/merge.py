@@ -7,10 +7,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from vpn_leaks.attribution.asn_prefixes import fetch_announced_prefixes_cached
 from vpn_leaks.attribution.cymru import cymru_asn_lookup
 from vpn_leaks.attribution.geolite_asn import lookup_asn
 from vpn_leaks.attribution.peeringdb import net_by_asn
 from vpn_leaks.attribution.ripestat import extract_asn_holder, prefix_overview
+from vpn_leaks.checks.exit_dns import write_exit_dns_json
 from vpn_leaks.models import AttributionResult, AttributionSource
 
 
@@ -84,6 +86,7 @@ def merge_attribution(
     exit_ip_v4: str | None,
     attr_cfg: dict[str, Any],
     raw_dir: Path,
+    exit_ip_v6: str | None = None,
 ) -> AttributionResult:
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -103,6 +106,30 @@ def merge_attribution(
 
     result = _score(sources, exit_ip_v4)
     result.disclaimers = list(result.disclaimers) + extra_disclaimers
+
+    write_exit_dns_json(
+        raw_dir=raw_dir,
+        exit_ip_v4=exit_ip_v4,
+        exit_ip_v6=exit_ip_v6,
+    )
+
+    if attr_cfg.get("announced_prefixes_enabled", True) and isinstance(result.asn, int):
+        ap = fetch_announced_prefixes_cached(result.asn, attr_cfg)
+        slim: dict[str, Any] = {
+            "asn": ap.get("asn"),
+            "prefixes": ap.get("prefixes") or [],
+            "prefix_count": len(ap.get("prefixes") or []),
+            "cache_hit": ap.get("cache_hit"),
+            "fetched_epoch": ap.get("fetched_epoch"),
+            "source": ap.get("source"),
+        }
+        if ap.get("error"):
+            slim["error"] = ap["error"]
+        (raw_dir / "asn_prefixes.json").write_text(
+            json.dumps(slim, indent=2),
+            encoding="utf-8",
+        )
+
     return result
 
 

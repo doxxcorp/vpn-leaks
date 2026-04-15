@@ -6,6 +6,8 @@ import ipaddress
 import subprocess
 from typing import Any
 
+_CYMRU_DIG_TIMEOUT_S = 15
+
 
 def ip_to_cymru_domain(ip: str) -> str | None:
     try:
@@ -28,7 +30,7 @@ def cymru_asn_lookup(ip: str) -> dict[str, Any]:
             ["dig", "+short", "TXT", domain],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=_CYMRU_DIG_TIMEOUT_S,
             check=False,
         )
     except FileNotFoundError:
@@ -36,6 +38,13 @@ def cymru_asn_lookup(ip: str) -> dict[str, Any]:
             "error": "dig not found",
             "disclaimer": [
                 "Install bind-utils/dnsutils for Team Cymru DNS lookup cross-check.",
+            ],
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "error": f"dig timed out after {_CYMRU_DIG_TIMEOUT_S}s",
+            "disclaimer": [
+                "Team Cymru DNS lookup timed out; cross-check skipped.",
             ],
         }
 

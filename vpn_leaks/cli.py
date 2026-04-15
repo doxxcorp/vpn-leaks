@@ -19,6 +19,7 @@ from vpn_leaks.auto_connection import (
     quick_exit_ip,
 )
 from vpn_leaks.checks.baseline import write_baseline_json
+from vpn_leaks.checks.browserleaks_probe import run_browserleaks_probe
 from vpn_leaks.checks.competitor_probes import run_competitor_probes
 from vpn_leaks.checks.dns import run_dns_checks_sync
 from vpn_leaks.checks.fingerprint import run_fingerprint_snapshot
@@ -232,6 +233,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
             attribution = merge_attribution(
                 exit_ip_v4=v4,
+                exit_ip_v6=v6,
                 attr_cfg=attr_cfg,
                 raw_dir=raw_base,
             )
@@ -259,6 +261,13 @@ def cmd_run(args: argparse.Namespace) -> int:
                 raw_dir=raw_base,
                 services_contacted=services_contacted,
                 skip=args.skip_yourinfo,
+            )
+
+            browserleaks_snapshot = run_browserleaks_probe(
+                leak_cfg=leak_cfg,
+                raw_dir=raw_base,
+                services_contacted=services_contacted,
+                skip=args.skip_browserleaks,
             )
 
             competitor_surface = run_competitor_probes(
@@ -312,6 +321,21 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if (raw_base / "yourinfo_probe").is_dir()
                 else None
             )
+            bl_rel = (
+                str((raw_base / "browserleaks_probe").relative_to(repo_root()))
+                if (raw_base / "browserleaks_probe").is_dir()
+                else None
+            )
+            asn_pf_rel = (
+                str((raw_base / "asn_prefixes.json").relative_to(repo_root()))
+                if (raw_base / "asn_prefixes.json").is_file()
+                else None
+            )
+            exit_dns_rel = (
+                str((raw_base / "exit_dns.json").relative_to(repo_root()))
+                if (raw_base / "exit_dns.json").is_file()
+                else None
+            )
             surf_rel = (
                 str((raw_base / "surface_probe").relative_to(repo_root()))
                 if (raw_base / "surface_probe").is_dir()
@@ -330,8 +354,11 @@ def cmd_run(args: argparse.Namespace) -> int:
                 ipv6_dir=str((raw_base / "ipv6").relative_to(repo_root())),
                 fingerprint_dir=str((raw_base / "fingerprint").relative_to(repo_root())),
                 attribution_json=str((raw_base / "attribution.json").relative_to(repo_root())),
+                asn_prefixes_json=asn_pf_rel,
+                exit_dns_json=exit_dns_rel,
                 policy_dir=str(policy_dir.relative_to(repo_root())),
                 competitor_probe_dir=comp_rel,
+                browserleaks_probe_dir=bl_rel,
                 yourinfo_probe_dir=yi_rel,
                 baseline_json=baseline_rel,
                 surface_probe_dir=surf_rel,
@@ -370,6 +397,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 artifacts=artifacts,
                 competitor_surface=competitor_surface,
                 yourinfo_snapshot=yourinfo_snapshot,
+                browserleaks_snapshot=browserleaks_snapshot,
             )
             if not args.no_framework:
                 normalized = apply_framework(normalized)
@@ -477,6 +505,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-yourinfo",
         action="store_true",
         help="Skip loading yourinfo.ai benchmark (Playwright HAR + excerpt)",
+    )
+    pr.add_argument(
+        "--skip-browserleaks",
+        action="store_true",
+        help="Skip pinned browserleaks.com pages (Playwright HAR + excerpts)",
     )
     pr.add_argument(
         "--no-framework",

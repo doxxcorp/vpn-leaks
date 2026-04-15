@@ -77,10 +77,22 @@ class ArtifactIndex(BaseModel):
     ipv6_dir: str | None = None
     fingerprint_dir: str | None = None
     attribution_json: str | None = None
+    asn_prefixes_json: str | None = Field(
+        default=None,
+        description="RIPEstat announced prefixes for exit ASN (raw/<loc>/asn_prefixes.json)",
+    )
+    exit_dns_json: str | None = Field(
+        default=None,
+        description="PTR lookups for exit IPs (raw/<loc>/exit_dns.json)",
+    )
     policy_dir: str | None = None
     competitor_probe_dir: str | None = Field(
         default=None,
         description="Raw JSON/HAR from competitor-surface probes (DNS, web, portal, transit)",
+    )
+    browserleaks_probe_dir: str | None = Field(
+        default=None,
+        description="BrowserLeaks Playwright captures (raw/<loc>/browserleaks_probe/)",
     )
     yourinfo_probe_dir: str | None = Field(
         default=None,
@@ -105,6 +117,10 @@ class CompetitorSurfaceSnapshot(BaseModel):
 
     provider_dns: dict[str, Any] = Field(default_factory=dict)
     web_probes: list[dict[str, Any]] = Field(default_factory=list)
+    har_summary: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Aggregated HAR hosts + tracker/CDN hints; see har_summary.json",
+    )
     portal_probes: list[dict[str, Any]] = Field(default_factory=list)
     transit: dict[str, Any] = Field(default_factory=dict)
     stray_json: list[dict[str, Any]] = Field(default_factory=list)
@@ -228,6 +244,10 @@ class NormalizedRun(BaseModel):
     yourinfo_snapshot: dict[str, Any] | None = Field(
         default=None,
         description="yourinfo.ai page capture (HAR + excerpt); see raw/.../yourinfo_probe/",
+    )
+    browserleaks_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        description="Pinned browserleaks.com pages (HAR + per-page excerpts)",
     )
     framework: FrameworkResult | None = Field(
         default=None,

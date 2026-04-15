@@ -33,3 +33,12 @@ webrtc:
 fingerprint:
   enabled: false
   urls: []
+
+# Optional pinned BrowserLeaks pages (JA3/JA4, DNS leak table, WebRTC, TLS). Skip with --skip-browserleaks.
+browserleaks_probe:
+  enabled: true
+  urls:
+    - "https://browserleaks.com/ip"
+    - "https://browserleaks.com/dns"
+    - "https://browserleaks.com/webrtc"
+    - "https://browserleaks.com/tls"

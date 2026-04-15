@@ -78,7 +78,7 @@ Align questions to probes; not every question needs every probe.
 2. **Leak heuristics** — DNS (`dns_servers_observed`, `dns_leak_flag`), WebRTC, IPv6.
 3. **Exit attribution** — `attribution` (RIPEstat, Team Cymru, PeeringDB, optional GeoLite).
 4. **Policies** — `policies` (VPN + optional underlay URLs), hashes and summaries.
-5. **Optional** — `competitor_surface` (apex DNS, NS glue attribution, web/CDN, portals, transit) when `competitor_probe` is configured.
+5. **Optional** — `competitor_surface` (apex DNS, NS glue attribution, web/CDN, HAR summary, portals, transit) when `competitor_probe` is configured. See [competitor-probe-checklist.md](competitor-probe-checklist.md) for YAML fields.
 6. **Optional** — `yourinfo_snapshot` unless `--skip-yourinfo`.
 
 ### Reproducibility

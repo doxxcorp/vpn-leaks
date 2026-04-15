@@ -16,6 +16,36 @@ def prefix_overview(resource: str, base_url: str) -> dict[str, Any]:
         return r.json()
 
 
+def announced_prefixes(resource_asn: str, base_url: str) -> dict[str, Any]:
+    """
+    RIPEstat announced-prefixes for an ASN, e.g. resource_asn='AS15169'.
+    https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS15169
+    """
+    url = f"{base_url.rstrip('/')}/announced-prefixes/data.json"
+    params = {"resource": resource_asn}
+    with httpx.Client(timeout=45.0) as client:
+        r = client.get(url, params=params)
+        r.raise_for_status()
+        return r.json()
+
+
+def announced_prefix_strings(data: dict[str, Any], *, limit: int = 2000) -> list[str]:
+    """Flatten RIPEstat announced-prefixes JSON to sorted unique CIDR strings."""
+    out: list[str] = []
+    try:
+        block = (data.get("data") or {}).get("prefixes") or []
+        for row in block:
+            if not isinstance(row, dict):
+                continue
+            p = row.get("prefix")
+            if isinstance(p, str) and p:
+                out.append(p)
+    except (TypeError, KeyError):
+        pass
+    uniq = sorted(set(out))
+    return uniq[:limit]
+
+
 def extract_asn_holder(data: dict[str, Any]) -> tuple[int | None, str | None, str | None]:
     """Best-effort from prefix-overview JSON."""
     try:

@@ -16,6 +16,8 @@ locations:
   label: Albuquerque, New Mexico, United States
 - id: us-california-santa-clara-160
   label: Santa Clara, California, United States
+- id: us-california-santa-clara-157
+  label: Santa Clara, California, United States
 credentials:
   username_env: null
   password_env: null

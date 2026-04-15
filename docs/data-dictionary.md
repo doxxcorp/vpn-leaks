@@ -32,9 +32,12 @@ Per **location** (under `raw/<location_id>/`):
 | `fingerprint/` | Optional fingerprint JSON |
 | `pcap/` | Optional (gated) |
 | `attribution.json` | Raw RIPEstat/Cymru/PeeringDB responses |
+| `asn_prefixes.json` | RIPEstat **announced-prefixes** for merged exit ASN (slim list + cache metadata) |
+| `exit_dns.json` | **PTR** lookups for exit IPv4/IPv6 |
 | `policy/` | `vpn_policy_*.html`, underlay HTML |
-| `competitor_probe/` | If `competitor_probe` is set in `configs/vpns/<slug>.yaml`: `provider_dns.json` (apex NS/A/AAAA plus **`ns_hosts`** glue + attribution), `transit.json`, `web_probes.json`, `har/*.har`, `portal_probes.json`, `stray_json.json` |
+| `competitor_probe/` | If `competitor_probe` is set in `configs/vpns/<slug>.yaml`: `provider_dns.json` (apex NS/A/AAAA/**TXT/MX/CAA** plus **`ns_hosts`** glue + attribution), `transit.json`, `web_probes.json`, `har/*.har`, **`har_summary.json`** (aggregated HAR hosts + tracker/CDN hints), `portal_probes.json`, `stray_json.json` |
 | `yourinfo_probe/` | Always-on unless `--skip-yourinfo`: `yourinfo.json`, `yourinfo.har` (third-party benchmark page) |
+| `browserleaks_probe/` | Unless `--skip-browserleaks` and `browserleaks_probe` enabled in `leak-tests.yaml`: `browserleaks.json`, `browserleaks.har` (pinned `/ip`, `/dns`, `/webrtc`, `/tls` pages) |
 | `surface_probe/` | Optional; when `surface_urls` in provider YAML: `web_probes.json`, `har/*.har` per page |
 | `transitions.json` | Optional; when `--transition-tests`: IP poll samples across disconnect/reconnect |
 
@@ -63,11 +66,15 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `fingerprint_snapshot` | Anonymous summary |
 | `attribution` | ASN, holder, confidence, sources, disclaimers |
 | `policies` | vpn + underlay policy records |
-| `competitor_surface` | Optional summary: provider DNS, web/CDN probes, portal probes, transit, stray JSON paths (`null` if no `competitor_probe` config). **`provider_dns`** includes `domains` (apex NS/A/AAAA) and **`ns_hosts`**: each NS hostname → `a`, `aaaa`, **`ip_attribution`** (map IP → `AttributionResult` JSON for DNS NS glue, same pipeline as exit attribution with `[provider_ns_glue]` notes on `confidence_notes`) |
+| `competitor_surface` | Optional summary: provider DNS, web/CDN probes, **`har_summary`** (merged HAR host/tag hints), portal probes, transit, stray JSON paths (`null` if no `competitor_probe` config). **`provider_dns`** includes `domains` (apex NS/A/AAAA/**TXT/MX/CAA** plus optional **`rr_errors`**) and **`ns_hosts`**: each NS hostname → `a`, `aaaa`, **`ip_attribution`** (map IP → `AttributionResult` JSON for DNS NS glue, same pipeline as exit attribution with `[provider_ns_glue]` notes on `confidence_notes`) |
 | `yourinfo_snapshot` | Capture from **yourinfo.ai** (HAR path, headers, title, text excerpt); `null` if `--skip-yourinfo` |
+| `browserleaks_snapshot` | Pinned **browserleaks.com** pages from `leak-tests.yaml`; `null` if `--skip-browserleaks` or disabled |
 | `services_contacted` | Third-party URLs used in tests (includes preflight + ipwho when auto) |
 | `artifacts` | Relative paths into `raw/` |
 | `artifacts.competitor_probe_dir` | When present, `raw/<location_id>/competitor_probe/` |
+| `artifacts.asn_prefixes_json` | When present, `raw/<location_id>/asn_prefixes.json` |
+| `artifacts.exit_dns_json` | When present, `raw/<location_id>/exit_dns.json` |
+| `artifacts.browserleaks_probe_dir` | When present, `raw/<location_id>/browserleaks_probe/` |
 | `artifacts.yourinfo_probe_dir` | When present, `raw/<location_id>/yourinfo_probe/` |
 | `artifacts.baseline_json` | When `--capture-baseline`, relative path to `raw/baseline.json` |
 | `artifacts.surface_probe_dir` | When `surface_urls` configured, `raw/<location_id>/surface_probe/` |

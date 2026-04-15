@@ -25,6 +25,9 @@ build/
 *.mmdb
 data/GeoLite*
 
+# RIPEstat / attribution cache
+.cache/
+
 # Browser / Playwright
 .playwright/
 playwright-state/

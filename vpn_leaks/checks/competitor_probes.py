@@ -15,6 +15,7 @@ from urllib.parse import urljoin
 import httpx
 
 from vpn_leaks.attribution.merge import merge_attribution_for_ip
+from vpn_leaks.checks.har_summary import summarize_competitor_har_paths
 from vpn_leaks.config_loader import repo_root
 from vpn_leaks.models import CompetitorSurfaceSnapshot
 
@@ -35,6 +36,60 @@ CDN_HEADER_KEYS = frozenset(
 
 def _safe_har_name(url: str) -> str:
     return hashlib.sha256(url.encode()).hexdigest()[:16]
+
+
+def _truncate_record(s: str, max_len: int = 500) -> str:
+    s = s.strip()
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 3] + "..."
+
+
+def _apex_txt_mx_caa(
+    res: Any,
+    domain: str,
+    entry: dict[str, Any],
+) -> None:
+    """Populate txt, mx, caa lists and rr_errors on entry."""
+    from dns.exception import DNSException
+    from dns.rdatatype import RdataType
+
+    entry["txt"] = []
+    entry["mx"] = []
+    entry["caa"] = []
+    entry["rr_errors"] = {}
+
+    try:
+        ans = res.resolve(domain, RdataType.TXT)
+        for r in ans:
+            chunks = getattr(r, "strings", None) or ()
+            raw = b"".join(chunks).decode("utf-8", errors="replace")
+            entry["txt"].append(_truncate_record(raw))
+            if len(entry["txt"]) >= 32:
+                break
+    except DNSException as e:
+        entry["rr_errors"]["txt"] = str(e)[:200]
+
+    try:
+        ans = res.resolve(domain, RdataType.MX)
+        rows = []
+        for r in ans:
+            pref = int(r.preference)
+            host = str(r.exchange).rstrip(".").lower()
+            rows.append((pref, f"{pref} {host}"))
+        rows.sort(key=lambda x: (x[0], x[1]))
+        entry["mx"] = [t[1] for t in rows[:32]]
+    except DNSException as e:
+        entry["rr_errors"]["mx"] = str(e)[:200]
+
+    try:
+        ans = res.resolve(domain, RdataType.CAA)
+        for r in ans:
+            entry["caa"].append(_truncate_record(r.to_text(), max_len=400))
+            if len(entry["caa"]) >= 32:
+                break
+    except DNSException as e:
+        entry["rr_errors"]["caa"] = str(e)[:200]
 
 
 def run_provider_dns(
@@ -75,6 +130,7 @@ def run_provider_dns(
             entry["aaaa"] = sorted({str(r) for r in aaaa})
         except DNSException:
             pass
+        _apex_txt_mx_caa(res, domain, entry)
         out["domains"][domain] = entry
 
     ip_attr_cache: dict[str, dict[str, Any]] = {}
@@ -408,6 +464,20 @@ def run_competitor_probes(
                 raw_dir=probe_root,
                 services_contacted=services_contacted,
             )
+            har_paths: list[Path] = []
+            for row in snap.web_probes or []:
+                hp = row.get("har_path")
+                if isinstance(hp, str):
+                    p = repo_root() / hp
+                    if p.is_file():
+                        har_paths.append(p)
+            if har_paths:
+                snap.har_summary = summarize_competitor_har_paths(har_paths)
+                services_contacted.append("competitor_probe:har_summary")
+                (probe_root / "har_summary.json").write_text(
+                    json.dumps(snap.har_summary, indent=2),
+                    encoding="utf-8",
+                )
 
         if not skip_portal and portal_hosts:
             snap.portal_probes = run_portal_probes(
