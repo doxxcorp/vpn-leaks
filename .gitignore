@@ -36,6 +36,9 @@ playwright-state/
 *.pcap
 *.pcapng
 
+# GitHub Pages local staging (scripts/build_github_pages_site.py)
+site/
+
 # IDE
 .idea/
 .vscode/

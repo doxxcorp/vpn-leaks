@@ -112,6 +112,19 @@ Artifacts: `runs/<run_id>/` (gitignored), including `raw/preflight.json`.
 | Underlay (ASN) | `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md` |
 | Exposure graph (nodes/edges JSON) | `vpn-leaks graph-export [--provider <slug>] [-o exposure-graph.json]` — then open [viewer/](viewer/) (see [viewer/README.md](viewer/README.md)) |
 
+### GitHub Pages (github.io)
+
+For a **project site** in this repository, the published base URL is typically:
+
+`https://<owner>.github.io/<repo>/`
+
+- **Landing:** `https://<owner>.github.io/<repo>/` — index listing all `VPNs/*.html` reports.
+- **Example report:** `https://<owner>.github.io/<repo>/VPNs/NORDVPN.html` (replace `<owner>`, `<repo>`, and filename with yours).
+
+**One-time setup:** In the GitHub repo, open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions** (not “Deploy from a branch”). The workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) stages `VPNs/`, `style/icons/` (needed for SPEC category icons in HTML), and a generated `index.html`, then deploys. You can also run **Actions → Pages → Run workflow** to redeploy without a commit.
+
+**Notes:** Publishing exposes whatever is committed under `VPNs/` (exit IPs and benchmark detail). Confirm that is acceptable. Private repositories may need a paid GitHub plan for **private** Pages visibility. To preview locally: `python3 scripts/build_github_pages_site.py` then serve the `site/` directory over HTTP.
+
 Add `runs/` (and optionally `VPNs/` / `PROVIDERS/`) to `.gitignore` if you do not want local reports or run artifacts in version control.
 
 ## Development
@@ -121,4 +134,4 @@ ruff check vpn_leaks tests
 pytest tests -q
 ```
 
-CI is not checked in under `.github/workflows/` (GitHub OAuth requires the `workflow` scope to push workflow files). Copy [docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example) to `.github/workflows/ci.yml` locally or after refreshing `gh auth refresh -s workflow`. It runs lint and tests without a live VPN (mocks only).
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys reports to GitHub Pages. Lint/test CI is still optional: copy [docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example) to `.github/workflows/ci.yml` locally if it is not present (GitHub OAuth may require the `workflow` scope to push workflow files; `gh auth refresh -s workflow`). That workflow runs lint and tests without a live VPN (mocks only).
