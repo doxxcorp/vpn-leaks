@@ -215,6 +215,10 @@ a:hover {
   margin-bottom: 2rem;
 }
 
+.loc-grid > .loc-card {
+  min-width: 0;
+}
+
 .loc-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -222,17 +226,22 @@ a:hover {
   padding: 1.1rem 1.2rem;
   box-shadow: var(--shadow);
   transition: border-color 0.2s ease, transform 0.2s ease;
+  min-width: 0;
 }
 .loc-card:hover {
   border-color: rgba(27, 193, 188, 0.35);
   transform: translateY(-2px);
 }
 
-.loc-card h3 {
+.loc-card h3.loc-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 0.5rem;
   line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .loc-card .loc-sub {
@@ -507,6 +516,10 @@ details.spec-q[open] > summary.spec-q-summary::after {
   font-family: var(--font-mono);
   font-size: 0.74rem;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .spec-q-body {
   padding: 0.65rem 0.75rem 0.75rem;
@@ -679,7 +692,7 @@ details.report-appendix .report-body {
       <div>
         <h1>Nordvpn (nordvpn)</h1>
         <p class="report-meta">
-          Generated 2026-04-16T00:42:51.283224+00:00
+          Generated 2026-04-16T01:35:11.633598+00:00
           
           · <a href="NORDVPN.md">Markdown export</a>
           
@@ -707,7 +720,7 @@ details.report-appendix .report-body {
       <div class="loc-grid">
         
         <article class="loc-card">
-          <h3>Albuquerque, New Mexico, United States</h3>
+          <h3 class="loc-title" title="Albuquerque, New Mexico, United States">Albuquerque, NM, USA</h3>
           <p class="loc-sub">nordvpn-20260415T232536Z-488a1217 / us-new-mexico-albuquerque-20</p>
           <dl>
             <div class="data-row"><dt>Exit IPv4</dt><dd>66.179.156.20</dd></div>
@@ -724,7 +737,7 @@ details.report-appendix .report-body {
         </article>
         
         <article class="loc-card">
-          <h3>San Francisco, California, United States</h3>
+          <h3 class="loc-title" title="San Francisco, California, United States">San Francisco, CA, USA</h3>
           <p class="loc-sub">nordvpn-20260416T003526Z-f5ad2e99 / us-california-san-francisco-67</p>
           <dl>
             <div class="data-row"><dt>Exit IPv4</dt><dd>185.187.168.67</dd></div>
@@ -829,7 +842,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>FP-001</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">No fingerprint data. — Enable browserleaks / fingerprint phase; without data FP questions stay open.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -892,7 +905,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>CTRL-002</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Post-harness service list captured.</span>
+              <span class="spec-q-preview">Post-harness service list captured. · Expand `services_contacted` via full harness; list is harness-visible URLs only.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -917,7 +930,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>CTRL-003</code></span>
                 <span class="badge not_testable_dynamically">not testable dynamically</span>
               </span>
-              <span class="spec-q-preview">Auth/control-plane inventory requires internal docs or app instrumentation.</span>
+              <span class="spec-q-preview">DOCUMENT_RESEARCH: vendor docs, app MITM, or support (D).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -945,7 +958,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>CTRL-004</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Infer from services_contacted and classified endpoints.</span>
+              <span class="spec-q-preview">Infer from services_contacted and classified endpoints. · Classify `services_contacted` hosts; app telemetry needs traffic capture (see TELEM-*).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -970,7 +983,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>CTRL-009</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">No web probes. — Enable portal/web probes (`portal_probes`); check `https_cdn_headers`.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1033,7 +1046,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>DNS-002</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Leak flag=False; see notes.</span>
+              <span class="spec-q-preview">Leak flag=False; see notes. · Heuristic: no obvious public resolver IPs parsed from external page — Compare resolver IPs to exit; read `dns_leak_notes` (heuristic). Capture baseline off-VPN if comparing.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1061,7 +1074,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>DNS-003</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Leak flag=False; see notes.</span>
+              <span class="spec-q-preview">Leak flag=False; see notes. · Heuristic: no obvious public resolver IPs parsed from external page — Same as DNS-002; transition tests help — run with `--transition-tests` when supported.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1089,7 +1102,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>DNS-004</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Connect/disconnect DNS not sampled; use --transition-tests when supported.</span>
+              <span class="spec-q-preview">Connect/disconnect DNS not sampled; use --transition-tests when supported. · Run `vpn-leaks run` with `--transition-tests` (see RUN-STEPS.md).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1114,7 +1127,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>DNS-009</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">DoH/DoT not isolated from resolver snapshot; inspect raw captures.</span>
+              <span class="spec-q-preview">DoH/DoT not isolated from resolver snapshot; inspect raw captures. · Inspect raw DNS captures / resolver lists; DoH/DoT may not be isolated in summary alone.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1139,7 +1152,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>DNS-011</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Leak flag=False; see notes.</span>
+              <span class="spec-q-preview">Leak flag=False; see notes. · Heuristic: no obvious public resolver IPs parsed from external page — Attribute resolver IPs (O); compare to exit ASN (I/D).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1246,7 +1259,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>EXIT-004</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">PTR lookup errors: ptr_v4: The resolution lifetime expired after 10.202 seconds: Server Do53:100.64.0.2@53 answered The DNS operation timed out.; Server Do53:1…</span>
+              <span class="spec-q-preview">PTR lookup errors: ptr_v4: The resolution lifetime expired after 10.202 seconds: Server Do53:100.64.0.2@53 answered The DNS operation timed out.; Server Do53:100.64.0.2@53 answered The DNS operation timed out. · Check raw `exit_dns.json` / attribution for rDNS when stored.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1271,7 +1284,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>EXIT-005</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States').</span>
+              <span class="spec-q-preview">Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States'). · Compare `extra.exit_geo` to `vpn_location_label`; add more regions to validate.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1309,7 +1322,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>FAIL-001</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Not sampled; optional --transition-tests or manual observation.</span>
+              <span class="spec-q-preview">Not sampled; optional --transition-tests or manual observation. · Use `--transition-tests` for connect-phase leaks when supported.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1334,7 +1347,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>FAIL-003</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Not sampled; optional --transition-tests or manual observation.</span>
+              <span class="spec-q-preview">Not sampled; optional --transition-tests or manual observation. · Use `--transition-tests` for reconnect leaks when supported.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1359,7 +1372,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>FAIL-004</code></span>
                 <span class="badge not_testable_dynamically">not testable dynamically</span>
               </span>
-              <span class="spec-q-preview">Crash/kill leak tests not run in this harness by default.</span>
+              <span class="spec-q-preview">Crash/kill scenarios not in default harness; fault injection or manual test.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1400,7 +1413,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IDENTITY-001</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Browser/session signals captured via fingerprint and optional YourInfo probe.</span>
+              <span class="spec-q-preview">Browser/session signals captured via fingerprint and optional YourInfo probe. · Run with fingerprint + YourInfo probes enabled; compare `fingerprint_snapshot` and `yourinfo_snapshot` in normalized.json. See RUN-STEPS.md (benchmark phases).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1425,7 +1438,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IDENTITY-006</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).</span>
+              <span class="spec-q-preview">Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints). · Browser `services_contacted` is partial; for app auth traffic use external capture or vendor docs (D).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1450,7 +1463,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IDENTITY-009</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">BrowserLeaks probe data available for re-identification risk assessment.</span>
+              <span class="spec-q-preview">BrowserLeaks probe data available for re-identification risk assessment. · Enable fingerprint capture; without it re-ID risk stays unassessed.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1488,7 +1501,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>LOG-001</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Infer logging surface from observable endpoints and services_contacted.</span>
+              <span class="spec-q-preview">Infer logging surface from observable endpoints and services_contacted. · Review `services_contacted` + endpoint classifications; pair with policy/audit (D).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1513,7 +1526,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>LOG-005</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">No policy fetch or failed fetch. — Fetch policies (`policy_urls` in provider YAML); compare marketing to ISAE/DPAs (D). See docs/research-questions-and-evidence.md.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1554,7 +1567,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>OS-001</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.</span>
+              <span class="spec-q-preview">OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run. · Process-level bypass not in default harness; external tooling or manual checks.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1614,7 +1627,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IP-002</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">No IPv6 exit or IPv6 not returned by endpoints.</span>
+              <span class="spec-q-preview">No IPv6 exit or IPv6 not returned by endpoints. · Enable IPv6 path in environment; check `ipv6/` artifacts when present.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1664,7 +1677,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IP-007</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Inspect host candidates vs LAN; see webrtc_notes.</span>
+              <span class="spec-q-preview">Inspect host candidates vs LAN; see webrtc_notes. · Exit IP appears in candidate set (expected for tunneled public) — Inspect host vs srflx candidates in `webrtc_candidates`.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1692,7 +1705,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>IP-014</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Multiple IP echo endpoints; compare exit_ip_sources for disagreement.</span>
+              <span class="spec-q-preview">Multiple IP echo endpoints; compare exit_ip_sources for disagreement. · Compare `exit_ip_sources` entries for disagreement.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1730,7 +1743,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>SIGNUP-001</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls.</span>
+              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls. · Set `competitor_probe` + `surface_urls` for signup/checkout in the provider YAML; re-run `vpn-leaks run`.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1755,7 +1768,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>SIGNUP-004</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls.</span>
+              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls. · Same as signup surface — competitor web HAR and `har_summary.json`.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1780,7 +1793,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>SIGNUP-010</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls.</span>
+              <span class="spec-q-preview">No competitor web HAR in this run; configure competitor_probe and surface_urls. · Enable competitor web probes; check `cdn_headers` / `web_probes` in competitor_surface.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1818,7 +1831,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>TELEM-001</code></span>
                 <span class="badge not_testable_dynamically">not testable dynamically</span>
               </span>
-              <span class="spec-q-preview">App telemetry requires traffic capture or binary analysis; not proven by this harness alone.</span>
+              <span class="spec-q-preview">INTERNAL_UNVERIFIABLE in harness; use binary/network analysis or vendor disclosures (D).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1846,7 +1859,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>TELEM-004</code></span>
                 <span class="badge not_testable_dynamically">not testable dynamically</span>
               </span>
-              <span class="spec-q-preview">App telemetry requires traffic capture or binary analysis; not proven by this harness alone.</span>
+              <span class="spec-q-preview">Same as TELEM-001.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1887,7 +1900,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>THIRDWEB-001</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">Enable competitor_probe or surface_urls. — Enable `competitor_probe` + marketing URLs; scripts listed in `web_probes.json`.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1915,7 +1928,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>THIRDWEB-003</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">Enable competitor_probe or surface_urls. — HAR + `har_summary.json` tracker_candidates when competitor probes run.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1943,7 +1956,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>THIRDWEB-012</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">Enable competitor_probe or surface_urls. — Review HAR for Set-Cookie; summary may be partial.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -1984,7 +1997,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>WEB-001</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">Configure competitor_probe.provider_domains. — Set `competitor_probe.provider_domains` (and related probes); for desk truth use `dig apex NS` + glue WHOIS (see docs/research-questions-and-evidence.md §H).</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -2012,7 +2025,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>WEB-004</code></span>
                 <span class="badge unanswered">unanswered</span>
               </span>
-              <span class="spec-q-preview">—</span>
+              <span class="spec-q-preview">No web probes in run. — Enable web/portal probes; headers show CDN/WAF signals. Compare with desk `curl -I` if needed.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -2040,7 +2053,7 @@ details.report-appendix .report-body {
                 <span class="spec-q-id"><code>WEB-008</code></span>
                 <span class="badge partially_answered">partially answered</span>
               </span>
-              <span class="spec-q-preview">Review web probe headers, redirects, and HAR for origin leaks.</span>
+              <span class="spec-q-preview">Review web probe headers, redirects, and HAR for origin leaks. · Enable competitor probes and review HAR / redirects in raw artifacts.</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">
@@ -2070,7 +2083,7 @@ details.report-appendix .report-body {
       <article class="report-body">
         <h1>Nordvpn (nordvpn)</h1>
 <ul>
-<li><strong>Report generated:</strong> 2026-04-16T00:42:51.283224+00:00</li>
+<li><strong>Report generated:</strong> 2026-04-16T01:35:11.633598+00:00</li>
 <li><strong>Runs included:</strong> nordvpn-20260415T232536Z-488a1217, nordvpn-20260416T003526Z-f5ad2e99</li>
 <li><strong>Normalized locations:</strong> 2</li>
 </ul>
@@ -2674,13 +2687,13 @@ details.report-appendix .report-body {
 </thead>
 <tbody>
 <tr>
-<td>Albuquerque, New Mexico, United States</td>
+<td>Albuquerque, NM, USA</td>
 <td>False</td>
 <td>False</td>
 <td>False</td>
 </tr>
 <tr>
-<td>San Francisco, California, United States</td>
+<td>San Francisco, CA, USA</td>
 <td>False</td>
 <td>False</td>
 <td>False</td>
@@ -7583,7 +7596,7 @@ doxx.net - Secure networking for humans
     </details>
   </div>
 
-  <script type="application/json" id="vpn-leaks-exposure-graph">{"graph_schema": "1.0", "generated_utc": "2026-04-16T00:42:51.294219+00:00", "filter_provider": "nordvpn", "nodes": [{"id": "vpn:nordvpn", "type": "vpn", "label": "nordvpn", "vpn_provider": "nordvpn"}, {"id": "ip:66.179.156.20", "type": "ip", "label": "66.179.156.20", "address": "66.179.156.20"}, {"id": "asn:136787", "type": "asn", "label": "AS136787 PACKETHUBSA-AS-AP PacketHub S.A.", "asn": 136787, "holder": "PACKETHUBSA-AS-AP PacketHub S.A."}, {"id": "ip:185.187.168.67", "type": "ip", "label": "185.187.168.67", "address": "185.187.168.67"}, {"id": "asn:212238", "type": "asn", "label": "AS212238 CDNEXT - Datacamp Limited", "asn": 212238, "holder": "CDNEXT - Datacamp Limited"}, {"id": "policy:c44e75d61c9675c7", "type": "policy_url", "label": "https://nordvpn.com/privacy-policy/", "url": "https://nordvpn.com/privacy-policy/"}, {"id": "domain:nordvpn.com", "type": "domain", "label": "nordvpn.com", "apex": "nordvpn.com"}], "edges": [{"source": "vpn:nordvpn", "target": "ip:66.179.156.20", "relation": "exit_ip", "run_id": "nordvpn-20260415T232536Z-488a1217", "location_id": "us-new-mexico-albuquerque-20", "normalized_path": "runs/nordvpn-20260415T232536Z-488a1217/locations/us-new-mexico-albuquerque-20/normalized.json"}, {"source": "ip:66.179.156.20", "target": "asn:136787", "relation": "attributed_as", "run_id": "nordvpn-20260415T232536Z-488a1217", "location_id": "us-new-mexico-albuquerque-20", "normalized_path": "runs/nordvpn-20260415T232536Z-488a1217/locations/us-new-mexico-albuquerque-20/normalized.json"}, {"source": "vpn:nordvpn", "target": "ip:185.187.168.67", "relation": "exit_ip", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "ip:185.187.168.67", "target": "asn:212238", "relation": "attributed_as", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "vpn:nordvpn", "target": "policy:c44e75d61c9675c7", "relation": "policy_document", "role": "vpn", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "vpn:nordvpn", "target": "domain:nordvpn.com", "relation": "provider_apex_domain", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}]}</script>
+  <script type="application/json" id="vpn-leaks-exposure-graph">{"graph_schema": "1.0", "generated_utc": "2026-04-16T01:35:11.642225+00:00", "filter_provider": "nordvpn", "nodes": [{"id": "vpn:nordvpn", "type": "vpn", "label": "nordvpn", "vpn_provider": "nordvpn"}, {"id": "ip:66.179.156.20", "type": "ip", "label": "66.179.156.20", "address": "66.179.156.20"}, {"id": "asn:136787", "type": "asn", "label": "AS136787 PACKETHUBSA-AS-AP PacketHub S.A.", "asn": 136787, "holder": "PACKETHUBSA-AS-AP PacketHub S.A."}, {"id": "ip:185.187.168.67", "type": "ip", "label": "185.187.168.67", "address": "185.187.168.67"}, {"id": "asn:212238", "type": "asn", "label": "AS212238 CDNEXT - Datacamp Limited", "asn": 212238, "holder": "CDNEXT - Datacamp Limited"}, {"id": "policy:c44e75d61c9675c7", "type": "policy_url", "label": "https://nordvpn.com/privacy-policy/", "url": "https://nordvpn.com/privacy-policy/"}, {"id": "domain:nordvpn.com", "type": "domain", "label": "nordvpn.com", "apex": "nordvpn.com"}], "edges": [{"source": "vpn:nordvpn", "target": "ip:66.179.156.20", "relation": "exit_ip", "run_id": "nordvpn-20260415T232536Z-488a1217", "location_id": "us-new-mexico-albuquerque-20", "normalized_path": "runs/nordvpn-20260415T232536Z-488a1217/locations/us-new-mexico-albuquerque-20/normalized.json"}, {"source": "ip:66.179.156.20", "target": "asn:136787", "relation": "attributed_as", "run_id": "nordvpn-20260415T232536Z-488a1217", "location_id": "us-new-mexico-albuquerque-20", "normalized_path": "runs/nordvpn-20260415T232536Z-488a1217/locations/us-new-mexico-albuquerque-20/normalized.json"}, {"source": "vpn:nordvpn", "target": "ip:185.187.168.67", "relation": "exit_ip", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "ip:185.187.168.67", "target": "asn:212238", "relation": "attributed_as", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "vpn:nordvpn", "target": "policy:c44e75d61c9675c7", "relation": "policy_document", "role": "vpn", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}, {"source": "vpn:nordvpn", "target": "domain:nordvpn.com", "relation": "provider_apex_domain", "run_id": "nordvpn-20260416T003526Z-f5ad2e99", "location_id": "us-california-san-francisco-67", "normalized_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/locations/us-california-san-francisco-67/normalized.json"}]}</script>
   <script type="module">
     import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3";
 

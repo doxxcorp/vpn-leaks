@@ -1,6 +1,6 @@
 # Nordvpn (nordvpn)
 
-- **Report generated:** 2026-04-16T00:42:51.283224+00:00
+- **Report generated:** 2026-04-16T01:35:11.633598+00:00
 - **Runs included:** nordvpn-20260415T232536Z-488a1217, nordvpn-20260416T003526Z-f5ad2e99
 - **Normalized locations:** 2
 
@@ -259,8 +259,8 @@ Questions still **unanswered** or only **partially answered** (merged status). U
 
 | Location | DNS leak | WebRTC leak | IPv6 leak |
 |----------|----------|-------------|-----------|
-| Albuquerque, New Mexico, United States | False | False | False |
-| San Francisco, California, United States | False | False | False |
+| Albuquerque, NM, USA | False | False | False |
+| San Francisco, CA, USA | False | False | False |
 
 
 ## Underlay (ASNs)

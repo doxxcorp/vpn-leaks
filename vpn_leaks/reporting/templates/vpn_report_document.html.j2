@@ -52,7 +52,7 @@
       <div class="loc-grid">
         {% for loc in dashboard.location_cards %}
         <article class="loc-card">
-          <h3>{{ loc.location_label }}</h3>
+          <h3 class="loc-title" title="{{ loc.location_label }}">{{ loc.location_label_display }}</h3>
           <p class="loc-sub">{{ loc.run_id }} / {{ loc.location_id }}</p>
           <dl>
             <div class="data-row"><dt>Exit IPv4</dt><dd>{{ loc.exit_ip_v4 or '—' }}</dd></div>
@@ -170,7 +170,7 @@
                 <span class="spec-q-id"><code>{{ q.question_id }}</code></span>
                 <span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span>
               </span>
-              <span class="spec-q-preview">{{ q.answer_summary_short or '—' }}</span>
+              <span class="spec-q-preview">{{ q.list_preview }}</span>
             </summary>
             <div class="spec-q-body">
               <dl class="spec-q-dl">

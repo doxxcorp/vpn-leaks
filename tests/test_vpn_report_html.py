@@ -102,6 +102,9 @@ def test_generate_vpn_report_writes_html(
     assert "Full narrative export" in html
     assert "Benchmark locations" in html
     assert "loc-grid" in html
+    assert 'class="loc-title"' in html
+    assert 'title="L1"' in html
     assert "spec-q" in html
+    assert "resolvers seen" in html
     assert "../style/icons/" in html
     assert "spec-cat-count" in html

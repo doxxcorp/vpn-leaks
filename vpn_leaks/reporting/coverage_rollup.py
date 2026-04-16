@@ -141,6 +141,7 @@ def compute_next_steps(
     status = str(row.get("answer_status") or "")
     notes = str(row.get("notes") or "").strip()
     hint = hints.get(qid, "").strip()
+    testability = str(row.get("testability") or "unknown").strip()
 
     if status == "not_testable_dynamically":
         if hint:
@@ -154,11 +155,22 @@ def compute_next_steps(
     # partial or unanswered
     if notes and hint:
         if notes in hint or hint.startswith(notes):
-            return hint
-        if hint in notes:
-            return notes
-        return f"{notes} — {hint}"
-    return notes or hint or "—"
+            combined = hint
+        elif hint in notes:
+            combined = notes
+        else:
+            combined = f"{notes} — {hint}"
+    else:
+        combined = notes or hint or ""
+
+    if combined and combined != "—":
+        return combined
+
+    return (
+        f"See docs/research-questions-and-evidence.md for {qid or '?'} "
+        f"(testability: {testability}); follow RUN-STEPS.md to extend the harness or add "
+        "desk/document evidence (S/D)."
+    )
 
 
 def _sanitize_table_cell(s: str) -> str:

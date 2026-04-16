@@ -12,6 +12,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
 from vpn_leaks.config_loader import repo_root
+from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
 from vpn_leaks.reporting.coverage_rollup import build_framework_rollup_payload
 from vpn_leaks.reporting.html_dashboard import build_html_dashboard_context
 
@@ -386,9 +387,10 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
 
     for _run_id, _path, data in rows:
         loc = data.get("vpn_location_label") or data.get("vpn_location_id")
+        display = format_benchmark_location_display(data) or str(loc)
         table_rows.append(
             {
-                "label": str(loc),
+                "label": display,
                 "dns": data.get("dns_leak_flag"),
                 "webrtc": data.get("webrtc_leak_flag"),
                 "ipv6": data.get("ipv6_leak_flag"),

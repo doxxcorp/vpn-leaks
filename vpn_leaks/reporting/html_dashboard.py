@@ -6,6 +6,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
+
 
 # Slugs with a vendored icon under style/icons/<slug>.svg (see configs/framework/questions.yaml).
 _SPEC_CATEGORY_ICON_SLUGS: frozenset[str] = frozenset(
@@ -32,6 +34,26 @@ def _category_icon_href(category: str) -> str:
     if slug not in _SPEC_CATEGORY_ICON_SLUGS:
         slug = "default"
     return f"../style/icons/{slug}.svg"
+
+
+def _spec_list_preview(row: dict[str, Any]) -> str:
+    """One line for collapsed SPEC row: answers and/or actionable next steps."""
+    status = str(row.get("answer_status") or "")
+    summ = str(row.get("answer_summary") or "").strip()
+    ns = str(row.get("next_steps") or "").strip()
+    if status == "answered":
+        return summ if summ else "—"
+    if status == "unanswered":
+        return ns if ns else "—"
+    if status == "partially_answered":
+        if summ and ns and ns != "—":
+            if ns in summ:
+                return summ
+            return f"{summ} · {ns}"
+        return summ or ns or "—"
+    if status == "not_testable_dynamically":
+        return ns if ns else summ or "—"
+    return summ or ns or "—"
 
 
 def _truncate(s: str, max_len: int = 140) -> str:
@@ -85,13 +107,16 @@ def build_location_cards(
         dns_obs = data.get("dns_servers_observed")
         if not isinstance(dns_obs, list):
             dns_obs = []
+        full_label = str(
+            data.get("vpn_location_label") or data.get("vpn_location_id") or "",
+        )
+        display_label = format_benchmark_location_display(data) or full_label
         cards.append(
             {
                 "run_id": run_id,
                 "location_id": str(data.get("vpn_location_id") or ""),
-                "location_label": str(
-                    data.get("vpn_location_label") or data.get("vpn_location_id") or "",
-                ),
+                "location_label": full_label,
+                "location_label_display": display_label,
                 "normalized_path": str(path),
                 "exit_ip_v4": data.get("exit_ip_v4"),
                 "exit_ip_v6": data.get("exit_ip_v6"),
@@ -128,6 +153,7 @@ def group_spec_by_category(
                 {
                     **r,
                     "answer_summary_short": _truncate(summ, 160),
+                    "list_preview": _spec_list_preview(r),
                 },
             )
         label = (

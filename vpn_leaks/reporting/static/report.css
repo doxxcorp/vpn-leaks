@@ -209,6 +209,10 @@ a:hover {
   margin-bottom: 2rem;
 }
 
+.loc-grid > .loc-card {
+  min-width: 0;
+}
+
 .loc-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -216,17 +220,22 @@ a:hover {
   padding: 1.1rem 1.2rem;
   box-shadow: var(--shadow);
   transition: border-color 0.2s ease, transform 0.2s ease;
+  min-width: 0;
 }
 .loc-card:hover {
   border-color: rgba(27, 193, 188, 0.35);
   transform: translateY(-2px);
 }
 
-.loc-card h3 {
+.loc-card h3.loc-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 0.5rem;
   line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .loc-card .loc-sub {
@@ -501,6 +510,10 @@ details.spec-q[open] > summary.spec-q-summary::after {
   font-family: var(--font-mono);
   font-size: 0.74rem;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .spec-q-body {
   padding: 0.65rem 0.75rem 0.75rem;
