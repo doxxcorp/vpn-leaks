@@ -1,6 +1,14 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-15._
+_Last updated: 2026-04-16._
+
+## 2026-04-16 — VPN HTML report UX (location cards, exposure graph, SPEC hints)
+
+- **[`vpn_report_document.html.j2`](vpn_leaks/reporting/templates/vpn_report_document.html.j2):** Benchmark **location cards** use **CSS subgrid** so rows line up across cards; **Exit IPv6** always shown; short hint distinguishes exit addresses vs leak-test **badges**. **Coverage** blurb states **strictest merge** rule; **SPEC** section adds the same when **multiple locations** exist. **Exposure graph** blurb explains VPN → exit IP → ASN / policies / DNS glue; **3d-force-graph** uses **`three-spritetext`** + **`nodeThreeObjectExtend`** so **labels render on load** (pinned `three@0.160.0` via esm.sh).
+- **[`report.css`](vpn_leaks/reporting/static/report.css):** Subgrid + `@supports` fallback (`min-height` on ASN row).
+- **[`configs/framework/report_hints.yaml`](configs/framework/report_hints.yaml):** Clearer **FP-001** and **CTRL-002** next-step copy (harness knobs, `services_contacted` scope, multi-location merge).
+- **[`coverage.py`](vpn_leaks/framework/coverage.py):** FP-001 unanswered rows omit redundant empty **notes** (hints carry guidance).
+- **[HANDOFF.md](HANDOFF.md):** Reporting table and **Viewing `VPNs/<SLUG>.html`** updated for subgrid cards, IPv4/IPv6/badges copy, on-load graph labels, merged SPEC semantics, and pointers to **`report_hints.yaml`** / **`coverage_rollup`**.
 
 ## 2026-04-15 — GitHub Pages (doxxcorp.github.io/vpn-leaks)
 
