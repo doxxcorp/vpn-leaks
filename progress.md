@@ -1,6 +1,27 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-16._
+_Last updated: 2026-04-16 (HANDOFF + progress sync for gap-closure + CLI)._
+
+## 2026-04-16 — NordVPN gap-closure plan (harness, artifacts, desk, external)
+
+**Config ([`configs/vpns/nordvpn.yaml`](configs/vpns/nordvpn.yaml)):** Added **`surface_urls`** (`pricing`, `signup` → my.nordaccount, `checkout` → nordcheckout) so **`surface_probe/`** HAR + `web_probes.json` cover signup/checkout surfaces. Added second **`policy_urls`** entry (`my.nordaccount.com/legal/privacy-policy/`) for policy fetch parity with Playwright-heavy pages. Appended **`gb-england-london-102`** for geographic diversity in declared locations. Comment block documents **`--transition-tests`** vs `manual_gui` / scripted modes.
+
+**CLI ([`vpn_leaks/cli.py`](vpn_leaks/cli.py)):** With **`--transition-tests`**, transition metadata is recorded for **`manual_gui`** even when **`--skip-vpn`** is set (writes `transitions.json` with `status: skipped`); full disconnect/reconnect polling still requires a non-manual adapter and a real connect path. **`RUN-STEPS.md`** section 9 updated to match.
+
+**Benchmarks:** Re-ran `vpn-leaks run --provider nordvpn --skip-vpn --force --locations us-california-san-francisco-75` (with and without `--transition-tests`); regenerated **`VPNs/NORDVPN.md`** / **`.html`** via `vpn-leaks report --provider nordvpn`.
+
+**Artifact review (latest run `nordvpn-20260416T041402Z-20561114`, off-VPN / ISP path):**
+
+- **DNS (`dnsleak/dns_summary.json`, `normalized`):** Tiers: `resolv.conf` → `10.0.0.1`, `getaddrinfo` → `173.219.119.98`, ipleak external → exit-aligned `47.208.238.130`; `dns_leak_flag` false; notes match heuristic partials (**DNS-002/003/011**).
+- **WebRTC:** `host` candidate uses **mDNS** hostname; `srflx` shows tunnel public **47.208.238.130** — consistent with **`webrtc_notes`** (**IP-007** partial).
+- **Exit DNS (`exit_dns.json`):** `ptr_v4` **NXDOMAIN** (no PTR), not timeout — store for **EXIT-004**; merged report may still show older timeout rows from other runs under strictest merge.
+- **Surface probe:** Marketing/pricing often **403** + Cloudflare challenge script; **my.nordaccount** 200 with long script list (Sentry, etc.) — useful for **THIRDWEB-*** / **SIGNUP-*** partials; automated rollup may remain partial where challenge pages dominate.
+
+**Desk checks (system resolver, 2026-04-16):** `dig nordvpn.com NS` → **Cloudflare** (`seth.ns.cloudflare.com`, `lily.ns.cloudflare.com`). `curl -I https://nordvpn.com/` → **HTTP 403**, `server: cloudflare`, `cf-mitigated: challenge` — aligns **WEB-004** CDN/WAF signals; compare to in-tunnel **`provider_dns.json`** when split horizon differs (**research-questions-and-evidence.md** §A).
+
+**External / document-only (plan §E–F):** **IPv6** still off-path in these runs (**IP-002**). **CTRL-003**, **TELEM-001/004**, **FAIL-004** remain doc/binary/capture/fault-injection work. **OS-001** needs host firewall or routing tools. **LOG-005**: compare dual **`policy_urls`** HTML to audits/ISAE (**D**).
+
+**Handoff:** **[HANDOFF.md](HANDOFF.md)** updated for **`surface_urls`**, **`surface_probe/`**, **`transitions.json`** / **`--transition-tests`** (including `manual_gui` + `--skip-vpn`), dual **`policy_urls`**, and **RUN-STEPS.md** in the documentation map.
 
 ## 2026-04-16 — VPN HTML report UX (location cards, exposure graph, SPEC hints)
 

@@ -1,8 +1,0 @@
-{
-  "ptr_v4": {
-    "ip": "66.179.156.20",
-    "ptr": [],
-    "error": "The resolution lifetime expired after 10.205 seconds: Server Do53:100.64.0.2@53 answered The DNS operation timed out.; Server Do53:100.64.0.2@53 answered The DNS operation timed out."
-  },
-  "ptr_v6": null
-}

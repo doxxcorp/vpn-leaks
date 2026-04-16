@@ -513,7 +513,7 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
                 summary="BrowserLeaks probe pages captured (canvas/WebGL/tls signals in raw excerpts).",
                 refs=[_ev("browserleaks_snapshot")],
             )
-        return _row(q, status="unanswered", summary="", notes="No fingerprint data.")
+        return _row(q, status="unanswered", summary="", notes="")
     if q.id == "FP-011":
         return _row(
             q,

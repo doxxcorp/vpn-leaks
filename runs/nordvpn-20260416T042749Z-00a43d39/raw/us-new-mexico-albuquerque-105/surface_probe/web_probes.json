@@ -1,0 +1,105 @@
+[
+  {
+    "url": "https://nordvpn.com/pricing/",
+    "error": null,
+    "status": 403,
+    "final_url": "https://nordvpn.com/pricing/",
+    "cdn_headers": {
+      "cf-ray": "9ed0759f9a839869-PHX",
+      "server": "cloudflare"
+    },
+    "scripts": [
+      "https://nordvpn.com/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1?ray=9ed0759f9a839869"
+    ],
+    "images": [],
+    "captcha_third_party": false,
+    "har_path": "runs/nordvpn-20260416T042749Z-00a43d39/raw/us-new-mexico-albuquerque-105/surface_probe/har/3cec43152ba057c5.har"
+  },
+  {
+    "url": "https://my.nordaccount.com/",
+    "error": null,
+    "status": 200,
+    "final_url": "https://my.nordaccount.com/",
+    "cdn_headers": {
+      "cf-ray": "9ed075a11dcc9d47-PHX",
+      "server": "cloudflare"
+    },
+    "scripts": [
+      "https://my.nordaccount.com/assets/runtime.8f001b37f65ca9b94463.js",
+      "https://my.nordaccount.com/assets/_formatjs.defaultvendors.490d421b9d5c3e9f8009.js",
+      "https://my.nordaccount.com/assets/regenerator-runtime.defaultvendors.1975ef189c3a5830cbd9.js",
+      "https://my.nordaccount.com/assets/promise-polyfill.defaultvendors.fed5c69d1d43f3c655ec.js",
+      "https://my.nordaccount.com/assets/index.f3f9e2458982da77703f.js",
+      "https://my.nordaccount.com/assets/_nordsec.defaultvendors.1cbad33e47ad89bb5d71.chunk.js",
+      "https://my.nordaccount.com/assets/date-fns.defaultvendors.27c069bedb2b90eb6745.chunk.js",
+      "https://my.nordaccount.com/assets/_nord.defaultvendors.cd2b72f3eabc7aefab85.chunk.js",
+      "https://my.nordaccount.com/assets/tslib.defaultvendors.f06c88be99e150fe47a8.chunk.js",
+      "https://my.nordaccount.com/assets/_sentry.defaultvendors.25c5c79233b02634b48a.chunk.js",
+      "https://my.nordaccount.com/assets/_sentry-internal.defaultvendors.12d96cb2c7ef87909b27.chunk.js",
+      "https://my.nordaccount.com/assets/graphql.defaultvendors.b4db7c317c7d39b65131.chunk.js",
+      "https://my.nordaccount.com/assets/react-intl.defaultvendors.92986a6cbe49509fcab3.chunk.js",
+      "https://my.nordaccount.com/assets/graphql-request.defaultvendors.b2146a3e5d0f596bb64a.chunk.js",
+      "https://my.nordaccount.com/assets/_reduxjs.defaultvendors.a64bef2b4c371a7c9ca8.chunk.js",
+      "https://my.nordaccount.com/assets/react-transition-group.defaultvendors.71d280de527e9735544f.chunk.js",
+      "https://my.nordaccount.com/assets/uuid.defaultvendors.487b6d676e3ad7b5e036.chunk.js",
+      "https://my.nordaccount.com/assets/_babel.defaultvendors.2455d74e1fb84c624c54.chunk.js",
+      "https://my.nordaccount.com/assets/react.defaultvendors.62bda77ffd034248908f.chunk.js",
+      "https://my.nordaccount.com/assets/react-dom.defaultvendors.510bc4dc1ad2bf37567c.chunk.js",
+      "https://my.nordaccount.com/assets/prop-types.defaultvendors.a656d45b79e86c928e92.chunk.js",
+      "https://my.nordaccount.com/assets/react-toastify.defaultvendors.e8751af5398f51cb657f.chunk.js",
+      "https://my.nordaccount.com/assets/dom-helpers.defaultvendors.929ba19f051e6cca5269.chunk.js",
+      "https://my.nordaccount.com/assets/intl-messageformat.defaultvendors.b994cdf10062f0dffbbb.chunk.js",
+      "https://my.nordaccount.com/assets/use-sync-external-store.defaultvendors.81442bee51666b2f5ab0.chunk.js",
+      "https://my.nordaccount.com/assets/scheduler.defaultvendors.c87722040a503f4f3f9f.chunk.js",
+      "https://my.nordaccount.com/assets/react-is.defaultvendors.92942d4a0302555e30b1.chunk.js",
+      "https://my.nordaccount.com/assets/react-inlinesvg.defaultvendors.4a977f328b9a40836758.chunk.js",
+      "https://my.nordaccount.com/assets/react-from-dom.defaultvendors.3dc35daf980ebd689198.chunk.js",
+      "https://my.nordaccount.com/assets/react-redux.defaultvendors.55e7cc60ca7ac18a7047.chunk.js",
+      "https://my.nordaccount.com/assets/js-cookie.defaultvendors.aa8f86970d616d2ce153.chunk.js",
+      "https://my.nordaccount.com/assets/immer.defaultvendors.6fded9f37b4913aa9bd1.chunk.js",
+      "https://my.nordaccount.com/assets/clsx.defaultvendors.856bc1a5790a3f606101.chunk.js",
+      "https://my.nordaccount.com/assets/_standard-schema.defaultvendors.6faa3d8d1551774e5c0c.chunk.js",
+      "https://my.nordaccount.com/assets/classnames.defaultvendors.e2ab443a1f27e04b04df.chunk.js",
+      "https://my.nordaccount.com/assets/react-side-effect.defaultvendors.035fb5461cb44aeb4641.chunk.js",
+      "https://my.nordaccount.com/assets/react-router.defaultvendors.a09a7faa911420a90ddf.chunk.js",
+      "https://my.nordaccount.com/assets/react-router-dom.defaultvendors.e50d96c12a219ec0d5e0.chunk.js",
+      "https://my.nordaccount.com/assets/react-intersection-observer.defaultvendors.4c2b522de6f7bbcd86e8.chunk.js",
+      "https://my.nordaccount.com/assets/react-helmet.defaultvendors.bdd36bae03791902fd4c.chunk.js",
+      "https://my.nordaccount.com/assets/react-fast-compare.defaultvendors.c13160b11e8cbb645318.chunk.js",
+      "https://my.nordaccount.com/assets/react-content-loader.defaultvendors.82e28da55d9337fe1e1e.chunk.js",
+      "https://my.nordaccount.com/assets/object-assign.defaultvendors.11dad362db8d6f602074.chunk.js",
+      "https://my.nordaccount.com/assets/lodash.isequal.defaultvendors.53b2e5173290a57b30b5.chunk.js",
+      "https://my.nordaccount.com/assets/humps.defaultvendors.d487ed7a935923c9b2e1.chunk.js",
+      "https://my.nordaccount.com/assets/hoist-non-react-statics.defaultvendors.7171840257da98967b9a.chunk.js",
+      "https://my.nordaccount.com/assets/filter-obj.defaultvendors.94c63526e1e718a23c90.chunk.js",
+      "https://my.nordaccount.com/assets/file-saver.defaultvendors.375bc154e865cb159827.chunk.js",
+      "https://my.nordaccount.com/assets/exenv.defaultvendors.3d6540bc323db97fe9b4.chunk.js",
+      "https://my.nordaccount.com/assets/decode-uri-component.defaultvendors.96cfd77d74c2797d6fc2.chunk.js",
+      "https://my.nordaccount.com/assets/cross-fetch.defaultvendors.1f89cb3ed554da089890.chunk.js",
+      "https://my.nordaccount.com/assets/strict-uri-encode.defaultvendors.c65a97db2a22557ed5b7.chunk.js",
+      "https://my.nordaccount.com/assets/split-on-first.defaultvendors.19d27a27e767feeaad1c.chunk.js",
+      "https://my.nordaccount.com/assets/query-string.defaultvendors.627b547650dfceb718cd.chunk.js",
+      "https://my.nordaccount.com/assets/_remix-run.defaultvendors.580c9c5b720b6c6b3554.chunk.js",
+      "https://my.nordaccount.com/assets/4666.c911d9a1839636cab2d6.chunk.js"
+    ],
+    "images": [],
+    "captcha_third_party": false,
+    "har_path": "runs/nordvpn-20260416T042749Z-00a43d39/raw/us-new-mexico-albuquerque-105/surface_probe/har/0096221d6f12d382.har"
+  },
+  {
+    "url": "https://nordcheckout.com/",
+    "error": null,
+    "status": 403,
+    "final_url": "https://nordvpn.com/pricing?redirected_from=nordcheckout.com%2F",
+    "cdn_headers": {
+      "cf-ray": "9ed075aa5862f4de-PHX",
+      "server": "cloudflare"
+    },
+    "scripts": [
+      "https://nordvpn.com/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1?ray=9ed075aa5862f4de"
+    ],
+    "images": [],
+    "captcha_third_party": false,
+    "har_path": "runs/nordvpn-20260416T042749Z-00a43d39/raw/us-new-mexico-albuquerque-105/surface_probe/har/5c4416295d131e0b.har"
+  }
+]

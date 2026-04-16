@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "06eee100-5210-423f-a4f0-2880ec116d15.local",
+    "port": 61767,
+    "raw": "candidate:213344460 1 udp 2113937151 06eee100-5210-423f-a4f0-2880ec116d15.local 61767 typ host generation 0 ufrag IQ13 network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "66.179.156.105",
+    "port": 35248,
+    "raw": "candidate:422987468 1 udp 1677729535 66.179.156.105 35248 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag IQ13 network-cost 999"
+  }
+]

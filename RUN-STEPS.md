@@ -272,9 +272,9 @@ skip_vpn: not invoking adapter.disconnect
 wrote runs/nordvpn-20260415T143022Z-8f3a9c1d/locations/us-california-santa-clara-42/normalized.json
 ```
 
-**Not run with `--skip-vpn`**
+**`--transition-tests` with `--skip-vpn`**
 
-- `run_transition_tests` only runs if `--transition-tests` **and** not `skip_vpn` — so it is skipped for your command.
+- For **`manual_gui`**, transition tests **still run** and write `raw/<loc>/transitions.json` with `status: skipped` (no automated disconnect/reconnect). For scripted modes, full transition polling runs only when **`--skip-vpn` is not** set.
 
 ---
 

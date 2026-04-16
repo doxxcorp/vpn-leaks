@@ -1,0 +1,19 @@
+[
+  {
+    "host": "my.nordaccount.com",
+    "a": [
+      "104.18.42.225",
+      "172.64.145.31"
+    ],
+    "aaaa": [
+      "2a06:98c1:3101::6812:2ae1",
+      "2a06:98c1:3107::ac40:911f"
+    ],
+    "https_status": 200,
+    "https_cdn_headers": {
+      "cf-ray": "9ed06c211fd6ed3f-SJC",
+      "server": "cloudflare"
+    },
+    "error": null
+  }
+]

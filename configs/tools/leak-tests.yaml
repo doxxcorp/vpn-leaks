@@ -31,7 +31,7 @@ webrtc:
   max_gather_rounds: 3
 
 fingerprint:
-  enabled: false
+  enabled: true
   urls: []
 
 # Optional pinned BrowserLeaks pages (JA3/JA4, DNS leak table, WebRTC, TLS). Skip with --skip-browserleaks.

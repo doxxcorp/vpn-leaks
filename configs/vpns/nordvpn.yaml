@@ -6,11 +6,22 @@ locations:
   label: Albuquerque, New Mexico, United States
 - id: us-california-san-francisco-67
   label: San Francisco, California, United States
+- id: us-california-san-francisco-75
+  label: San Francisco, California, United States
+- id: gb-england-london-102
+  label: London, England, United Kingdom
+- id: us-california-san-francisco-64
+  label: San Francisco, California, United States
+- id: us-new-mexico-albuquerque-105
+  label: Albuquerque, New Mexico, United States
+- id: de-hamburg-hamburg-238
+  label: Hamburg, Hamburg, Germany
 credentials:
   username_env: null
   password_env: null
 policy_urls:
 - https://nordvpn.com/privacy-policy/
+- https://my.nordaccount.com/legal/privacy-policy/
 competitor_probe:
   provider_domains:
   - nordvpn.com
@@ -18,3 +29,10 @@ competitor_probe:
   - https://nordvpn.com/
   portal_hosts:
   - my.nordaccount.com
+surface_urls:
+- page_type: pricing
+  url: https://nordvpn.com/pricing/
+- page_type: signup
+  url: https://my.nordaccount.com/
+- page_type: checkout
+  url: https://nordcheckout.com/

@@ -301,7 +301,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             if surface_data:
                 loc_extra["surface_probe"] = surface_data
 
-            if args.transition_tests and not skip_vpn:
+            # Full disconnect/reconnect polling only when the adapter runs; for manual_gui
+            # still record a stub (skipped) so `--transition-tests` produces transitions.json.
+            if args.transition_tests and (not skip_vpn or mode == "manual_gui"):
                 tr = run_transition_tests(
                     leak_cfg=leak_cfg,
                     raw_dir=raw_base,

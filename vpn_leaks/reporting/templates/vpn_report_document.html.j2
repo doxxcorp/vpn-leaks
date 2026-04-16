@@ -49,21 +49,18 @@
 
     <section aria-labelledby="loc-h" class="anim-in anim-delay-2">
       <h2 class="section-title" id="loc-h">Benchmark locations</h2>
+      <p class="loc-section-hint">Exit IPv4 / IPv6 above are observed tunnel addresses. Tags below are harness leak-test outcomes (not the same as “has IPv6”).</p>
       <div class="loc-grid">
         {% for loc in dashboard.location_cards %}
         <article class="loc-card">
           <h3 class="loc-title" title="{{ loc.location_label }}">{{ loc.location_label_display }}</h3>
           <p class="loc-sub">{{ loc.run_id }} / {{ loc.location_id }}</p>
-          <dl>
-            <div class="data-row"><dt>Exit IPv4</dt><dd>{{ loc.exit_ip_v4 or '—' }}</dd></div>
-            {% if loc.exit_ip_v6 %}
-            <div class="data-row"><dt>Exit IPv6</dt><dd>{{ loc.exit_ip_v6 }}</dd></div>
-            {% endif %}
-            <div class="data-row"><dt>ASN</dt><dd>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</dd></div>
-            <div class="data-row"><dt>Mode</dt><dd>{{ loc.connection_mode }}</dd></div>
-            <div class="data-row"><dt>Resolvers</dt><dd style="text-align:left;max-width:65%">{{ loc.dns_summary }}</dd></div>
-          </dl>
-          <div class="flag-row">
+          <dl class="data-row"><dt>Exit IPv4</dt><dd>{{ loc.exit_ip_v4 or '—' }}</dd></dl>
+          <dl class="data-row"><dt>Exit IPv6</dt><dd>{{ loc.exit_ip_v6 or '—' }}</dd></dl>
+          <dl class="data-row data-row--asn"><dt>ASN</dt><dd>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</dd></dl>
+          <dl class="data-row"><dt>Mode</dt><dd>{{ loc.connection_mode }}</dd></dl>
+          <dl class="data-row data-row--resolvers"><dt>Resolvers</dt><dd>{{ loc.dns_summary }}</dd></dl>
+          <div class="flag-row" title="DNS / WebRTC / IPv6 leak flags from this benchmark harness">
             <span class="badge {% if loc.dns_leak == true %}unanswered{% elif loc.dns_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">DNS</span>
             <span class="badge {% if loc.webrtc_leak == true %}unanswered{% elif loc.webrtc_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">WebRTC</span>
             <span class="badge {% if loc.ipv6_leak == true %}unanswered{% elif loc.ipv6_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">IPv6</span>
@@ -118,7 +115,7 @@
       <div class="viz-panel">
         <h3>SPEC framework coverage</h3>
         {% if framework_rollup.has_framework %}
-        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Bar shows share of IDs by status.</p>
+        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Each ID uses the <strong>strictest</strong> status across benchmark rows: unanswered beats partially answered beats answered. Bar shows share of IDs by status.</p>
         {% set c = framework_rollup.coverage_counts %}
         {% set total = (c.answered + c.partially_answered + c.unanswered + c.not_testable_dynamically) %}
         {% if total > 0 %}
@@ -144,7 +141,7 @@
 
       <div class="viz-panel">
         <h3>Exposure graph</h3>
-        <p class="graph-blurb">Same graph as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>. Rotate and zoom.</p>
+        <p class="graph-blurb">Same data as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>. <strong>How to read:</strong> the VPN node links to your observed <strong>exit IPv4</strong>, then to its <strong>ASN</strong>; to <strong>policy URLs</strong> when policies were fetched; and (when competitor DNS ran) to <strong>provider apex domains</strong> → <strong>nameservers</strong> → <strong>glue IPs</strong> → <strong>ASN</strong>. Drag to rotate, scroll to zoom. Node labels show on load.</p>
         <div id="graph-err" hidden></div>
         <div id="exposure-graph" role="application" aria-label="Exposure graph 3D visualization"></div>
       </div>
@@ -153,6 +150,9 @@
     {% if dashboard.has_framework and dashboard.spec_by_category %}
     <section class="spec-zone anim-in anim-delay-4" aria-labelledby="spec-h">
       <h2 class="section-title" id="spec-h">SPEC questions by category</h2>
+      {% if dashboard.run_count > 1 %}
+      <p class="spec-merge-hint">Merged answers use the strictest status per question ID across all {{ dashboard.run_count }} locations. If one location lacks evidence for a question, the merged row can stay open even when another location looks fine—open each question or use the markdown “Detailed runs” section for per-location coverage.</p>
+      {% endif %}
       {% for cat in dashboard.spec_by_category %}
       <details class="spec-cat">
         <summary class="spec-cat-summary">
@@ -208,7 +208,8 @@
 
   <script type="application/json" id="vpn-leaks-exposure-graph">{{ exposure_graph_json|safe }}</script>
   <script type="module">
-    import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3";
+    import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3?deps=three@0.160.0";
+    import SpriteText from "https://esm.sh/three-spritetext@1.9.4?deps=three@0.160.0";
 
     const errEl = document.getElementById("graph-err");
     const mount = document.getElementById("exposure-graph");
@@ -216,6 +217,13 @@
     function showErr(msg) {
       errEl.hidden = false;
       errEl.textContent = msg;
+    }
+
+    function nodeCaption(n) {
+      const typ = n.type || "?";
+      const raw = String(n.label || n.id || "");
+      const snip = raw.length > 42 ? `${raw.slice(0, 40)}…` : raw;
+      return `[${typ}] ${snip}`;
     }
 
     const rawEl = document.getElementById("vpn-leaks-exposure-graph");
@@ -242,6 +250,14 @@
         .height(mount.clientHeight)
         .nodeLabel((n) => `[${n.type}] ${n.label || n.id}`)
         .nodeAutoColorBy("type")
+        .nodeThreeObjectExtend(true)
+        .nodeThreeObject((n) => {
+          const s = new SpriteText(nodeCaption(n));
+          s.color = "rgba(210, 218, 228, 0.92)";
+          s.textHeight = 3.2;
+          s.position.set(0, -14, 0);
+          return s;
+        })
         .linkDirectionalParticles(0);
 
       fg.graphData({ nodes, links });

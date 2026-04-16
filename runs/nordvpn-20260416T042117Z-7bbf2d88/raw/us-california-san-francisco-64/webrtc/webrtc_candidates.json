@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "f6081914-5fd9-499c-975e-3991d769a321.local",
+    "port": 59115,
+    "raw": "candidate:1654439336 1 udp 2113937151 f6081914-5fd9-499c-975e-3991d769a321.local 59115 typ host generation 0 ufrag De7T network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "185.187.168.64",
+    "port": 53197,
+    "raw": "candidate:1998429096 1 udp 1677729535 185.187.168.64 53197 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag De7T network-cost 999"
+  }
+]

@@ -94,13 +94,18 @@ def test_generate_vpn_report_writes_html(
     assert "one row per SPEC ID" in md_text
     html = html_path.read_text(encoding="utf-8")
     assert "Coverage and graph" in html
+    assert "strictest" in html
     assert "SPEC framework coverage" in html
     assert "Exposure graph" in html
+    assert "How to read" in html
+    assert "nodeThreeObjectExtend" in html
     assert "graph_schema" in html
     assert "stacked-bar" in html
     assert "report-appendix" in html
     assert "Full narrative export" in html
     assert "Benchmark locations" in html
+    assert "loc-section-hint" in html
+    assert "Exit IPv6" in html
     assert "loc-grid" in html
     assert 'class="loc-title"' in html
     assert 'title="L1"' in html

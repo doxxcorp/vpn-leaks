@@ -2,13 +2,13 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-16 (VPN HTML report UX + handoff)._
+_Last updated: 2026-04-16 (NordVPN gap closure: `surface_urls`, transition-tests CLI, docs)._
 
 ---
 
 ## What this project is
 
-**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional browser fingerprint, **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, **always-on yourinfo.ai** capture (third-party benchmark page: HAR + text excerpt; **`--skip-yourinfo`** to omit), and optional **competitor-surface** probes (provider apex DNS, Playwright web/HAR + CDN headers, HTTPS portal checks, traceroute toward exit, bounded stray JSON GETs)—driven by `competitor_probe` in each provider YAML.
+**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional browser fingerprint, **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, **always-on yourinfo.ai** capture (third-party benchmark page: HAR + text excerpt; **`--skip-yourinfo`** to omit), optional **competitor-surface** probes (provider apex DNS, Playwright web/HAR + CDN headers, HTTPS portal checks, traceroute toward exit, bounded stray JSON GETs)—driven by `competitor_probe` in each provider YAML—and optional **`surface_urls`** (tagged Playwright loads → **`surface_probe/`**, e.g. pricing/signup/checkout pages for SPEC web/signup inventory).
 
 - **Package name:** `vpn-leaks` (import: `vpn_leaks`).
 - **Python:** 3.12+ ([pyproject.toml](pyproject.toml)).
@@ -28,7 +28,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading |
 | VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs, `manual_gui`, `policy_urls`, location list |
 | Auto location (ipwho) | [vpn_leaks/auto_connection.py](vpn_leaks/auto_connection.py) | When `--locations` omitted: build `location_id` / label, optional YAML persist |
-| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes` |
+| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes`, `surface_probe` (`surface_urls` in YAML) |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
 | Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (visual-first dashboard; full markdown in collapsible appendix), `PROVIDERS/AS<n>.md`, `graph-export` JSON |
@@ -51,6 +51,9 @@ vpn-leaks run --provider nordvpn --skip-vpn
 # Aggregated markdown + HTML dashboard from all runs for that provider under runs/:
 vpn-leaks report --provider nordvpn
 
+# Transition-phase artifact: for manual_gui, writes transitions.json (skipped stub) even with --skip-vpn:
+vpn-leaks run --provider nordvpn --skip-vpn --transition-tests
+
 # Per-ASN underlay report:
 vpn-leaks report --provider nordvpn --asn <asn_integer>
 
@@ -72,7 +75,7 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 | Output | Location |
 |--------|----------|
-| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, optional **competitor_probe/**) |
+| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, optional **competitor_probe/**, optional **surface_probe/**, optional **transitions.json** when `--transition-tests`) |
 | Per-provider rollup | `vpn-leaks report --provider <slug>` → **`VPNs/<SLUG>.md`** (full narrative) and **`VPNs/<SLUG>.html`** (dashboard: risk strip, location cards, third-party signals, SPEC by category, coverage bar, embedded 3D exposure graph; slug uppercased, `-` → `_`) |
 | Per-ASN rollup | `PROVIDERS/AS<n>.md` |
 
@@ -86,7 +89,7 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 ## Policy fetching (important)
 
-- **NordVPN** ([configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml)): `policy_urls` points at **`https://my.nordaccount.com/legal/privacy-policy/`** because the marketing site `https://nordvpn.com/privacy-policy/` often returns **403** or Cloudflare interstitials to simple HTTP clients.
+- **NordVPN** ([configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml)): `policy_urls` lists both **`https://nordvpn.com/privacy-policy/`** and **`https://my.nordaccount.com/legal/privacy-policy/`** (account legal is the reliable capture for Playwright/httpx; the marketing URL often returns **403** or Cloudflare interstitials to simple HTTP clients).
 - Implementation: browser-like **httpx** headers; **Playwright** fallback for Cloudflare challenges or thin SPA shells (e.g. Nord Account). Successful runs add `policy:playwright_chromium` to `services_contacted`.
 - **Older runs (2026-04-10)** may still show `fetch error: 403` in `policies` for the *previous* URL; new runs after the config change should have `sha256` and summary bullets. Re-run benchmarks if you need on-disk policy HTML under `raw/.../policy/`.
 
@@ -100,9 +103,9 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 ## NordVPN: completed benchmark snapshot
 
-Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run --provider nordvpn --skip-vpn`** with **auto location** after switching the **NordVPN macOS client** per destination. **No** DNS / WebRTC / IPv6 leak flags were set in those runs (per harness heuristics). Full table (run ids, locations, exit IPs, ASNs) is in **[progress.md](progress.md)** — do not duplicate that table here; update **progress.md** when new runs are added.
+Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run --provider nordvpn --skip-vpn`** with **auto location** after switching the **NordVPN macOS client** per destination. **No** DNS / WebRTC / IPv6 leak flags were set in the 2026-04-10 campaign (per harness heuristics). The **[progress.md](progress.md)** table lists those run ids; newer gap-closure runs (surface probes, transition stubs) are summarized in the **“NordVPN gap-closure plan”** section there—update **progress.md** when you add material runs.
 
-**Config:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) lists location entries including the five auto-derived ids.
+**Config:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) includes **`competitor_probe`**, dual **`policy_urls`**, optional **`surface_urls`** (pricing/signup/checkout → **`surface_probe/`**), and multiple declared **`locations`** (merge **strictest** SPEC status across all runs included in `vpn-leaks report`).
 
 ---
 
@@ -116,7 +119,8 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 | [docs/methodology.md](docs/methodology.md) | Run order |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
 | [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
-| [progress.md](progress.md) | Project progress, Nord run table, policy notes |
+| [RUN-STEPS.md](RUN-STEPS.md) | Step-by-step walkthrough of `vpn-leaks run` (including transition tests vs `skip_vpn`) |
+| [progress.md](progress.md) | Project progress, Nord run table, gap-closure notes, policy notes |
 | [HANDOFF.md](HANDOFF.md) | This file: repo map, CLI, artifacts, agent next steps |
 
 ---
