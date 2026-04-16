@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-15 (HTML dashboard + SPEC coverage handoff)._
+_Last updated: 2026-04-15 (GitHub Pages publish + handoff refresh)._
 
 ---
 
@@ -123,8 +123,9 @@ Five **NordVPN** runs were collected (one exit per run) using **`vpn-leaks run -
 
 ## CI / GitHub
 
-- Workflow is **not** committed under `.github/workflows/` (OAuth `workflow` scope can block pushes). Copy **[docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example)** to `.github/workflows/ci.yml` locally or after `gh auth refresh -s workflow`.
-- Remote repo: **doxxcorp/vpn-leaks** on GitHub. Commit authorship is **g4lr0n &lt;g4lr0n@doxx.net&gt;**; local repo `user.name` / `user.email` should match for new commits.
+- **Remote:** **github.com/doxxcorp/vpn-leaks**. Commit authorship is **g4lr0n &lt;g4lr0n@doxx.net&gt;**; local repo `user.name` / `user.email` should match for new commits.
+- **GitHub Pages:** [`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys a static site (copies **`VPNs/`** and **`style/icons/`**, generates **`index.html`** via [`scripts/build_github_pages_site.py`](scripts/build_github_pages_site.py)) on pushes that touch those paths or on **workflow_dispatch**. **One-time:** repo **Settings → Pages → Source: GitHub Actions**. Public URL (project site): **`https://doxxcorp.github.io/vpn-leaks/`** (e.g. **`https://doxxcorp.github.io/vpn-leaks/VPNs/NORDVPN.html`**). Pushing workflow files may require OAuth **`workflow`** scope (`gh auth refresh -s workflow`) or a credential that is allowed to update `.github/workflows/`.
+- **Lint/test CI (optional):** Not required for Pages. Copy **[docs/github-actions-ci.yml.example](docs/github-actions-ci.yml.example)** to `.github/workflows/ci.yml` if you want Ruff + pytest in Actions.
 
 ---
 

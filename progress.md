@@ -2,6 +2,13 @@
 
 _Last updated: 2026-04-15._
 
+## 2026-04-15 — GitHub Pages (doxxcorp.github.io/vpn-leaks)
+
+- **[`.github/workflows/pages.yml`](.github/workflows/pages.yml):** Build job runs [`scripts/build_github_pages_site.py`](scripts/build_github_pages_site.py) to stage `site/` (`VPNs/`, `style/icons/` for SPEC category icon URLs in HTML, `.nojekyll`, generated `index.html` listing `VPNs/*.html`), then `upload-pages-artifact` + `deploy-pages`. Triggers: `push` to `main`/`master` with `paths` on `VPNs/**`, `style/icons/**`, workflow/script, or **workflow_dispatch**.
+- **[README.md](README.md):** “GitHub Pages (github.io)” under Reports — URL pattern, Settings note, privacy/plan caveats, local preview via the script.
+- **`.gitignore`:** `site/` (local staging output).
+- **Public URL:** `https://doxxcorp.github.io/vpn-leaks/` (reports under `/VPNs/<SLUG>.html`).
+
 ## 2026-04-15 — HANDOFF.md refresh
 
 - **[HANDOFF.md](HANDOFF.md):** Updated for the **HTML dashboard** (`VPNs/<SLUG>.html`), [`html_dashboard.py`](vpn_leaks/reporting/html_dashboard.py), [`reporting/static/`](vpn_leaks/reporting/static/), **SPEC coverage** alignment notes, and the reporting table / CLI blurbs.
