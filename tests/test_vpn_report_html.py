@@ -67,8 +67,18 @@ def test_generate_vpn_report_writes_html(
         "framework": {
             "risk_scores": {"overall_severity": "LOW"},
             "question_coverage": [
-                {"answer_status": "answered"},
-                {"answer_status": "unanswered"},
+                {
+                    "question_id": "DNS-001",
+                    "answer_status": "answered",
+                    "answer_summary": "resolvers seen",
+                    "notes": "",
+                },
+                {
+                    "question_id": "IP-001",
+                    "answer_status": "unanswered",
+                    "answer_summary": "",
+                    "notes": "needs check",
+                },
             ],
             "findings": [],
         },
@@ -92,3 +102,6 @@ def test_generate_vpn_report_writes_html(
     assert "Full narrative export" in html
     assert "Benchmark locations" in html
     assert "loc-grid" in html
+    assert "spec-q" in html
+    assert "../style/icons/" in html
+    assert "spec-cat-count" in html

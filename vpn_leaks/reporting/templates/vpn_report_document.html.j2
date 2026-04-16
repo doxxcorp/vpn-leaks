@@ -155,22 +155,43 @@
       <h2 class="section-title" id="spec-h">SPEC questions by category</h2>
       {% for cat in dashboard.spec_by_category %}
       <details class="spec-cat">
-        <summary>{{ cat.category | replace('_', ' ') }} <span style="color:var(--color-muted);font-weight:500;font-size:0.8rem;">({{ cat.questions | length }})</span></summary>
-        <div class="spec-table-wrap">
-          <table class="spec-table">
-            <thead>
-              <tr><th>ID</th><th>Status</th><th>Summary</th></tr>
-            </thead>
-            <tbody>
-              {% for q in cat.questions %}
-              <tr>
-                <td><code>{{ q.question_id }}</code></td>
-                <td><span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span></td>
-                <td>{{ q.answer_summary_short or '—' }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <summary class="spec-cat-summary">
+          <span class="spec-cat-leading">
+            <img class="spec-cat-icon" src="{{ cat.icon_href }}" width="24" height="24" alt="" decoding="async" loading="lazy"/>
+            <span class="spec-cat-title">{{ cat.category_label }}</span>
+          </span>
+          <span class="spec-cat-count" aria-label="{{ cat.questions | length }} questions in this category">{{ cat.questions | length }}</span>
+        </summary>
+        <div class="spec-questions">
+          {% for q in cat.questions %}
+          <details class="spec-q">
+            <summary class="spec-q-summary">
+              <span class="spec-q-top">
+                <span class="spec-q-id"><code>{{ q.question_id }}</code></span>
+                <span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span>
+              </span>
+              <span class="spec-q-preview">{{ q.answer_summary_short or '—' }}</span>
+            </summary>
+            <div class="spec-q-body">
+              <dl class="spec-q-dl">
+                <dt>Question</dt>
+                <dd>{{ q.question_text or '—' }}</dd>
+                <dt>Status</dt>
+                <dd><span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span></dd>
+                <dt>Summary</dt>
+                <dd>{{ q.answer_summary or '—' }}</dd>
+                {% if q.notes %}
+                <dt>Notes</dt>
+                <dd>{{ q.notes }}</dd>
+                {% endif %}
+                {% if q.next_steps and q.next_steps != '—' %}
+                <dt>Next steps</dt>
+                <dd>{{ q.next_steps }}</dd>
+                {% endif %}
+              </dl>
+            </div>
+          </details>
+          {% endfor %}
         </div>
       </details>
       {% endfor %}
@@ -217,11 +238,19 @@
       showErr("No graph nodes for this provider (empty exposure graph).");
     } else {
       const fg = ForceGraph3D()(mount)
+        .width(mount.clientWidth)
+        .height(mount.clientHeight)
         .nodeLabel((n) => `[${n.type}] ${n.label || n.id}`)
         .nodeAutoColorBy("type")
         .linkDirectionalParticles(0);
 
       fg.graphData({ nodes, links });
+
+      const resize = () => {
+        fg.width(mount.clientWidth).height(mount.clientHeight);
+      };
+      const ro = new ResizeObserver(resize);
+      ro.observe(mount);
     }
   </script>
 </body>

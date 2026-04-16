@@ -1,34 +1,20 @@
-# NordVPN — expand locations and credentials as needed for your environment.
 provider_name: Nordvpn
 slug: nordvpn
 connection_mode: manual_gui
-
 locations:
-  - id: us-new-mexico-albuquerque-20
-    label: Albuquerque, New Mexico, United States
-
+- id: us-new-mexico-albuquerque-20
+  label: Albuquerque, New Mexico, United States
+- id: us-california-san-francisco-67
+  label: San Francisco, California, United States
 credentials:
   username_env: null
   password_env: null
-
-# Privacy / legal text fetched into raw/<loc>/policy/ for LOG-* coverage.
 policy_urls:
-  - "https://nordvpn.com/privacy-policy/"
-
-# Competitor-surface probes: apex DNS, marketing HAR, portal HTTPS headers (WEB-*, THIRDWEB-*, CTRL-009, SIGNUP-*).
-# See docs/competitor-probe-checklist.md. Use CLI skips if a phase fails (--skip-competitor-web, etc.).
+- https://nordvpn.com/privacy-policy/
 competitor_probe:
   provider_domains:
-    - nordvpn.com
+  - nordvpn.com
   probe_urls:
-    - "https://nordvpn.com/"
+  - https://nordvpn.com/
   portal_hosts:
-    - my.nordaccount.com
-
-# Optional: signup/checkout pages for script inventory (adds surface_probe under raw/).
-# surface_urls:
-#   - page_type: signup
-#     url: "https://nordvpn.com/pricing/"
-
-# Transition sampling (DNS-004, FAIL-001/003): not enabled in YAML — pass `vpn-leaks run --transition-tests`
-# when your adapter supports disconnect/reconnect during the benchmark.
+  - my.nordaccount.com

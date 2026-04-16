@@ -7,6 +7,33 @@ from pathlib import Path
 from typing import Any
 
 
+# Slugs with a vendored icon under style/icons/<slug>.svg (see configs/framework/questions.yaml).
+_SPEC_CATEGORY_ICON_SLUGS: frozenset[str] = frozenset(
+    {
+        "identity_correlation",
+        "signup_payment",
+        "website_portal",
+        "dns",
+        "real_ip_leak",
+        "control_plane",
+        "exit_infrastructure",
+        "third_party_web",
+        "browser_tracking",
+        "telemetry_app",
+        "os_specific",
+        "failure_state",
+        "logging_retention",
+    },
+)
+
+
+def _category_icon_href(category: str) -> str:
+    slug = str(category or "unknown").strip()
+    if slug not in _SPEC_CATEGORY_ICON_SLUGS:
+        slug = "default"
+    return f"../style/icons/{slug}.svg"
+
+
 def _truncate(s: str, max_len: int = 140) -> str:
     t = " ".join(str(s).split())
     if len(t) <= max_len:
@@ -103,7 +130,17 @@ def group_spec_by_category(
                     "answer_summary_short": _truncate(summ, 160),
                 },
             )
-        out.append({"category": cat, "questions": enriched})
+        label = (
+            str(cat).replace("_", " ") if str(cat).strip() else "unknown"
+        )
+        out.append(
+            {
+                "category": cat,
+                "category_label": label,
+                "icon_href": _category_icon_href(cat),
+                "questions": enriched,
+            },
+        )
     return out
 
 

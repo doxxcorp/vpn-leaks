@@ -1,0 +1,11 @@
+{
+  "url": "https://yourinfo.ai/",
+  "final_url": "https://yourinfo.ai/",
+  "status": 200,
+  "title": "YourInfo.ai",
+  "text_excerpt": "RESEARCHING YOUR INFORMATION...\n20\nQuerying intelligence databases...\n\nConcerned about your digital privacy?\n\ndoxx.net - Secure networking for humans\n ",
+  "text_excerpt_truncated": false,
+  "har_path": "runs/nordvpn-20260416T003526Z-f5ad2e99/raw/us-california-san-francisco-67/yourinfo_probe/yourinfo.har",
+  "cdn_headers": {},
+  "error": null
+}
