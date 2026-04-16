@@ -9,6 +9,7 @@ Repeatable client-side benchmarking for VPN services: exit IP, DNS leaks, IPv6, 
 - **Operational overview:** [docs/spec.md](docs/spec.md)  
 - **SPEC framework (question bank, coverage):** [docs/framework.md](docs/framework.md)  
 - **Run order & methodology:** [docs/methodology.md](docs/methodology.md)  
+- **Website third-party exposure analysis:** [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md)  
 - **Research questions, evidence map, desk playbook, FD graphs:** [docs/research-questions-and-evidence.md](docs/research-questions-and-evidence.md)  
 - **Fields & paths:** [docs/data-dictionary.md](docs/data-dictionary.md)  
 - **Full product spec:** [vpn-leaks.md](vpn-leaks.md)
