@@ -46,6 +46,7 @@ from vpn_leaks.reporting.generate_reports import (
     write_run_summary,
 )
 from vpn_leaks.run_manifest import build_manifest, manifest_to_json
+from vpn_leaks.run_progress import RunProgress, compute_run_total
 from vpn_leaks.vpn_config_locations import append_location_if_missing, resolve_run_locations
 
 
@@ -176,12 +177,25 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(msg, file=sys.stderr)
 
     preflight_ip = v4
+    mode = str(vpn_config.get("connection_mode") or "manual_gui")
+    run_progress = RunProgress(
+        compute_run_total(
+            locations=locations,
+            run_root=run_root,
+            force=args.force,
+            args=args,
+            skip_vpn=skip_vpn,
+            mode=mode,
+        ),
+        no_progress=args.no_progress,
+    )
     try:
         for loc in locations:
             loc_id = str(loc.get("id") or "default")
             loc_label = str(loc.get("label") or loc_id)
             norm_path = run_root / "locations" / loc_id / "normalized.json"
             if norm_path.is_file() and not args.force:
+                run_progress.step("Skipping (already have normalized.json)")
                 log(f"skip (exists): {norm_path}")
                 normalized_paths.append(norm_path)
                 continue
@@ -194,8 +208,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             if run_extra.get("exit_geo"):
                 services_contacted.append(f"https://ipwho.is/{preflight_ip}")
 
-            mode = str(vpn_config.get("connection_mode") or "manual_gui")
-
+            run_progress.step("VPN connect + stabilize")
             if not skip_vpn:
                 log(f"connect: {loc_id} ({loc_label}) mode={mode}")
                 adapter.connect(loc)
@@ -207,12 +220,14 @@ def cmd_run(args: argparse.Namespace) -> int:
             endpoints = leak_cfg.get("ip_endpoints") or [
                 {"url": "https://api.ipify.org", "format": "text"},
             ]
+            run_progress.step("Exit IP check")
             exit_sources, v4, v6 = run_ip_check_sync(
                 raw_dir=raw_base,
                 endpoints=endpoints,
                 services_contacted=services_contacted,
             )
 
+            run_progress.step("DNS leak tests")
             dns_obs, dns_flag, dns_notes = run_dns_checks_sync(
                 raw_dir=raw_base / "dnsleak",
                 leak_cfg=leak_cfg,
@@ -220,6 +235,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 services_contacted=services_contacted,
             )
 
+            run_progress.step("IPv6 checks")
             ipv6_status, ipv6_flag, ipv6_notes = run_ipv6_checks_sync(
                 raw_dir=raw_base / "ipv6",
                 leak_cfg=leak_cfg,
@@ -227,6 +243,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 services_contacted=services_contacted,
             )
 
+            run_progress.step("WebRTC")
             webrtc_cands, webrtc_flag, webrtc_notes = run_webrtc_check(
                 raw_dir=raw_base / "webrtc",
                 leak_cfg=leak_cfg,
@@ -234,12 +251,14 @@ def cmd_run(args: argparse.Namespace) -> int:
                 services_contacted=services_contacted,
             )
 
+            run_progress.step("Fingerprint")
             fp = run_fingerprint_snapshot(
                 raw_dir=raw_base / "fingerprint",
                 leak_cfg=leak_cfg,
                 services_contacted=services_contacted,
             )
 
+            run_progress.step("Attribution (RIPE / Cymru / PeeringDB)")
             attribution = merge_attribution(
                 exit_ip_v4=v4,
                 exit_ip_v6=v6,
@@ -247,6 +266,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 raw_dir=raw_base,
             )
 
+            run_progress.step("Privacy policies")
             vpn_urls = list(vpn_config.get("policy_urls") or [])
             vpn_pol = fetch_policies(
                 policy_dir=policy_dir,
@@ -266,12 +286,14 @@ def cmd_run(args: argparse.Namespace) -> int:
 
             policies = vpn_pol + u_pol
 
+            run_progress.step("yourinfo.ai probe")
             yourinfo_snapshot = run_yourinfo_probe(
                 raw_dir=raw_base,
                 services_contacted=services_contacted,
                 skip=args.skip_yourinfo,
             )
 
+            run_progress.step("browserleaks probe")
             browserleaks_snapshot = run_browserleaks_probe(
                 leak_cfg=leak_cfg,
                 raw_dir=raw_base,
@@ -279,6 +301,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 skip=args.skip_browserleaks,
             )
 
+            run_progress.step("Competitor probes")
             competitor_surface = run_competitor_probes(
                 vpn_config,
                 raw_base=raw_base,
@@ -293,6 +316,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             )
 
             loc_extra: dict[str, object] = dict(run_extra)
+            run_progress.step("Surface probes")
             surface_data = run_surface_probes(
                 vpn_config,
                 raw_base=raw_base,
@@ -304,6 +328,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             # Full disconnect/reconnect polling only when the adapter runs; for manual_gui
             # still record a stub (skipped) so `--transition-tests` produces transitions.json.
             if args.transition_tests and (not skip_vpn or mode == "manual_gui"):
+                run_progress.step("Transition tests")
                 tr = run_transition_tests(
                     leak_cfg=leak_cfg,
                     raw_dir=raw_base,
@@ -316,6 +341,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if tr is not None:
                     loc_extra["transition_tests"] = tr
 
+            run_progress.step("VPN disconnect")
             if not skip_vpn:
                 log(f"disconnect: {loc_id}")
                 adapter.disconnect()
@@ -410,6 +436,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 yourinfo_snapshot=yourinfo_snapshot,
                 browserleaks_snapshot=browserleaks_snapshot,
             )
+            run_progress.step("Write normalized.json + framework")
             if not args.no_framework:
                 normalized = apply_framework(normalized)
 
@@ -420,7 +447,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     finally:
         log_fp.close()
 
-    write_run_summary(run_root, normalized_paths)
+    try:
+        run_progress.step("Writing run summary")
+        write_run_summary(run_root, normalized_paths)
+    finally:
+        run_progress.close()
+
     print(f"Run complete: {run_root}", file=sys.stderr)
     return 0
 
@@ -547,6 +579,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--transition-tests",
         action="store_true",
         help="After probes, poll exit IP across disconnect/reconnect (non-manual_gui only)",
+    )
+    pr.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable tqdm bar; still print phase lines to stderr",
     )
     pr.set_defaults(func=cmd_run, auto_location=True)
 

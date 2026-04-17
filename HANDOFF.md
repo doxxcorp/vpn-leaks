@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-17 (SPEC **FP-001**: `answered` when fingerprint/BrowserLeaks evidence exists; MD/HTML coverage blurb for **DYNAMIC_PARTIAL** vs desk interpretation; plus prior: website exposure in reports, NordVPN `surface_urls`, transition-tests; desk pass Phases 8–9)._
+_Last updated: 2026-04-17 (`vpn-leaks run` **progress bar** + phase hints via **tqdm** and [`vpn_leaks/run_progress.py`](vpn_leaks/run_progress.py); **`--no-progress`**; plus prior: SPEC **FP-001**, website exposure in reports, NordVPN `surface_urls`, transition-tests; desk pass Phases 8–9)._
 
 ---
 
@@ -13,7 +13,7 @@ _Last updated: 2026-04-17 (SPEC **FP-001**: `answered` when fingerprint/BrowserL
 - **Package name:** `vpn-leaks` (import: `vpn_leaks`).
 - **Python:** 3.12+ ([pyproject.toml](pyproject.toml)).
 - **Entry point:** `vpn-leaks` → `vpn_leaks.cli:main`.
-- **Key deps:** httpx, pydantic, PyYAML, Jinja2, Playwright (Chromium for WebRTC, policy fallback, and web probes), **dnspython** (authoritative DNS for competitor domains).
+- **Key deps:** httpx, pydantic, PyYAML, Jinja2, Playwright (Chromium for WebRTC, policy fallback, and web probes), **dnspython** (authoritative DNS for competitor domains), **tqdm** (terminal progress for `vpn-leaks run`).
 
 It does **not** prove what a VPN stores on its servers or automate vendor desktop apps beyond optional adapters; for NordVPN the expected workflow is **manual connect in the app**, then `vpn-leaks run --provider nordvpn --skip-vpn`.
 
@@ -24,6 +24,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Area | Path | Role |
 |------|------|------|
 | CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run`, `report`, `graph-export`, preflight, duplicate guard, per-location suite |
+| Run progress UI | [vpn_leaks/run_progress.py](vpn_leaks/run_progress.py) | `RunProgress`, `compute_run_total` — tqdm bar + phase descriptions on stderr; text-only lines when not a TTY or **`--no-progress`** |
 | Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (1.3 default; 1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, artifacts index |
 | Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading |
 | VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs, `manual_gui`, `policy_urls`, location list |
@@ -54,6 +55,9 @@ vpn-leaks report --provider nordvpn
 
 # Transition-phase artifact: for manual_gui, writes transitions.json (skipped stub) even with --skip-vpn:
 vpn-leaks run --provider nordvpn --skip-vpn --transition-tests
+
+# Disable tqdm bar (still prints [n/total] phase lines to stderr):
+vpn-leaks run --provider nordvpn --skip-vpn --no-progress
 
 # Per-ASN underlay report:
 vpn-leaks report --provider nordvpn --asn <asn_integer>

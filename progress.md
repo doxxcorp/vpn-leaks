@@ -1,6 +1,15 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-17 (FP-001 coverage semantics and dashboard copy)._
+_Last updated: 2026-04-17 (run progress UX + FP-001 coverage semantics)._
+
+## 2026-04-17 — `vpn-leaks run` progress bar and phase hints
+
+**Goal:** Long runs felt idle; surface **what phase** is executing and overall progress on stderr.
+
+- **Dependency:** **`tqdm`** in [pyproject.toml](pyproject.toml).
+- **[`vpn_leaks/run_progress.py`](vpn_leaks/run_progress.py):** **`RunProgress`** — tqdm bar when stderr is a TTY and **`--no-progress`** is not set; otherwise **`[step/total] description`** lines. **`compute_run_total`** / **`steps_for_full_run`** match **`cmd_run`** (per-location full suite vs one tick for cached `normalized.json`, **`+1`** for **`write_run_summary`**; optional transition step when **`--transition-tests`** matches existing CLI rules).
+- **[`vpn_leaks/cli.py`](vpn_leaks/cli.py):** **`--no-progress`**; **`step()`** before each major phase (connect + stabilize through write normalized + “Writing run summary”).
+- **Tests:** [`tests/test_run_progress.py`](tests/test_run_progress.py).
 
 ## 2026-04-17 — FP-001 coverage semantics (answered when probe evidence exists)
 
