@@ -16,6 +16,14 @@ locations:
   label: Albuquerque, New Mexico, United States
 - id: de-hamburg-hamburg-238
   label: Hamburg, Hamburg, Germany
+- id: us-california-san-francisco-63
+  label: San Francisco, California, United States
+- id: us-california-san-jose-222
+  label: San Jose, California, United States
+- id: ca-british-columbia-vancouver-136
+  label: Vancouver, British Columbia, Canada
+- id: de-hamburg-hamburg-154
+  label: Hamburg, Hamburg, Germany
 credentials:
   username_env: null
   password_env: null

@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-17 (`vpn-leaks run` **progress bar** + phase hints via **tqdm** and [`vpn_leaks/run_progress.py`](vpn_leaks/run_progress.py); **`--no-progress`**; plus prior: SPEC **FP-001**, website exposure in reports, NordVPN `surface_urls`, transition-tests; desk pass Phases 8–9)._
+_Last updated: 2026-04-17 (`vpn-leaks run` **progress bar** + phase hints; NordVPN **2026-04-17** benchmarks **`nordvpn-20260417T071350Z-5b9ffc60`** / **`nordvpn-20260417T072634Z-607907b5`**, four new **`locations`** in [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml), regenerated **`VPNs/NORDVPN`**, removed superseded **`runs/nordvpn-20260416T*`** trees; plus prior: SPEC **FP-001**, website exposure rollups, `surface_urls`, transition-tests; desk pass Phases 8–9)._
 
 ---
 
@@ -110,7 +110,7 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 ## NordVPN: completed benchmark snapshot
 
-Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run --provider nordvpn --skip-vpn`** with **auto location** after switching the **NordVPN macOS client** per destination. **No** DNS / WebRTC / IPv6 leak flags were set in the 2026-04-10 campaign (per harness heuristics). The **[progress.md](progress.md)** table lists those run ids; newer gap-closure runs (surface probes, transition stubs) are summarized in the **“NordVPN gap-closure plan”** section there—update **progress.md** when you add material runs.
+Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run --provider nordvpn --skip-vpn`** with **auto location** after switching the **NordVPN macOS client** per destination. **No** DNS / WebRTC / IPv6 leak flags were set in the 2026-04-10 campaign (per harness heuristics). The **[progress.md](progress.md)** table lists committed run ids (including **2026-04-17** Vancouver + Hamburg runs); the **“NordVPN gap-closure plan”** section there has the 2026-04-16 artifact review—update **progress.md** when you add material runs.
 
 **Config:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) includes **`competitor_probe`**, dual **`policy_urls`**, optional **`surface_urls`** (pricing/signup/checkout → **`surface_probe/`**), and multiple declared **`locations`** (merge **strictest** SPEC status across all runs included in `vpn-leaks report`).
 

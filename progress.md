@@ -1,6 +1,15 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-17 (run progress UX + FP-001 coverage semantics)._
+_Last updated: 2026-04-17 (NordVPN 2026-04-17 benchmarks + run progress UX + FP-001 coverage semantics)._
+
+## 2026-04-17 — NordVPN benchmarks, YAML locations, reports, repo run cleanup
+
+**Goal:** Record two new auto-location runs (Vancouver, Hamburg), persist their **`locations`** in [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml), regenerate aggregated **`VPNs/NORDVPN`**, and drop three superseded **`runs/nordvpn-20260416T*`** trees from the repo.
+
+- **Config:** Appended **`us-california-san-francisco-63`**, **`us-california-san-jose-222`**, **`ca-british-columbia-vancouver-136`**, **`de-hamburg-hamburg-154`** (ids + ipwho-style labels from **`vpn-leaks run`**).
+- **Committed runs:** **`runs/nordvpn-20260417T071350Z-5b9ffc60/`** — **`ca-british-columbia-vancouver-136`**, exit **176.100.43.136**, ASN **147049** (PACKETHUBSA-AS-AP PacketHub S.A.); **`runs/nordvpn-20260417T072634Z-607907b5/`** — **`de-hamburg-hamburg-154`**, exit **185.161.202.154**, ASN **207137** (PACKETHUBSA - PacketHub S.A.). Harness DNS / WebRTC / IPv6 leak flags **false** for both.
+- **Removed:** **`runs/nordvpn-20260416T042117Z-7bbf2d88/`**, **`runs/nordvpn-20260416T042749Z-00a43d39/`**, **`runs/nordvpn-20260416T044817Z-976afdc6/`** (superseded local benchmark dirs).
+- **Reports:** Regenerated **[VPNs/NORDVPN.md](VPNs/NORDVPN.md)** and **[VPNs/NORDVPN.html](VPNs/NORDVPN.html)** with **`vpn-leaks report --provider nordvpn`**.
 
 ## 2026-04-17 — `vpn-leaks run` progress bar and phase hints
 
@@ -136,7 +145,7 @@ The **VPN Leaks harness is implemented and usable end-to-end** in this repositor
 
 ## NordVPN benchmark runs you collected
 
-You ran **`vpn-leaks run --provider nordvpn --skip-vpn`** (auto location) after switching the **NordVPN macOS client** to each destination. That produced **five separate run directories** — one **location / exit** per run — listed **oldest to newest** below.
+You ran **`vpn-leaks run --provider nordvpn --skip-vpn`** (auto location) after switching the **NordVPN macOS client** to each destination. The table below lists **seven** committed benchmark rows (five from **2026-04-10**, two from **2026-04-17**), **oldest to newest** by run id.
 
 | # | Run id (folder under `runs/`) | Auto location id | Label (ipwho) | Exit IPv4 | Exit ASN | ASN holder (attribution) | DNS leak | WebRTC leak | IPv6 leak |
 |---|------------------------------|------------------|-----------------|-----------|----------|---------------------------|----------|-------------|-----------|
@@ -145,6 +154,8 @@ You ran **`vpn-leaks run --provider nordvpn --skip-vpn`** (auto location) after 
 | 3 | `nordvpn-20260410T020935Z-8559f9bc` | `ca-british-columbia-vancouver-153` | Vancouver, British Columbia, Canada | 45.90.222.153 | 147049 | PACKETHUBSA-AS-AP PacketHub S.A. | false | false | false |
 | 4 | `nordvpn-20260410T021013Z-3db4d1ec` | `de-hamburg-hamburg-127` | Hamburg, Hamburg, Germany | 185.161.202.127 | 207137 | PACKETHUBSA - PacketHub S.A. | false | false | false |
 | 5 | `nordvpn-20260410T021116Z-5cf8e0dc` | `us-new-mexico-albuquerque-136` | Albuquerque, New Mexico, United States | 66.179.156.136 | 136787 | PACKETHUBSA-AS-AP PacketHub S.A. | false | false | false |
+| 6 | `nordvpn-20260417T071350Z-5b9ffc60` | `ca-british-columbia-vancouver-136` | Vancouver, British Columbia, Canada | 176.100.43.136 | 147049 | PACKETHUBSA-AS-AP PacketHub S.A. | false | false | false |
+| 7 | `nordvpn-20260417T072634Z-607907b5` | `de-hamburg-hamburg-154` | Hamburg, Hamburg, Germany | 185.161.202.154 | 207137 | PACKETHUBSA - PacketHub S.A. | false | false | false |
 
 **What each run stored (per location):**
 
@@ -152,7 +163,7 @@ You ran **`vpn-leaks run --provider nordvpn --skip-vpn`** (auto location) after 
 - **`raw/<location_id>/`:** `ip-check.json`, `dnsleak/` (e.g. `ipleak_dns.html`, `dns_summary.json`), `webrtc/webrtc_candidates.json`, `ipv6/` (curl output, test-ipv6 HTML, summary JSON), `attribution.json`, `policy/` (fetched HTML), optional **`competitor_probe/`** (DNS/transit/web/portal/stray JSON artifacts).
 - **`raw/preflight.json`:** Preflight IPv4 and whether auto-location was used for that run.
 
-**Config updated:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) now lists the six location entries (including the older `sf-usa` placeholder) plus the five auto-derived ids above.
+**Config updated:** [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml) lists declared **`locations`** (including placeholders and auto-appended ids from runs—see the **2026-04-17** subsection above for the latest four ids).
 
 **Aggregated markdown reports:** Generate locally with `vpn-leaks report --provider nordvpn` (writes under `VPNs/`, gitignored by default). Underlay-specific report: `vpn-leaks report --provider nordvpn --asn <asn>` if you want a file per ASN.
 
@@ -168,6 +179,8 @@ runs/nordvpn-20260410T020850Z-06046ac5/locations/gb-england-london-102/normalize
 runs/nordvpn-20260410T020935Z-8559f9bc/locations/ca-british-columbia-vancouver-153/normalized.json
 runs/nordvpn-20260410T021013Z-3db4d1ec/locations/de-hamburg-hamburg-127/normalized.json
 runs/nordvpn-20260410T021116Z-5cf8e0dc/locations/us-new-mexico-albuquerque-136/normalized.json
+runs/nordvpn-20260417T071350Z-5b9ffc60/locations/ca-british-columbia-vancouver-136/normalized.json
+runs/nordvpn-20260417T072634Z-607907b5/locations/de-hamburg-hamburg-154/normalized.json
 ```
 
-If you delete `runs/` later, this table is the snapshot of what was collected on **2026-04-10**; re-run the commands above to regenerate data.
+If you delete `runs/` later, this table is the snapshot of committed benchmarks (**2026-04-10** and **2026-04-17**); re-run the commands above to regenerate data.

@@ -1,0 +1,8 @@
+{
+  "ptr_v4": {
+    "ip": "176.100.43.136",
+    "ptr": [],
+    "error": "The DNS response does not contain an answer to the question: 136.43.100.176.in-addr.arpa. IN PTR"
+  },
+  "ptr_v6": null
+}
