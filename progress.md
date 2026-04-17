@@ -1,6 +1,10 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-16 (HANDOFF + progress sync for gap-closure + CLI)._
+_Last updated: 2026-04-16 (website exposure desk integration in docs)._
+
+## 2026-04-16 — Website exposure methodology integrated into process docs
+
+**Docs:** [docs/methodology.md](docs/methodology.md) adds a **desk pass** subsection (Phases **8–9** after `vpn-leaks run`, **O** vs **S** labeling). [RUN-STEPS.md](RUN-STEPS.md) §13 and [HANDOFF.md](HANDOFF.md) CLI notes describe the same workflow. [research-questions-and-evidence.md](docs/research-questions-and-evidence.md) §D and §H link [website-exposure-methodology.md](docs/website-exposure-methodology.md) with a Barrett **phase map**; [competitor-probe-checklist.md](docs/competitor-probe-checklist.md) adds an **after run** section. [website-exposure-methodology.md](docs/website-exposure-methodology.md) **Relevant SPEC questions** block is tightened (DNS-001 vs client `dnsleak/`, EXIT-003 vs exit `attribution.json`, CTRL-004 scope). **Artifacts:** [scripts/desk_dns_audit.sh](scripts/desk_dns_audit.sh) (Phase-8 `dig` bundle), [research/desk-exposure-template.md](research/desk-exposure-template.md) (Phase 9 inventory).
 
 ## 2026-04-16 — NordVPN gap-closure plan (harness, artifacts, desk, external)
 

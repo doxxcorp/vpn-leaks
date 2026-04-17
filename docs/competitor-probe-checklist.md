@@ -58,6 +58,24 @@ Skip individual phases when debugging:
 - `--skip-competitor-transit` — traceroute toward exit IP
 - `--skip-competitor-stray-json` — stray path GETs
 
+## After `vpn-leaks run`: desk Phases 8–9 (website exposure)
+
+The harness writes **O** artifacts below; it does **not** run the full **email / platform** DNS audit from [website-exposure-methodology.md](website-exposure-methodology.md).
+
+**Barrett phase mapping**
+
+| Layer | Harness (O) | Desk (S) — after run |
+|-------|-------------|------------------------|
+| Page load, HAR, hosts | `probe_urls`, `surface_urls` → `har/`, `har_summary.json`, `web_probes.json` | Phases 1–7 interpretation + company classification |
+| Apex NS, glue | `provider_dns.json` | §H steps 1–4 + [website-exposure §8](website-exposure-methodology.md) for MX, SPF, DMARC, DKIM, TXT tokens, CNAME chains |
+| Third-party inventory | — | Phase 9 table: combine HAR hosts + Phase 8 findings |
+
+Checklist:
+
+- [ ] For each apex in `provider_domains`, run **Phases 8–9** (or paste output from [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) and extend with SPF/DMARC/DKIM parsing as in the methodology).
+- [ ] Archive dated transcript: `research/desk-<date>-<apex>.txt` (or equivalent).
+- [ ] When writing `vpn-leaks report` narrative, label **O** vs **S**; do not cite desk MX/SPF as proof of **DNS-001** (client resolvers while connected — that is `dnsleak/` **O**).
+
 ## Artifacts written
 
 Under `runs/<run_id>/raw/<location_id>/competitor_probe/`:

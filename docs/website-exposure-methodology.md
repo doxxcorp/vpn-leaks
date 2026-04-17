@@ -16,10 +16,34 @@ The analysis has two layers:
    platform services for the provider's domains. This reveals companies
    the user never sees but that handle their data.
 
-**Relevant SPEC questions:** WEB-001, WEB-004, WEB-008, SIGNUP-001,
-SIGNUP-004, SIGNUP-010, THIRDWEB-001, THIRDWEB-003, THIRDWEB-012,
-CTRL-004, CTRL-009, FP-001, FP-011, DNS-001, DNS-011, EXIT-003,
-LOG-001, LOG-005.
+**Relevant SPEC questions (by evidence tier — see
+[`configs/framework/questions.yaml`](../configs/framework/questions.yaml)):**
+
+- **Observed (O) — harness:** Phases **1–7** align with `competitor_probe` /
+  `surface_urls` outputs (e.g. `har_summary.json`, `web_probes.json`,
+  `provider_dns.json`) for **WEB-001**, **WEB-004**, **WEB-008**,
+  **SIGNUP-001**, **SIGNUP-004**, **SIGNUP-010**, **THIRDWEB-001**,
+  **THIRDWEB-003**, **THIRDWEB-012**, **CTRL-009**, **FP-001**, **FP-011**
+  (site / page context).
+- **Desk (S) — Phases 8–9 in this doc:** Provider **apex / email / platform**
+  DNS (MX, SPF, DMARC, DKIM, TXT, CNAME chains) supports **WEB-001** /
+  **WEB-004** context (who terminates TLS, who sends mail, SaaS on-domain) and
+  supplemental “supply chain” reasoning. It does **not** answer **DNS-001**
+  (*which resolvers are used **while connected*** — that is **`dnsleak/`** and
+  `normalized.dns_servers_observed`, **O**). For **DNS-011** (*first-party vs
+  third-party resolvers* in the SPEC sense), use resolver IP attribution from
+  the harness; Phase 8 here describes **third parties in the provider’s
+  authoritative and email stack**, which is a **different** question — label
+  **S** and do not merge with client **O** without explanation
+  ([research-questions-and-evidence.md](research-questions-and-evidence.md) §A.1).
+- **VPN exit org:** **EXIT-003** (*organization that owns the **VPN exit** IP
+  range*) comes from **`attribution.json` (O)**. WHOIS on **marketing site** or
+  CDN IPs in this methodology supports **web / infra** questions, not EXIT-003.
+- **CTRL-004** (*telemetry endpoints during **VPN connection***): page HARs show
+  **web-session** beacons only; **app** connection telemetry is out of scope
+  here (see TELEM-* in the framework).
+- **Inference (I):** **LOG-001**, **LOG-005** — enumerate parties who *could*
+  see traffic or mail; not proof of retention or logging.
 
 ---
 

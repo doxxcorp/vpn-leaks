@@ -361,6 +361,21 @@ Run complete: /path/to/vpn-leaks/runs/nordvpn-20260415T143022Z-8f3a9c1d
 
 ---
 
+## 13. After the run: website exposure desk (optional, not part of CLI)
+
+`vpn-leaks run` does **not** execute [website-exposure-methodology.md](../docs/website-exposure-methodology.md) **Phases 8–9** (MX, SPF, DMARC, DKIM, TXT SaaS tokens, CNAME chains, compiled third-party inventory). Those are **systematic desk (S)** steps you perform **after** artifacts exist under `runs/<run_id>/`.
+
+**Typical order**
+
+1. Ensure `competitor_probe` (and `surface_urls` if you need signup/pricing HARs) is filled in the provider YAML so **O** captures HARs and `provider_dns.json` for the apexes you care about.
+2. Run `vpn-leaks run …` as above.
+3. For each apex in `provider_domains`, run the methodology’s **Phases 8–9**; save the transcript (e.g. `research/desk-<date>-<apex>.txt`). See [research-questions-and-evidence.md](../docs/research-questions-and-evidence.md) §H and [docs/methodology.md](../docs/methodology.md) (Website third-party exposure — desk pass).
+4. Run **`vpn-leaks report --provider <slug>`** separately; in narrative or SPEC notes, distinguish **O** (`runs/...`) from **S** (desk archive).
+
+**Helper:** [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) — prints a `dig` bundle for one or more domains to stdout.
+
+---
+
 ## Quick reference: artifacts under `runs/<run_id>/`
 
 | Path | Purpose |

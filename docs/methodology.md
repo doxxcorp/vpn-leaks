@@ -94,6 +94,18 @@ Align questions to probes; not every question needs every probe.
 - Leak flags are **heuristics** from client-observable tests; **“no leak”** means the harness did not flag an issue under those conditions, not a proof of privacy against all adversaries or all traffic paths.
 - Provider apex DNS and **NS glue** attribution (see [data-dictionary](data-dictionary.md)) describe **public DNS/routing relationships**, not VPN tunnel contents.
 
+### Website third-party exposure — desk pass (after `vpn-leaks run`)
+
+The harness captures **observed (O)** web and apex DNS probes when `competitor_probe` and `surface_urls` are configured ([competitor-probe-checklist.md](competitor-probe-checklist.md)). It does **not** run the full **email / platform DNS** audit (MX, SPF, DMARC, DKIM, TXT verification tokens, mail/support CNAME chains).
+
+For SPEC and supplemental questions about **third-party supply chain** (beyond HAR hosts), run a **systematic desk (S)** pass **after** a successful run, **same day**, and record which resolver you used for `dig`:
+
+1. Follow [website-exposure-methodology.md](website-exposure-methodology.md) **Phases 8–9** for each apex in `competitor_probe.provider_domains`.
+2. Archive the transcript (e.g. `research/desk-<date>-<apex>.txt`) — same pattern as [research-questions-and-evidence.md](research-questions-and-evidence.md) §H.
+3. When you run **`vpn-leaks report --provider <slug>`**, cite **O** paths into `runs/...` for harness data and **S** for desk findings. Do **not** treat desk apex/email DNS as evidence for **DNS-001** (client resolvers **while connected** — that is `dnsleak/` **O**).
+
+Optional: [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) prints a Phase-8-style `dig` bundle for one or more domains (stdout suitable for pasting into an archive file).
+
 ### Aggregates and graphs
 
 - Rollup markdown: `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md`.

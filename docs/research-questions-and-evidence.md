@@ -111,6 +111,7 @@ These are not separate YAML IDs; tag them **S**, **D**, or **I** when answering.
 | Exit IP | `ip-check.json`, `preflight.json` | — | — |
 | ASN / prefix | `attribution.json`, `asn_prefixes.json` | — | RIR public data |
 | Web / CDN | `web_probes.json`, `har/*.har`, `har_summary.json` | `curl -I` | Subprocessor list |
+| Web + email supply chain (desk) | — | [website-exposure-methodology.md](website-exposure-methodology.md) Phases **8–9** (MX, SPF, DMARC, DKIM, TXT, CNAME chains + inventory); archive transcript | DPA / vendor list |
 | Portal | `portal_probes.json` | `dig` portal host | Privacy policy |
 | Transit | `competitor_probe/transit.json` | `traceroute`, `mtr` | — |
 | Policies | `policy/*.html` | — | PDF audits, DPAs |
@@ -212,12 +213,14 @@ Shortcut link: [fd-graph.md](fd-graph.md) (bookmark target for this topic).
 
 Use this **alongside** `vpn-leaks run`, not instead of it, when you need authoritative DNS or glue geography.
 
+**Phase map (Barrett website exposure):** Steps 1–6 below match the methodology’s **apex NS + glue** focus. For **MX, SPF, DMARC, DKIM, TXT verification tokens, and mail/support CNAME chains** (Phases **8–9**) — i.e. the full **email and platform DNS supply chain** — follow [website-exposure-methodology.md](website-exposure-methodology.md) and archive the same way. Harness **`competitor_probe`** already records apex NS/A/AAAA/TXT/MX/CAA in `provider_dns.json` (**O**); Phases 8–9 add **interpreted** mail-stack and SaaS discovery (**S**/**I**) and the compiled third-party inventory table.
+
 1. **Record environment** — Date (UTC), machine, and **which resolver** you use for `dig` (system default vs `dig @1.1.1.1` etc.).
 2. **Apex NS** — `dig +short <apex> NS` (add `+tcp` if UDP fails).
 3. **NS names** — Resolve each NS: `dig +short <ns_hostname> A` and `AAAA`.
 4. **Glue WHOIS** — For each glue IP, `whois <ip>` or RIR web; note **inetnum**, **netname**, **country**, **abuse**.
 5. **Compare to O** — Open `runs/.../competitor_probe/provider_dns.json`. If **timeout** or empty, your **S** row still documents public delegation; explain the **difference** (VPN DNS path vs public resolver).
-6. **Archive** — Paste full transcript into `research/dig-<date>-<apex>.txt` or an appendix in your report (repo-local path optional).
+6. **Archive** — Paste full transcript into `research/dig-<date>-<apex>.txt` or an appendix in your report (repo-local path optional). For a printable Phase-8 `dig` bundle per domain, you can use [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) and paste stdout into the archive.
 
 ### H.1 Worked example shape (not live truth)
 

@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-16 (NordVPN gap closure: `surface_urls`, transition-tests CLI, docs)._
+_Last updated: 2026-04-16 (NordVPN gap closure: `surface_urls`, transition-tests CLI; website exposure desk pass: Phases 8–9, `desk_dns_audit.sh`, `research/desk-exposure-template.md`, doc cross-links)._
 
 ---
 
@@ -48,6 +48,7 @@ playwright install chromium
 # After VPN is connected (manual app) — auto location via ipwho.is:
 vpn-leaks run --provider nordvpn --skip-vpn
 
+# Optional desk pass (not CLI): Phases 8–9 from docs/website-exposure-methodology.md — MX/SPF/DMARC/DKIM/TXT/CNAME inventory; archive transcript under research/ or appendix. Then:
 # Aggregated markdown + HTML dashboard from all runs for that provider under runs/:
 vpn-leaks report --provider nordvpn
 
@@ -117,7 +118,7 @@ Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run
 | [vpn-leaks.md](vpn-leaks.md) | Long-form product / research spec |
 | [docs/spec.md](docs/spec.md) | Operational spec |
 | [docs/methodology.md](docs/methodology.md) | Run order |
-| [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md) | Manual website third-party exposure analysis (curl, DNS, WHOIS, classification) |
+| [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md) | Manual website third-party exposure analysis (curl, DNS, WHOIS, classification); **after run**, Phases **8–9** + [scripts/desk_dns_audit.sh](scripts/desk_dns_audit.sh), [research/desk-exposure-template.md](research/desk-exposure-template.md) |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
 | [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
 | [RUN-STEPS.md](RUN-STEPS.md) | Step-by-step walkthrough of `vpn-leaks run` (including transition tests vs `skip_vpn`) |
