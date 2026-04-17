@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 from vpn_leaks.checks.competitor_probes import run_web_probes
+from vpn_leaks.checks.har_summary import summarize_competitor_har_paths
 from vpn_leaks.config_loader import repo_root
 
 
@@ -40,7 +42,25 @@ def run_surface_probes(
     for i, row in enumerate(rows):
         if i < len(pairs):
             row["page_type"] = pairs[i][0]
-    return {
+
+    root = repo_root()
+    har_paths: list[Path] = []
+    for row in rows:
+        hp = row.get("har_path")
+        if isinstance(hp, str):
+            p = root / hp
+            if p.is_file():
+                har_paths.append(p)
+
+    out: dict[str, Any] = {
         "probes": rows,
-        "surface_probe_dir": str(out_dir.relative_to(repo_root())),
+        "surface_probe_dir": str(out_dir.relative_to(root)),
     }
+    if har_paths:
+        out["har_summary"] = summarize_competitor_har_paths(har_paths)
+        services_contacted.append("surface_probe:har_summary")
+        (out_dir / "har_summary.json").write_text(
+            json.dumps(out["har_summary"], indent=2),
+            encoding="utf-8",
+        )
+    return out

@@ -85,6 +85,58 @@ Questions still **unanswered** or only **partially answered** (merged status). U
 - *No ASN in the summary table for these runs (see **Detailed runs** → **Attribution** per location).*
 {% endfor %}
 
+## Website and DNS surface (third-party exposure)
+
+Interpretation, manual desk steps, and evidence tiers (O / S / I): [docs/website-exposure-methodology.md](../docs/website-exposure-methodology.md).
+
+{% if web_exposure.has_any %}
+### HAR-derived signals (merged across locations)
+
+| Metric | Count |
+|--------|-------|
+| Unique request hosts | {{ web_exposure.merged_har.merged_unique_hosts | length }} |
+| Tracker / analytics candidates | {{ web_exposure.merged_har.merged_tracker_candidates | length }} |
+| CDN candidates | {{ web_exposure.merged_har.merged_cdn_candidates | length }} |
+
+{% if web_exposure.merged_har.merged_tracker_candidates | length > 0 %}
+**Tracker / analytics hostnames (sample, up to 32):** {% for h in web_exposure.merged_har.merged_tracker_candidates[:32] %}`{{ h }}`{% if not loop.last %}, {% endif %}{% endfor %}{% if web_exposure.merged_har.merged_tracker_candidates | length > 32 %} *(truncated; full lists in per-location summaries and `normalized.json`.)*{% endif %}
+
+{% endif %}
+{% if web_exposure.merged_har.merged_cdn_candidates | length > 0 %}
+**CDN hostnames (sample, up to 24):** {% for h in web_exposure.merged_har.merged_cdn_candidates[:24] %}`{{ h }}`{% if not loop.last %}, {% endif %}{% endfor %}{% if web_exposure.merged_har.merged_cdn_candidates | length > 24 %} *(truncated.)*{% endif %}
+
+{% endif %}
+{% if web_exposure.dns_rows | length > 0 %}
+### Provider DNS (apex, from `competitor_probe`)
+
+| Domain | NS (sample) | MX (sample) | TXT (sample) | IPv6 apex |
+|--------|-------------|-------------|--------------|-----------|
+{% for row in web_exposure.dns_rows %}| `{{ row.domain }}` | {{ row.ns }} | {{ row.mx }} | {{ row.txt_sample }} | {{ row.ipv6_note }} |
+{% endfor %}
+
+{% endif %}
+{% if web_exposure.surface_rows | length > 0 %}
+### Surface URL matrix (`surface_urls`)
+
+| page_type | URL | HTTP status |
+|-----------|-----|-------------|
+{% for s in web_exposure.surface_rows %}| {{ s.page_type }} | {{ s.url }} | {% if s.error %}`error`{% else %}{{ s.status | default('—') }}{% endif %} |
+{% endfor %}
+
+{% endif %}
+{% if web_exposure.portal_hosts | length > 0 %}
+**Portal hosts probed:** {% for h in web_exposure.portal_hosts %}`{{ h }}`{% if not loop.last %}, {% endif %}{% endfor %}
+
+{% endif %}
+{% if web_exposure.probe_urls_sample | length > 0 %}
+**Competitor probe URLs (sample):** {% for u in web_exposure.probe_urls_sample %}{{ u }}{% if not loop.last %}; {% endif %}{% endfor %}
+
+{% endif %}
+{% else %}
+*No website surface or provider DNS signals in these runs (no `competitor_probe` / `surface_urls` data, or probes empty).*
+
+{% endif %}
+
 ---
 
 ## Detailed runs
@@ -226,6 +278,37 @@ Large JSON fields use size caps in this markdown file; when an excerpt hits a ca
 {{ dr.framework_block }}
 {% else %}
 *No framework synthesis on this record (older run or `--no-framework`).*
+{% endif %}
+
+#### Website & DNS surface (summary)
+
+{% if dr.web_exposure.has_any %}
+| Metric | This location |
+|--------|---------------|
+| Unique request hosts | {{ dr.web_exposure.har.merged_unique_hosts | length }} |
+| Tracker candidates | {{ dr.web_exposure.har.merged_tracker_candidates | length }} |
+| CDN candidates | {{ dr.web_exposure.har.merged_cdn_candidates | length }} |
+
+{% if dr.web_exposure.dns_rows | length > 0 %}
+**Provider DNS (apex)**
+
+| Domain | NS (sample) | MX (sample) | IPv6 apex |
+|--------|-------------|-------------|-----------|
+{% for row in dr.web_exposure.dns_rows %}| `{{ row.domain }}` | {{ row.ns }} | {{ row.mx }} | {{ row.ipv6_note }} |
+{% endfor %}
+
+{% endif %}
+{% if dr.web_exposure.surface_rows | length > 0 %}
+**Surface URLs**
+
+| page_type | URL | status |
+|-----------|-----|--------|
+{% for s in dr.web_exposure.surface_rows %}| {{ s.page_type }} | {{ s.url }} | {% if s.error %}error{% else %}{{ s.status | default('—') }}{% endif %} |
+{% endfor %}
+
+{% endif %}
+{% else %}
+*No surface/DNS summary for this location (`competitor_surface` / `extra.surface_probe` empty or absent).*
 {% endif %}
 
 #### Competitor surface (provider YAML probes)

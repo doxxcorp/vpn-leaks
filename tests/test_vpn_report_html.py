@@ -63,7 +63,43 @@ def test_generate_vpn_report_writes_html(
         "policies": [],
         "services_contacted": [],
         "artifacts": {},
-        "extra": {},
+        "competitor_surface": {
+            "har_summary": {
+                "merged_unique_hosts": ["a.example.com", "b.example.com"],
+                "merged_tracker_candidates": ["stats.example.net"],
+                "merged_cdn_candidates": ["cdn.example.org"],
+            },
+            "provider_dns": {
+                "domains": {
+                    "acmevpn.example": {
+                        "ns": ["ns1.cf.example"],
+                        "a": ["1.2.3.4"],
+                        "aaaa": [],
+                        "mx": ["10 mx.google.example"],
+                        "txt": ["v=spf1 -all"],
+                    },
+                },
+                "ns_hosts": {},
+            },
+            "web_probes": [],
+            "portal_probes": [],
+        },
+        "extra": {
+            "surface_probe": {
+                "probes": [
+                    {
+                        "page_type": "home",
+                        "url": "https://acmevpn.example/",
+                        "status": 200,
+                        "error": None,
+                    },
+                ],
+                "har_summary": {
+                    "merged_tracker_candidates": ["stats.example.net"],
+                    "merged_unique_hosts": ["acmevpn.example"],
+                },
+            },
+        },
         "framework": {
             "risk_scores": {"overall_severity": "LOW"},
             "question_coverage": [
@@ -92,6 +128,10 @@ def test_generate_vpn_report_writes_html(
     md_text = md_path.read_text(encoding="utf-8")
     assert "## SPEC question coverage (full table)" in md_text
     assert "one row per SPEC ID" in md_text
+    assert "## Website and DNS surface (third-party exposure)" in md_text
+    assert "website-exposure-methodology.md" in md_text
+    assert "acmevpn.example" in md_text
+    assert "#### Website & DNS surface (summary)" in md_text
     html = html_path.read_text(encoding="utf-8")
     assert "Coverage and graph" in html
     assert "strictest" in html
@@ -113,3 +153,6 @@ def test_generate_vpn_report_writes_html(
     assert "resolvers seen" in html
     assert "../style/icons/" in html
     assert "spec-cat-count" in html
+    assert "Website and DNS surface" in html
+    assert "web-exposure-table" in html
+    assert "Surface URL matrix" in html

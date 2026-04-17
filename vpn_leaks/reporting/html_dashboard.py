@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
+from vpn_leaks.reporting.web_exposure import (
+    collect_surface_probe_urls,
+    merge_har_signals,
+    rollup_web_exposure,
+)
 
 
 # Slugs with a vendored icon under style/icons/<slug>.svg (see configs/framework/questions.yaml).
@@ -173,50 +178,64 @@ def group_spec_by_category(
 def extract_third_party_signals(
     rows: list[tuple[str, Path, dict[str, Any]]],
 ) -> dict[str, Any]:
-    """Merge competitor_surface signals across locations (best-effort)."""
-    trackers: set[str] = set()
+    """Merge competitor_surface + surface_probe HAR signals across locations (best-effort)."""
+    merged_har = merge_har_signals(rows)
+    trackers: set[str] = set(merged_har["merged_tracker_candidates"])
+    cdns: set[str] = set(merged_har["merged_cdn_candidates"])
     apex_domains: set[str] = set()
     portal_hosts: set[str] = set()
     probe_urls: list[str] = []
+    surface_urls: list[str] = []
 
     for _rid, _p, data in rows:
         cs = data.get("competitor_surface")
-        if not isinstance(cs, dict):
-            continue
-        hs = cs.get("har_summary") or {}
-        if isinstance(hs, dict):
-            for t in hs.get("tracker_candidates") or []:
-                if isinstance(t, str) and t.strip():
-                    trackers.add(t.strip())
-            merged = hs.get("merged_tracker_candidates")
-            if isinstance(merged, list):
-                for t in merged:
-                    if isinstance(t, str) and t.strip():
-                        trackers.add(t.strip())
-        pd = cs.get("provider_dns") or {}
-        if isinstance(pd, dict):
-            doms = pd.get("domains") or {}
-            if isinstance(doms, dict):
-                for d in doms.keys():
-                    if isinstance(d, str) and d.strip():
-                        apex_domains.add(d.strip().lower())
-        for prow in cs.get("portal_probes") or []:
-            if isinstance(prow, dict):
-                h = prow.get("host")
-                if isinstance(h, str) and h.strip():
-                    portal_hosts.add(h.strip().lower())
-        for w in cs.get("web_probes") or []:
-            if isinstance(w, dict):
-                u = w.get("url")
-                if isinstance(u, str) and u.strip():
-                    probe_urls.append(u.strip())
+        if isinstance(cs, dict):
+            pd = cs.get("provider_dns") or {}
+            if isinstance(pd, dict):
+                doms = pd.get("domains") or {}
+                if isinstance(doms, dict):
+                    for d in doms.keys():
+                        if isinstance(d, str) and d.strip():
+                            apex_domains.add(d.strip().lower())
+            for prow in cs.get("portal_probes") or []:
+                if isinstance(prow, dict):
+                    h = prow.get("host")
+                    if isinstance(h, str) and h.strip():
+                        portal_hosts.add(h.strip().lower())
+            for w in cs.get("web_probes") or []:
+                if isinstance(w, dict):
+                    u = w.get("url")
+                    if isinstance(u, str) and u.strip():
+                        probe_urls.append(u.strip())
+        extra = data.get("extra") or {}
+        if isinstance(extra, dict):
+            surface_urls.extend(collect_surface_probe_urls(extra))
+
+    seen_surf: set[str] = set()
+    surface_unique: list[str] = []
+    for u in surface_urls:
+        if u not in seen_surf:
+            seen_surf.add(u)
+            surface_unique.append(u)
+
+    has_signals = bool(
+        merged_har["merged_unique_hosts"]
+        or merged_har["merged_tracker_candidates"]
+        or merged_har["merged_cdn_candidates"]
+        or apex_domains
+        or portal_hosts
+        or probe_urls
+        or surface_unique
+    )
 
     return {
         "tracker_candidates": sorted(trackers)[:48],
+        "cdn_candidates": sorted(cdns)[:48],
         "apex_domains": sorted(apex_domains),
         "portal_hosts": sorted(portal_hosts),
         "probe_urls_sample": probe_urls[:12],
-        "has_signals": bool(trackers or apex_domains or portal_hosts or probe_urls),
+        "surface_urls_sample": surface_unique[:12],
+        "has_signals": has_signals,
     }
 
 
@@ -261,11 +280,14 @@ def build_html_dashboard_context(
             if isinstance(f, dict):
                 findings.append(normalize_finding(f))
 
+    web_exposure = rollup_web_exposure(rows)
+
     return {
         "markdown_basename": markdown_basename,
         "location_cards": build_location_cards(rows),
         "spec_by_category": group_spec_by_category(merged),
         "third_party": extract_third_party_signals(rows),
+        "web_exposure": web_exposure,
         "leak_flags": leak_flags_anywhere(rows),
         "top_findings": findings,
         "max_overall_severity": str(

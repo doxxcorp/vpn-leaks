@@ -1,6 +1,19 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-16 (website exposure desk integration in docs)._
+_Last updated: 2026-04-16 (website exposure methodology outputs in VPN MD/HTML reports)._
+
+## 2026-04-16 — Website exposure outputs in VPN reports (harness rollups)
+
+**Goal:** Surface [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md)-aligned **HAR + provider DNS + surface URL matrix** results in the **aggregated** Markdown and HTML reports, not only as raw JSON under **Detailed runs**.
+
+- **[`vpn_leaks/checks/surface_probe.py`](vpn_leaks/checks/surface_probe.py):** After Playwright loads, merges HARs with **`summarize_competitor_har_paths`**, attaches **`har_summary`** to `extra.surface_probe`, writes **`raw/.../surface_probe/har_summary.json`**, adds **`surface_probe:har_summary`** to `services_contacted`.
+- **[`vpn_leaks/reporting/web_exposure.py`](vpn_leaks/reporting/web_exposure.py):** **`merge_har_signals`**, **`provider_dns_summary_rows`**, **`surface_probe_rows`**, **`per_location_web_exposure`**, **`rollup_web_exposure`** for templates.
+- **[`vpn_leaks/reporting/generate_reports.py`](vpn_leaks/reporting/generate_reports.py):** Passes **`web_exposure`** into **`vpn_report.md.j2`**; each detailed run includes **`web_exposure`** from **`per_location_web_exposure`**.
+- **[`vpn_leaks/reporting/html_dashboard.py`](vpn_leaks/reporting/html_dashboard.py):** **`extract_third_party_signals`** merges **`competitor_surface`** + **`extra.surface_probe`** HAR hints; **`cdn_candidates`**, **`surface_urls_sample`**; dashboard includes **`web_exposure`**.
+- **Templates:** **`vpn_report.md.j2`** — **`## Website and DNS surface (third-party exposure)`** (rollup) and **`#### Website & DNS surface (summary)`** per location. **`vpn_report_document.html.j2`** — **Website and DNS surface** panel with DNS and surface tables (methodology link). **[`report.css`](vpn_leaks/reporting/static/report.css)** — **`.web-exposure-table`** overflow.
+- **Tests:** [`tests/test_vpn_report_html.py`](tests/test_vpn_report_html.py) fixture includes `competitor_surface` + `extra.surface_probe`; asserts section titles and HTML tables.
+
+**Regenerate:** `vpn-leaks report --provider <slug>` after runs that include **`competitor_probe`** and/or **`surface_urls`**, **`HANDOFF.md`** updated for reporting artifacts.
 
 ## 2026-04-16 — Website exposure methodology integrated into process docs
 

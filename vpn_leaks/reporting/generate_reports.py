@@ -15,6 +15,7 @@ from vpn_leaks.config_loader import repo_root
 from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
 from vpn_leaks.reporting.coverage_rollup import build_framework_rollup_payload
 from vpn_leaks.reporting.html_dashboard import build_html_dashboard_context
+from vpn_leaks.reporting.web_exposure import per_location_web_exposure, rollup_web_exposure
 
 # Default cap for medium-sized fenced JSON (DNS, exit sources, policies, artifacts).
 REPORT_JSON_BLOCK_MAX = 120_000
@@ -359,6 +360,7 @@ def build_detailed_runs(
                 "full_normalized_block": full_normalized_block,
                 "truncation_notes": truncation_notes,
                 "has_truncated_blocks": bool(truncation_notes),
+                "web_exposure": per_location_web_exposure(data),
             },
         )
     return detailed
@@ -403,6 +405,7 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
 
     detailed_runs = build_detailed_runs(rows)
     framework_rollup = build_framework_rollup(rows)
+    web_exposure = rollup_web_exposure(rows)
     generated_utc = datetime.now(UTC).isoformat()
 
     env = _jinja_env()
@@ -419,6 +422,7 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         detailed_runs=detailed_runs,
         run_count=len(rows),
         framework_rollup=framework_rollup,
+        web_exposure=web_exposure,
     )
     out_dir = repo_root() / "VPNs"
     out_dir.mkdir(parents=True, exist_ok=True)

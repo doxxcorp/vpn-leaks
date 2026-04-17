@@ -70,10 +70,31 @@
       </div>
     </section>
 
-    {% if dashboard.third_party.has_signals %}
+    {% if dashboard.web_exposure.has_any %}
     <section class="tp-panel anim-in anim-delay-3" aria-labelledby="tp-h">
-      <h2 class="section-title" id="tp-h">Third-party and web surface</h2>
-      <p style="color:var(--color-muted);font-size:0.88rem;margin:0;">Signals from competitor / portal probes when present in runs.</p>
+      <h2 class="section-title" id="tp-h">Website and DNS surface</h2>
+      <p style="color:var(--color-muted);font-size:0.88rem;margin:0;">HAR-derived hosts and provider DNS from <code>competitor_probe</code> and <code>surface_urls</code> (see <a href="../docs/website-exposure-methodology.md">methodology</a>).</p>
+      <p style="margin:0.5rem 0 0;font-size:0.85rem;">Unique hosts: <strong>{{ dashboard.web_exposure.merged_har.merged_unique_hosts | length }}</strong> · Trackers: <strong>{{ dashboard.web_exposure.merged_har.merged_tracker_candidates | length }}</strong> · CDN hints: <strong>{{ dashboard.web_exposure.merged_har.merged_cdn_candidates | length }}</strong></p>
+      {% if dashboard.web_exposure.dns_rows %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Provider DNS (apex)</p>
+      <div class="web-exposure-table-wrap">
+        <table class="web-exposure-table">
+          <thead>
+            <tr><th>Domain</th><th>NS (sample)</th><th>MX (sample)</th><th>IPv6 apex</th></tr>
+          </thead>
+          <tbody>
+            {% for row in dashboard.web_exposure.dns_rows %}
+            <tr>
+              <td><code>{{ row.domain }}</code></td>
+              <td class="cell-mono">{{ row.ns }}</td>
+              <td class="cell-mono">{{ row.mx }}</td>
+              <td>{{ row.ipv6_note }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
       {% if dashboard.third_party.apex_domains %}
       <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Apex domains probed</p>
       <ul class="mono-list">
@@ -90,6 +111,33 @@
         {% endfor %}
       </ul>
       {% endif %}
+      {% if dashboard.web_exposure.surface_rows %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Surface URL matrix</p>
+      <div class="web-exposure-table-wrap">
+        <table class="web-exposure-table">
+          <thead>
+            <tr><th>page_type</th><th>URL</th><th>status</th></tr>
+          </thead>
+          <tbody>
+            {% for s in dashboard.web_exposure.surface_rows %}
+            <tr>
+              <td>{{ s.page_type }}</td>
+              <td class="cell-mono">{{ s.url }}</td>
+              <td>{% if s.error %}error{% else %}{{ s.status | default('—') }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {% if dashboard.third_party.surface_urls_sample %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Surface URLs (sample)</p>
+      <ul class="mono-list">
+        {% for u in dashboard.third_party.surface_urls_sample %}
+        <li>{{ u }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
       {% if dashboard.third_party.tracker_candidates %}
       <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Tracker / analytics candidates (HAR)</p>
       <ul class="mono-list">
@@ -98,8 +146,16 @@
         {% endfor %}
       </ul>
       {% endif %}
+      {% if dashboard.third_party.cdn_candidates %}
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">CDN candidates (HAR)</p>
+      <ul class="mono-list">
+        {% for c in dashboard.third_party.cdn_candidates %}
+        <li>{{ c }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
       {% if dashboard.third_party.probe_urls_sample %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Web probe URLs (sample)</p>
+      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Competitor web probe URLs (sample)</p>
       <ul class="mono-list">
         {% for u in dashboard.third_party.probe_urls_sample %}
         <li>{{ u }}</li>
