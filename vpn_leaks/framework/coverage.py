@@ -502,15 +502,21 @@ def _coverage_for_question(q: QuestionDef, run: NormalizedRun) -> QuestionCovera
         if run.fingerprint_snapshot:
             return _row(
                 q,
-                status="partially_answered",
-                summary="Fingerprint snapshot present.",
+                status="answered",
+                summary=(
+                    "Fingerprint snapshot captured (harness baseline; does not prove the provider "
+                    "site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence)."
+                ),
                 refs=[_ev("fingerprint_snapshot")],
             )
         if _has_browserleaks_data(run):
             return _row(
                 q,
-                status="partially_answered",
-                summary="BrowserLeaks probe pages captured (canvas/WebGL/tls signals in raw excerpts).",
+                status="answered",
+                summary=(
+                    "BrowserLeaks probe pages captured (canvas/WebGL/TLS signals in raw excerpts; "
+                    "harness baseline—not proof of provider-side fingerprinting scripts)."
+                ),
                 refs=[_ev("browserleaks_snapshot")],
             )
         return _row(q, status="unanswered", summary="", notes="")

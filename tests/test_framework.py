@@ -83,8 +83,23 @@ def test_coverage_fp001_browserleaks_without_fingerprint_dict() -> None:
     )
     cov = build_question_coverage(run, qs)
     row = next(c for c in cov if c.question_id == "FP-001")
-    assert row.answer_status == "partially_answered"
+    assert row.answer_status == "answered"
     assert "browserleaks" in row.answer_summary.lower()
+
+
+def test_coverage_fp001_fingerprint_snapshot_only() -> None:
+    _, qs = load_question_bank()
+    run = NormalizedRun(
+        run_id="r1",
+        vpn_provider="example",
+        vpn_location_id="loc1",
+        fingerprint_snapshot={"user_agent": "Mozilla/5.0"},
+        browserleaks_snapshot=None,
+    )
+    cov = build_question_coverage(run, qs)
+    row = next(c for c in cov if c.question_id == "FP-001")
+    assert row.answer_status == "answered"
+    assert "fingerprint" in row.answer_summary.lower()
 
 
 def test_coverage_ip014_agreement_summary() -> None:

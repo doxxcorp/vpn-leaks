@@ -1,6 +1,16 @@
 # VPN Leaks — project progress
 
-_Last updated: 2026-04-16 (website exposure methodology outputs in VPN MD/HTML reports)._
+_Last updated: 2026-04-17 (FP-001 coverage semantics and dashboard copy)._
+
+## 2026-04-17 — FP-001 coverage semantics (answered when probe evidence exists)
+
+**Goal:** Stop treating successful fingerprint/BrowserLeaks captures as **`partially_answered`** gaps; align **`answered`** with harness evidence captured while summaries stay honest (not proof of provider-side fingerprinting).
+
+- **[`vpn_leaks/framework/coverage.py`](vpn_leaks/framework/coverage.py):** **FP-001** → **`answered`** when **`fingerprint_snapshot`** or BrowserLeaks data exists; summaries point to THIRDWEB/HAR for script-level evidence.
+- **[`configs/framework/report_hints.yaml`](configs/framework/report_hints.yaml):** FP-001 hint targets the **unanswered** path (enable probes / re-run).
+- **Templates:** [`vpn_report_document.html.j2`](vpn_leaks/reporting/templates/vpn_report_document.html.j2), [`vpn_report.md.j2`](vpn_leaks/reporting/templates/vpn_report.md.j2) — short note that for some **DYNAMIC_PARTIAL** IDs (e.g. FP-001), **`answered`** means harness evidence class captured, not a fully settled desk answer.
+- **Tests:** [`tests/test_framework.py`](tests/test_framework.py) — BrowserLeaks-only and fingerprint-only FP-001 cases expect **`answered`**.
+- **Handoff:** [`HANDOFF.md`](HANDOFF.md) — SPEC section documents FP-001 semantics and template blurb for agents.
 
 ## 2026-04-16 — Website exposure outputs in VPN reports (harness rollups)
 

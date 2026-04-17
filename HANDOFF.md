@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-04-16 (website exposure in VPN reports: `web_exposure.py`, MD/HTML “Website and DNS surface”, `surface_probe` `har_summary.json`; plus prior: NordVPN `surface_urls`, transition-tests; desk pass Phases 8–9, `desk_dns_audit.sh`, `research/desk-exposure-template.md`)._
+_Last updated: 2026-04-17 (SPEC **FP-001**: `answered` when fingerprint/BrowserLeaks evidence exists; MD/HTML coverage blurb for **DYNAMIC_PARTIAL** vs desk interpretation; plus prior: website exposure in reports, NordVPN `surface_urls`, transition-tests; desk pass Phases 8–9)._
 
 ---
 
@@ -99,6 +99,8 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 ## SPEC coverage and `framework` rows
 
 [`vpn_leaks/framework/coverage.py`](vpn_leaks/framework/coverage.py) maps the question bank to per-run **answer_status** / summaries. Recent alignment work: **portal** and **web** probes both count for WEB/CTRL/SIGNUP/THIRDWEB-style questions; **BrowserLeaks** snapshots count toward fingerprint-style IDs; **EXIT-004** / **EXIT-005** / **IP-014** use structured summaries from `exit_dns.json`, `extra.exit_geo`, and `exit_ip_sources` when present. Provider YAML example with **`competitor_probe`** and **`policy_urls`**: [configs/vpns/nordvpn.yaml](configs/vpns/nordvpn.yaml).
+
+**FP-001 (browser fingerprinting):** When **`fingerprint_snapshot`** or **`browserleaks_snapshot`** has real content, coverage marks **`answered`** (harness baseline captured; summaries explicitly **do not** claim proof of provider-side fingerprinting—use THIRDWEB / HAR rows for script-level evidence). If neither is present, the row stays **`unanswered`**; [configs/framework/report_hints.yaml](configs/framework/report_hints.yaml) drives gap **Next steps**. Aggregated MD/HTML reports add a short note that for some **`DYNAMIC_PARTIAL`** IDs, **`answered`** means the harness captured the intended evidence class, not a fully settled desk answer—see [vpn_leaks/reporting/templates/vpn_report_document.html.j2](vpn_leaks/reporting/templates/vpn_report_document.html.j2) / [vpn_report.md.j2](vpn_leaks/reporting/templates/vpn_report.md.j2). **`vpn-leaks report`** merged **`gap_rows`** use the strictest status across locations (unchanged).
 
 ---
 

@@ -34,7 +34,7 @@ hints:
   THIRDWEB-001: "Enable `competitor_probe` + marketing URLs; scripts listed in `web_probes.json`."
   THIRDWEB-003: "HAR + `har_summary.json` tracker_candidates when competitor probes run."
   THIRDWEB-012: "Review HAR for Set-Cookie; summary may be partial."
-  FP-001: "Per location, FP-001 is satisfied when `fingerprint_snapshot` and/or `browserleaks_snapshot` in `normalized.json` has real content: set `fingerprint.enabled: true` under `configs/tools/leak-tests.yaml` (optional Playwright navigator snapshot), re-run `vpn-leaks run` without `--skip-browserleaks`, and confirm `raw/<location>/browserleaks_probe/` exists. Merged report status is strictest across locations—if any location lacks that evidence, FP-001 can stay unanswered for the whole report; check each location under Detailed runs or `framework.question_coverage`."
+  FP-001: "No fingerprint-class evidence in this row: set `fingerprint.enabled: true` in `configs/tools/leak-tests.yaml`, re-run `vpn-leaks run` without `--skip-browserleaks`, and confirm `raw/<location>/browserleaks_probe/` exists. Merged reports use the strictest status across locations—check each location under Detailed runs or `framework.question_coverage`."
   FP-011: "Harness exercises WebRTC on leak-test pages; provider marketing pages need separate probe config."
   TELEM-001: "INTERNAL_UNVERIFIABLE in harness; use binary/network analysis or vendor disclosures (D)."
   TELEM-004: "Same as TELEM-001."

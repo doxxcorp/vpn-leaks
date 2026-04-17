@@ -171,7 +171,7 @@
       <div class="viz-panel">
         <h3>SPEC framework coverage</h3>
         {% if framework_rollup.has_framework %}
-        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Each ID uses the <strong>strictest</strong> status across benchmark rows: unanswered beats partially answered beats answered. Bar shows share of IDs by status.</p>
+        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Each ID uses the <strong>strictest</strong> status across benchmark rows: unanswered beats partially answered beats answered. Bar shows share of IDs by status. For some <strong>DYNAMIC_PARTIAL</strong> questions (e.g. <strong>FP-001</strong>), <strong>answered</strong> means the harness captured the intended evidence class in <code>normalized.json</code>—not that the English question is fully settled by desk review; use per-ID summaries, category context, and raw artifacts to interpret.</p>
         {% set c = framework_rollup.coverage_counts %}
         {% set total = (c.answered + c.partially_answered + c.unanswered + c.not_testable_dynamically) %}
         {% if total > 0 %}
