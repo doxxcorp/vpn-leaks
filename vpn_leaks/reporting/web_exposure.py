@@ -166,6 +166,65 @@ def collect_surface_probe_urls(extra: dict[str, Any] | None) -> list[str]:
     return [r["url"] for r in surface_probe_rows(extra) if r.get("url")]
 
 
+def methodology_and_pcap_sections(data: dict[str, Any]) -> dict[str, Any]:
+    """Compact tables for automated methodology + PCAP-derived metadata."""
+    wm = data.get("website_exposure_methodology")
+    if not isinstance(wm, dict):
+        meth = {"has_methodology": False, "inventory_preview": [], "errors": []}
+    else:
+        inv = wm.get("phase9_third_party_inventory") or []
+        inv_preview: list[dict[str, Any]] = []
+        if isinstance(inv, list):
+            for row in inv[:40]:
+                if isinstance(row, dict):
+                    inv_preview.append(
+                        {
+                            "company": row.get("company_hypothesis", ""),
+                            "role": row.get("role", ""),
+                            "how": row.get("how_discovered", ""),
+                        },
+                    )
+        p8 = wm.get("phase8_dns_infra") or {}
+        per_dom = p8.get("per_domain") if isinstance(p8, dict) else {}
+        dom_count = len(per_dom) if isinstance(per_dom, dict) else 0
+        meth = {
+            "has_methodology": True,
+            "tier_note": str(wm.get("evidence_tier_note") or "")[:800],
+            "phase9_count": len(inv) if isinstance(inv, list) else 0,
+            "phase8_domains": dom_count,
+            "inventory_preview": inv_preview,
+            "limits": wm.get("limits") or [],
+            "errors": wm.get("errors") or [],
+        }
+
+    pc = data.get("pcap_derived")
+    if not isinstance(pc, dict) or not pc:
+        cap: dict[str, Any] = {"has_pcap": False, "finalize_notes": []}
+    else:
+        cap = {
+            "has_pcap": True,
+            "flows_unique_estimate": pc.get("flows_unique_estimate"),
+            "packet_total": (pc.get("packet_counts") or {}).get("total"),
+            "snis": (pc.get("tls_clienthello_snis_unique") or [])[:48],
+            "dns_hosts": (pc.get("dns_hostnames_unique") or [])[:48],
+            "limits": pc.get("limits") or [],
+            "errors": pc.get("errors") or [],
+            "finalize_notes": [],
+        }
+
+    fin = data.get("capture_finalize")
+    if isinstance(fin, dict) and fin:
+        meth_cap_note: list[str] = []
+        sid = fin.get("session_id")
+        if sid:
+            meth_cap_note.append(f"session_id={sid}")
+        ferr = fin.get("finalize_errors") or []
+        if ferr:
+            meth_cap_note.extend([str(x) for x in ferr[:6]])
+        cap["finalize_notes"] = meth_cap_note
+    return {"methodology": meth, "pcap": cap}
+
+
 def per_location_web_exposure(data: dict[str, Any]) -> dict[str, Any]:
     """Compact payload for one detailed run section."""
     cs = data.get("competitor_surface")

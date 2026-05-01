@@ -97,3 +97,27 @@ def load_leak_tests_config() -> dict[str, Any]:
 def load_attribution_config() -> dict[str, Any]:
     path = repo_root() / "configs" / "tools" / "attribution.yaml"
     return load_yaml(path) if path.is_file() else {}
+
+
+def methodology_config_hints(vpn_cfg: dict[str, Any]) -> list[str]:
+    """Non-fatal reminders for website-exposure methodology completeness."""
+    msgs: list[str] = []
+    cp = vpn_cfg.get("competitor_probe")
+    doms: list[Any] = []
+    if isinstance(cp, dict):
+        doms = list(cp.get("provider_domains") or [])
+    if not doms:
+        msgs.append(
+            "competitor_probe.provider_domains is empty — automated Phase 8–9 "
+            "website-exposure methodology will be skipped.",
+        )
+    if not (vpn_cfg.get("surface_urls") or []):
+        msgs.append(
+            "surface_urls is empty — host inventory will rely on competitor_probe URLs only.",
+        )
+    urls = vpn_cfg.get("policy_urls") or []
+    if not urls:
+        msgs.append(
+            "policy_urls is empty — no VPN marketing/policy pages will be fetched for this slug.",
+        )
+    return msgs

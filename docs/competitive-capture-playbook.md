@@ -2,22 +2,34 @@
 
 Two-command operator flow: **`capture start`** before signup/install, then **`vpn-leaks run --attach-capture`** on-VPN to run the full harness, stop capture, summarize PCAP, and merge into reports. **No Wireshark** (including `tshark`).
 
+## Implemented in-tree (baseline)
+
+Session-aware CLI: **`vpn-leaks capture start|status|abort`**, **`run --attach-capture`**, **`run --with-pcap`**, **`vpn-leaks pcap-summarize`**, PCAP under **`runs/<id>/raw/<location_id>/capture/`**, merge **`pcap_derived`** into **`normalized.json`**, report + **`graph-export`** integration ( **`graph_schema` 1.1** PCAP edges).
+
+**Remaining / optional backlog:** JA3/JA4 pinning in **`[pcap]`** extra; advanced tcpdump rotation; reference provider YAML tweaks as vendors change URLs.
+
+---
+
+## Choosing a PCAP mode
+
+| Approach | PCAP starts | Signup/install traffic in PCAP | Second command nuances |
+|-----------|-------------|-----------------------------------|-------------------------|
+| **`capture start` → `run --attach-capture`** | Before signup (you run **`capture start`** first) | Yes (full funnel) | Requires **active session** descriptor; **`--attach-capture`** stops tcpdump at end of **`run`** |
+| **`run --with-pcap`** | When **`run`** begins (**harness-managed** tcpdump) | Only what happens during **CLI run** window | Cannot combine with **`--attach-capture`**; abort any stray **`capture start`** session first |
+
+**Repair:** **`vpn-leaks pcap-summarize <path/to/file.pcap>`** emits **`pcap_summary.json`** without re-running benchmarks.
+
+---
+
 ## Implementation backlog
 
-- **vpn-leaks-capture-design:** Session-aware CLI—`capture start` (tcpdump + JSON session desc), `run --attach-capture` finalizes one PCAP spanning signup+install+bench; `capture status|abort`; move pcap from cache to `runs/<id>/raw/.../capture/`.
-- **define-artifacts:** Per-provider artifact dirs: `runs/`, research transcripts, optional PCAP/MITM exports, report outputs.
-- **utm-vm-per-provider:** UTM baseline image + clone workflow; host prep checklist.
-- **capture-stack:** tcpdump filter/rotation; mitmproxy scripting; no Wireshark anywhere.
-- **pcap-summarize-report:** Post-run PCAP parser (Python only—dpkt/scapy/custom TLS ClientHello)—`pcap_summary.json`; merge into `normalized.json` + MD/HTML report tables; optional JA fingerprints.
-- **yaml-parity:** Nord/Express/Mullvad `surface_urls` / `competitor_probe` / `policy_urls` parity in `configs/vpns/`.
-- **ja-fingerprint-toolchain:** JA3/JA4 from ClientHello in summarizer (or vetted non-Wireshark helper); pin versions for comparability.
-- **docs:** Keep [website-exposure-methodology.md](website-exposure-methodology.md) authoritative for manual DNS/email supply-chain phases 8–9; align report copy with this playbook.
+- **utm-vm-per-provider:** UTM baseline image + clone workflow; host prep checklist (this document §Golden base VM).
 
 ---
 
 ## Repo strategy—capture lives in vpn-leaks
 
-**This repo is the single canonical codebase** for competitive evaluation: `runs/`, `normalized.json`, HAR/`surface_probe`, `competitor_probe`, reports, `graph-export`, and (planned) PCAP session + summarization.
+**This repo is the single canonical codebase** for competitive evaluation: `runs/`, `normalized.json`, HAR/`surface_probe`, `competitor_probe`, automated **website exposure methodology**, reports, **`graph-export`**, and **PCAP capture + summarization**.
 
 **Authoritative companion docs:** [HANDOFF.md](../HANDOFF.md) (repo map, CLI, artifacts), [website-exposure-methodology.md](website-exposure-methodology.md) (website + DNS infrastructure desk methodology), [methodology.md](methodology.md), [data-dictionary.md](data-dictionary.md).
 
@@ -25,23 +37,21 @@ Two-command operator flow: **`capture start`** before signup/install, then **`vp
 
 **Primary operator UX (two commands per campaign):**
 
-1. **`vpn-leaks capture start`** (exact name negotiable, e.g. `capture begin`) — **one command** that spawns **long-lived `tcpdump`** on the chosen interface, writes a **session descriptor** (JSON: `session_id`, `pid`, `pcap_path` still growing, `interface`, `started_at_utc`, optional `bpf`). PCAP lives under a **temp/cache dir** until finalized because **`run_id` does not exist yet**. Document **`sudo`** behavior up front.
+1. **`vpn-leaks capture start`** — Spawns **`tcpdump`** on the chosen interface (**`-i` / `--interface`**, default from **`VPN_LEAKS_CAPTURE_INTERFACE`** or **`en0`**), writes a **session descriptor** (JSON under **`.vpn-leaks/capture/`**: `session_id`, `pid`, `pcap_path`, `interface`, `started_at_utc`, optional `bpf`). PCAP grows in cache until **`run`** finalizes (**`run_id`** did not exist at capture start).
 2. **Human window** — browser signup, download/install vendor app, connect VPN (all traffic **including pre-VPN marketing + installer callbacks** lands in the same PCAP).
 3. **`vpn-leaks run --provider <slug> --skip-vpn --attach-capture`** — **second command**: runs the **full existing harness** (leak tests, `competitor_probe`, `surface_urls`, policy, yourinfo, attribution, …) **while tunnel is up**. On **exit** (success or controlled failure): **stop tcpdump** from the active session descriptor, **rotate/close** the PCAP, **move or hardlink** it into `runs/<run_id>/raw/<location_id>/capture/*.pcap`, invoke **`pcap_summary`**, merge into **`normalized.json`**, then teardown session file. If **no** active capture, `run` behaves exactly as today.
 
-**Helpers:** `vpn-leaks capture status` (show active session + bytes written), `vpn-leaks capture abort` (kill tcpdump, discard or quarantine partial pcap), optional `--capture-interface en0` on **start** / default from env.
+**Helpers:** **`vpn-leaks capture status`** (active session + byte size), **`vpn-leaks capture abort`** (**`--keep-pcap`** optional). Interface default: env **`VPN_LEAKS_CAPTURE_INTERFACE`** or **`en0`**.
 
-**Alternate / advanced:** `vpn-leaks run --with-pcap` that **only** wraps the harness window (no signup traffic)—kept for quick retests; not the default story for competitive campaigns.
+**Alternate path:** **`vpn-leaks run --with-pcap`** — harness starts **`tcpdump`** at run start (**no signup window** unless you overlap manually); merges the same **`pcap_derived`** block at finalize. Prefer **`attach-capture`** for full-funnel campaigns.
 
-**Other wrappers:** optional `vpn-leaks capture mitm-run` / mitmdump recipe for decrypted HTTP(S) where CA trust exists—orthogonal to the two-command PCAP story.
+**PCAP summarization (shipping):** [`vpn_leaks/checks/pcap_summarize.py`](../vpn_leaks/checks/pcap_summarize.py) + CLI **`vpn-leaks pcap-summarize`** — **dpkt** only; **`pcap_summary.json`** includes flow samples, TLS SNI (ClientHello heuristic), UDP/53 DNS names, QUIC/opaque TLS hints and explicit **`limits`**. **`ja3_ja4`** array reserved until optional tooling lands in **`[pcap]`** extra.
 
-- **Run integration (legacy / short capture):** optional flags that **start tcpdump immediately before phases and stop after**—superseded for full-funnel research by **session capture** above.
-- **Post-run PCAP review (mandatory design goal):** A **vpn-leaks internal module** parses each saved `.pcap` (Python-only stack—e.g. **dpkt** and/or **scapy-lite path**, custom TLS ClientHello parser for **SNI**/cipher lists, optional JA3/JA4 math from raw hello bytes). **Do not depend on Wireshark** (no GUI, **`tshark` excluded** policy). Outputs **`pcap_summary.json`** beside the PCAP with: aggregated flows (5-tuples + byte/packet counts), top remote IPs/hostnames inferred from TLS SNI / cleartext DNS (`udp/53`, `tcp/53`), optional QUIC heuristic notes, pinning gaps called out explicitly (“opaque TLS to X without SNI”).
-- **Report fusion:** Extend **`normalized.json`** (or sibling artifact referenced from it with stable schema) plus **Jinja** templates so `vpn-leaks report` emits a **PCAP-derived exposure** subsection per location in **`VPNs/<SLUG>.md`** and **`VPNs/<SLUG>.html`** (tables + badges: third-party IPs, inferred services, parity with HAR lists). Optional **graph-export** nodes for high-volume third-party edges.
-- **This playbook** (and future tight cross-links in README) documents bpf defaults, “no Wireshark” policy, and interpretive limits (encrypted DNS, ESNI/ECH blindness).
-- **Dependencies:** PCAP parsing deps live in **`pyproject.toml` extras** (`pcap`, etc.); **`mitmproxy` remains optional/Homebrew**. **Never** Wireshark/mitmshark/tshark.
+**Report + graph fusion (shipping):** **`pcap_derived`** on **`normalized.json`**, Jinja rollup subsection in **`vpn-leaks report`**, and **`graph-export`** PCAP-related edges (**`graph_schema` 1.1**).
 
-**Out of scope for bundling:** Proxyman is GUI-first—document it as manual export into `runs/.../capture/proxyman/` rather than automate its binary.
+This playbook documents bpf defaults, “no Wireshark” policy, and interpretive limits (encrypted DNS, ESNI/ECH blindness). **Dependencies:** PCAP parsing uses **`dpkt`** (declared in **`pyproject.toml`**). **Never** Wireshark/mitmshark/tshark or **mitmproxy** on the standard operator path.
+
+**Out of scope for bundling:** GUI TLS-intercept tools (e.g. Proxyman)—not part of `vpn-leaks` automation.
 
 ---
 
@@ -55,13 +65,11 @@ You end up with **repeatable evidence bundles per provider** and **rollups**, no
 - **Rollup after one or more runs:** `vpn-leaks report --provider <slug>` → **`VPNs/<SLUG>.md`** and **`VPNs/<SLUG>.html`** (dashboard + Website/DNS surface section + embedded 3D graph when data exists).
 - **Graph export:** `vpn-leaks graph-export --provider <slug> -o exposure-graph.json` → feed [viewer/](../viewer/).
 
-**Desk methodology (DNS/email supply chain Phases 8–9):** [docs/website-exposure-methodology.md](website-exposure-methodology.md). Archive deep transcripts as `runs/.../raw/.../dns-audit-<date>.txt` or under `research/` in this repo.
+**Desk methodology (DNS/email supply chain):** Automated projection in **`normalized.json`** → **`website_exposure_methodology`** during **`vpn-leaks run`**; authoritative definitions and manual deepening (transcripts **`S`**) in [website-exposure-methodology.md](website-exposure-methodology.md).
 
-**Capture extensions to implement** (manual or partial today):
+**Operational polish:** Prefer recording harness **git SHA** / hostname in **`run.json`** when available; note tester geography when CDN POP interpretation matters.
 
-- **Raw PCAP** via **`tcpdump` only** (no Wireshark family); **automatic summarization** post-run proves **which IPs/ports** and inferred identities (SNI/DNS).
-- **MITM artifacts** (mitmproxy first-class; Proxyman via manual export): decrypted **HTTP(S)** where pinning allows—stored under `runs/.../raw/.../capture/`.
-- **Run metadata:** record harness version, git SHA, interface name, and hostname in **`run.json`** where possible; optionally append tester geography in freeform run notes when CDN POP context matters.
+- **Raw PCAP** via **`tcpdump` only** (no Wireshark family); summarize with **`vpn-leaks`** (**`dpkt`**) — see **Choosing a PCAP mode** above.
 
 ---
 
@@ -103,7 +111,7 @@ Run the snippet Homebrew prints (eval `brew shellenv` …) so `brew` is on **`PA
 **3 — Packages via Brew**
 
 ```bash
-brew install python@3.12 git jq mitmproxy
+brew install python@3.12 git jq
 ```
 
 **Forbidden on base image:** anything **Wireshark** (`brew install --cask wireshark`), **`tshark`**, **`wireshark-cli`**. PCAP review is fully in **vpn-leaks** code paths.
@@ -132,7 +140,7 @@ Matches [HANDOFF.md](../HANDOFF.md) baseline.
 ```bash
 source ~/src/vpn-leaks/.venv/bin/activate
 vpn-leaks --help
-which mitmdump tcpdump python3.12
+which tcpdump python3.12
 /usr/sbin/tcpdump -h | head -n 1
 ```
 
@@ -176,9 +184,7 @@ For private `vpn-leaks`, run `ssh -T git@github.com` once on the **golden** imag
 
 ### JA3/JA4 / PCAP analytics on the base image
 
-No extra **brew** packages required until **vpn-leaks** ships `pcap` extras—then on golden (or first clone after release): **`pip install -e ".[dev,pcap]"`** (exact extra name TBD in implementation). Still **no Wireshark**.
-
-**Not globally required:** Proxyman (GUI MITM)—install only if an analyst wants it; not part of golden minimal path.
+**`dpkt`** is installed with **`pip install -e ".[dev]"`** via `pyproject.toml`. Still **no Wireshark** / **tshark** / **mitmproxy** on the golden path.
 
 ---
 
@@ -207,14 +213,13 @@ vpn-leaks run --provider <slug> --skip-vpn --attach-capture [--force ...]
 
 Harness runs **all** automated phases; on completion it **stops tcpdump**, runs **`pcap_summary`**, merges into **`normalized.json`**. (Exact flag names ship with implementation; **`--with-pcap`** remains the short-window alternative.)
 
-8. **Optional app MITM / Proxyman** — manual side-channel if you need decrypted bodies where CA trust works; PCAP from steps 5–7 remains the ground truth for metadata.
-9. **More cities:** **Command 1** again (or new clone) → reconnect elsewhere → **Command 2** again.
-10. **Publishing:** `git` add/commit `runs/`, lift artifacts off the VM as needed.
-11. **Executive wording** (“who can see what”)—human reviewer; may draft from normalized outputs.
+8. **More cities:** **Command 1** again (or new clone) → reconnect elsewhere → **Command 2** again.
+9. **Publishing:** `git` add/commit `runs/`, lift artifacts off the VM as needed.
+10. **Executive wording** (“who can see what”)—human reviewer; may draft from normalized outputs.
 
 ### Automated by vpn-leaks + capture extensions
 
-Including: **session-scoped PCAP** spanning signup through benchmark; competitor DNS probing; **`surface_urls` Playwright** + **HAR summaries**; leak URLs; **yourinfo.ai** if enabled; **policy** fetch; RIPEstat / Cymru / PeeringDB attribution; **`pcap_summary` + report fusion**; **`vpn-leaks report`** + **`graph-export`**; optional **mitmdump** exporter; JA fingerprints from summarizer.
+Including: **session-scoped PCAP** spanning signup through benchmark; competitor DNS probing; **`surface_urls` Playwright** + **HAR summaries**; leak URLs; **yourinfo.ai** if enabled; **policy** fetch; RIPEstat / Cymru / PeeringDB attribution; automated **website-exposure methodology** (Phases 1–9 desk bundle in `normalized.json`); **`pcap_summary` + report fusion**; **`vpn-leaks report`** + **`graph-export`**; optional **JA** fingerprints from **`pcap_summary`** when enabled.
 
 **Rare escape hatch:** one **manual Safari** capture if Cloudflare defeats Playwright—drop HAR under `runs/.../manual/` and annotate.
 
@@ -228,23 +233,15 @@ Treat each competitor as multiple **`runs/`** (`location_id`/exit-dependent). Ro
 - **Phase A:** `capture start` — long-lived PCAP (minus sudo password).
 - **Phase B:** Human signup/install/connect — **PCAP includes marketing + installers + tunnel bring-up**.
 - **Phase C:** `run --attach-capture` — harness phases + **`capture finalize`** inside same process.
-- **Phase D:** Optional MITM pass (**mixed**).
 
 ---
 
-## tcpdump vs Proxyman vs mitmproxy
+## tcpdump + Python summarization (standard path)
 
-- **tcpdump:** captures **all** IP packets—ports, flows, timing. **Interpretation:** **vpn-leaks post-run PCAP module** parses locally (SNI/DNS aggregates, fingerprints)—**never** through Wireshark/`tshark`. **Limit:** no decrypted HTTP bodies without MITM; ECH/DoH blind spots must be labeled in `pcap_summary.json`.
-- **mitmproxy:** decrypted **HTTP(S)** when apps trust your CA; **scriptable** via `mitmdump`. **Limit:** pinning blocks sessions; some control-plane traffic bypasses system HTTP proxy.
-- **Proxyman:** same MITM class, strong GUI triage; **manual** export path into run folder—not required for headless benchmarks.
-
-**Practical stack:**
-
-- **Prefer session tcpdump from `capture start` through `run --attach-capture`** so signup/install traffic is captured; optionally add a harness-only BPF if you split sessions later.
-- **Run mitmproxy** when you care about **JSON telemetry bodies** and third-party SDK domains from the **app**—accept **partial** coverage.
-- **Use Proxyman** when a human needs to **click through** pinning failures and export single flows quickly.
-
-**JA3 / JA4:** Produced by the **`pcap_summary` pipeline** (and mitm TLS metadata when MITM succeeds), not manual tools.
+- **tcpdump:** captures **all** IP packets visible to the NIC—ports, flows, timing.
+- **Interpretation:** **`vpn-leaks pcap-summarize`** / in-run merge uses **dpkt** (SNI/DNS aggregates, optional JA math later)—**never** Wireshark/`tshark`.
+- **Limits:** no decrypted HTTP bodies from this path; ECH/DoH blind spots must be labeled in `pcap_summary.json`.
+- **Operational default:** session **tcpdump** from **`capture start`** through **`run --attach-capture`**; optional BPF on `capture start` if you need to trim volume.
 
 ---
 

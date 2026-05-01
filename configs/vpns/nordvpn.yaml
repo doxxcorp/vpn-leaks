@@ -38,9 +38,13 @@ competitor_probe:
   portal_hosts:
   - my.nordaccount.com
 surface_urls:
+- page_type: home
+  url: https://www.nordvpn.com/
 - page_type: pricing
   url: https://nordvpn.com/pricing/
 - page_type: signup
   url: https://my.nordaccount.com/
 - page_type: checkout
   url: https://nordcheckout.com/
+- page_type: support
+  url: https://support.nordvpn.com/

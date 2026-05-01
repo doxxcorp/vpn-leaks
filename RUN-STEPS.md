@@ -2,6 +2,8 @@
 
 This document walks through what the harness does for that command. **Defaults assumed:** `--locations` omitted (auto location from exit IP + geo), `--auto-location` on (default), locations **persisted** into `configs/vpns/nordvpn.yaml` unless you pass `--no-persist-locations`.
 
+**Beyond this Nord walkthrough — updated CLI features:** Canonical **phase order**, automated **website exposure methodology**, and PCAP modes (**`capture start` + `--attach-capture`**, **`--with-pcap`**, **`pcap-summarize`**) live in **[docs/methodology.md](docs/methodology.md)** and **[README.md](README.md)**; UTM/competitive workflows in **[docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md)**. This file does **not** re-number every downstream step—use those references when PCAP or methodology questions come up.
+
 ---
 
 ## 1. CLI parsing

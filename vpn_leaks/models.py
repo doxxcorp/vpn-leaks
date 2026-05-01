@@ -110,6 +110,14 @@ class ArtifactIndex(BaseModel):
         default=None,
         description="Optional transition poll log raw/.../transitions.json",
     )
+    website_exposure_dir: str | None = Field(
+        default=None,
+        description="Automated methodology JSON under raw/<loc>/website_exposure/",
+    )
+    capture_dir: str | None = Field(
+        default=None,
+        description="Final PCAP bundle under raw/<loc>/capture/ when attach-capture finalized",
+    )
 
 
 class CompetitorSurfaceSnapshot(BaseModel):
@@ -198,10 +206,50 @@ class FrameworkResult(BaseModel):
     observed_endpoints: list[ObservedEndpoint] = Field(default_factory=list)
 
 
+class WebsiteExposureMethodology(BaseModel):
+    """Automated desk methodology (Phases 1–9). Tier = desk automation, not client DNS-leak (O)."""
+
+    methodology_schema_version: str = "1.0"
+    evidence_tier_note: str = Field(
+        default=(
+            "Desk automation of website-exposure methodology (Phases 1–9). "
+            "Do not conflate with client resolver / DNS-leak observations (O); see "
+            "docs/research-questions-and-evidence.md."
+        ),
+    )
+    phases: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Compact summaries per methodology phase.",
+    )
+    hosts_inventory: dict[str, Any] = Field(default_factory=dict)
+    resolver_results: dict[str, Any] = Field(default_factory=dict)
+    classifications: dict[str, Any] = Field(default_factory=dict)
+    phase8_dns_infra: dict[str, Any] = Field(default_factory=dict)
+    phase9_third_party_inventory: list[dict[str, Any]] = Field(default_factory=list)
+    raw_relpaths: dict[str, str] = Field(
+        default_factory=dict,
+        description="Paths relative to repo root for methodology JSON artifacts.",
+    )
+    limits: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+
+
+class CaptureSessionFinalize(BaseModel):
+    """Recorded when a tcpdump attach-capture session is finalized."""
+
+    session_id: str | None = None
+    finalized_at_utc: str | None = None
+    source_pcap_cache_path: str | None = Field(
+        default=None,
+        description="Original cache path prior to moving into runs/ (audit).",
+    )
+    finalize_errors: list[str] = Field(default_factory=list)
+
+
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.4"
+    schema_version: str = "1.5"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)
@@ -252,5 +300,17 @@ class NormalizedRun(BaseModel):
     framework: FrameworkResult | None = Field(
         default=None,
         description="Findings, coverage, risk scores (SPEC framework)",
+    )
+    website_exposure_methodology: WebsiteExposureMethodology | None = Field(
+        default=None,
+        description="Automated website exposure methodology (Phases 1–9).",
+    )
+    pcap_derived: dict[str, Any] | None = Field(
+        default=None,
+        description="Summarized PCAP (pcap_summary.json payload); metadata-only, no Wireshark.",
+    )
+    capture_finalize: CaptureSessionFinalize | None = Field(
+        default=None,
+        description="Attach-capture session finalization audit row.",
     )
     extra: dict[str, Any] = Field(default_factory=dict)

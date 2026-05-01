@@ -69,3 +69,29 @@ def test_build_exposure_graph_provider_filter(
     ids = {n["id"] for n in g["nodes"]}
     assert "vpn:a" in ids
     assert "vpn:b" not in ids
+
+
+def test_build_exposure_graph_pcap_edges(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    loc = tmp_path / "runs" / "run-p" / "locations" / "loc1"
+    loc.mkdir(parents=True)
+    norm = {
+        "vpn_provider": "example",
+        "vpn_location_id": "loc1",
+        "exit_ip_v4": "203.0.113.45",
+        "attribution": {},
+        "competitor_surface": None,
+        "pcap_derived": {
+            "top_inet_pairs_sample": [{"src": "10.1.2.3", "dst": "8.8.8.8", "bytes": 42}],
+            "tls_clienthello_snis_unique": ["api.vendor.example"],
+        },
+    }
+    (loc / "normalized.json").write_text(json.dumps(norm), encoding="utf-8")
+    _patch_repo(monkeypatch, tmp_path)
+    g = build_exposure_graph()
+    relations = [e["relation"] for e in g["edges"]]
+    assert "pcap_ip_flow" in relations
+    assert "tls_sni_observed" in relations
+    assert any(n["type"] == "tls_sni" for n in g["nodes"])

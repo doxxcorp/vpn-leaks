@@ -18,6 +18,8 @@ from vpn_leaks.run_progress import (
 def _ns(**kwargs: object) -> argparse.Namespace:
     base = {
         "transition_tests": False,
+        "attach_capture": False,
+        "with_pcap": False,
     }
     base.update(kwargs)
     return argparse.Namespace(**base)
@@ -35,17 +37,17 @@ def test_transition_skipped_when_skip_vpn_and_not_manual_gui() -> None:
 
 def test_steps_for_full_run_without_transition() -> None:
     args = _ns(transition_tests=False)
-    assert steps_for_full_run(args, skip_vpn=False, mode="openvpn") == 14
+    assert steps_for_full_run(args, skip_vpn=False, mode="openvpn") == 15
 
 
 def test_steps_for_full_run_with_transition() -> None:
     args = _ns(transition_tests=True)
-    assert steps_for_full_run(args, skip_vpn=False, mode="openvpn") == 15
+    assert steps_for_full_run(args, skip_vpn=False, mode="openvpn") == 16
 
 
 def test_steps_for_full_run_transition_stub_manual_gui() -> None:
     args = _ns(transition_tests=True)
-    assert steps_for_full_run(args, skip_vpn=True, mode="manual_gui") == 15
+    assert steps_for_full_run(args, skip_vpn=True, mode="manual_gui") == 16
 
 
 def test_compute_run_total_one_location_full(tmp_path: Path) -> None:
@@ -61,7 +63,7 @@ def test_compute_run_total_one_location_full(tmp_path: Path) -> None:
             skip_vpn=True,
             mode="manual_gui",
         )
-        == 15
+        == 16
     )
 
 
@@ -99,7 +101,39 @@ def test_compute_run_total_force_reruns_full(tmp_path: Path) -> None:
             skip_vpn=True,
             mode="manual_gui",
         )
-        == 15
+        == 16
+    )
+
+
+def test_compute_run_total_attach_adds_finalize_tick(tmp_path: Path) -> None:
+    args = _ns(transition_tests=False, attach_capture=True)
+    run_root = tmp_path / "run"
+    assert (
+        compute_run_total(
+            locations=[{"id": "loc1"}],
+            run_root=run_root,
+            force=False,
+            args=args,
+            skip_vpn=True,
+            mode="manual_gui",
+        )
+        == 17
+    )
+
+
+def test_compute_run_total_with_pcap_adds_finalize_tick(tmp_path: Path) -> None:
+    args = _ns(transition_tests=False, attach_capture=False, with_pcap=True)
+    run_root = tmp_path / "run"
+    assert (
+        compute_run_total(
+            locations=[{"id": "loc1"}],
+            run_root=run_root,
+            force=False,
+            args=args,
+            skip_vpn=True,
+            mode="manual_gui",
+        )
+        == 17
     )
 
 

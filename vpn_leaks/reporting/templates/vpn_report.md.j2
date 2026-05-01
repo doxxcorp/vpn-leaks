@@ -312,6 +312,58 @@ Large JSON fields use size caps in this markdown file; when an excerpt hits a ca
 *No surface/DNS summary for this location (`competitor_surface` / `extra.surface_probe` empty or absent).*
 {% endif %}
 
+#### Automated website-exposure methodology & PCAP
+
+{% if dr.methodology_pcap.methodology.has_methodology %}
+**Desk automation note:** {{ dr.methodology_pcap.methodology.tier_note }}
+
+| Third-party inventory rows | Phase-8 domains with deep audit |
+|---------------------------|--------------------------------|
+| {{ dr.methodology_pcap.methodology.phase9_count }} | {{ dr.methodology_pcap.methodology.phase8_domains }} |
+
+**Inventory (sample)**
+
+| Company (hypothesis) | Role | How discovered |
+|---------------------|------|----------------|
+{% for row in dr.methodology_pcap.methodology.inventory_preview %}| {{ row.company }} | {{ row.role }} | {{ row.how }} |
+{% endfor %}
+
+{% if dr.methodology_pcap.methodology.limits | length > 0 %}
+**Methodology limits:** {% for x in dr.methodology_pcap.methodology.limits[:10] %}*{{ x }}*{% if not loop.last %}; {% endif %}{% endfor %}
+{% endif %}
+{% if dr.methodology_pcap.methodology.errors | length > 0 %}
+**Methodology errors:** {% for e in dr.methodology_pcap.methodology.errors[:8] %}`{{ e }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% else %}
+*No `website_exposure_methodology` block on this `normalized.json` (older run or methodology phase skipped).*
+{% endif %}
+
+{% if dr.methodology_pcap.pcap.has_pcap %}
+**PCAP-derived metadata** (no Wireshark; see `pcap_derived` in JSON)
+
+| Unique flows (estimate) | Packets (total) |
+|-------------------------|-----------------|
+| {{ dr.methodology_pcap.pcap.flows_unique_estimate | default('—') }} | {{ dr.methodology_pcap.pcap.packet_total | default('—') }} |
+
+{% if dr.methodology_pcap.pcap.snis | length > 0 %}
+**TLS SNI (sample):** {% for h in dr.methodology_pcap.pcap.snis %}`{{ h }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% if dr.methodology_pcap.pcap.dns_hosts | length > 0 %}
+**Cleartext DNS names (UDP/53 sample):** {% for h in dr.methodology_pcap.pcap.dns_hosts %}`{{ h }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% if dr.methodology_pcap.pcap.limits | length > 0 %}
+**PCAP interpretation limits:** {% for x in dr.methodology_pcap.pcap.limits[:6] %}*{{ x }}*{% if not loop.last %}; {% endif %}{% endfor %}
+{% endif %}
+{% if dr.methodology_pcap.pcap.errors | length > 0 %}
+**PCAP summarizer notes:** {% for e in dr.methodology_pcap.pcap.errors[:10] %}`{{ e }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% else %}
+*No `pcap_derived` merge on this location (no **`--attach-capture`** / **`--with-pcap`**, missing active capture session at finalize, or empty PCAP artifact).*
+{% endif %}
+{% if dr.methodology_pcap.pcap.finalize_notes | length > 0 %}
+**Capture finalize:** {% for x in dr.methodology_pcap.pcap.finalize_notes %}{{ x }}{% if not loop.last %}; {% endif %}{% endfor %}
+{% endif %}
+
 #### Competitor surface (provider YAML probes)
 
 {% if dr.competitor_surface_kind == "absent" %}

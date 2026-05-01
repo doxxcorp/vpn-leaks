@@ -58,23 +58,27 @@ Skip individual phases when debugging:
 - `--skip-competitor-transit` — traceroute toward exit IP
 - `--skip-competitor-stray-json` — stray path GETs
 
-## After `vpn-leaks run`: desk Phases 8–9 (website exposure)
+## After `vpn-leaks run`: website exposure (automated + optional desk)
 
-The harness writes **O** artifacts below; it does **not** run the full **email / platform** DNS audit from [website-exposure-methodology.md](website-exposure-methodology.md).
+Two layers:
 
-**Barrett phase mapping**
+1. **Harness `competitor_probe`** writes **OBSERVED (O)** artifacts (below): apex DNS (**`provider_dns.json`**: NS/A/AAAA/TXT/MX/CAA, NS glue + attribution), web/HAR, portals, transit. That is **not** client DNS leak evidence while connected (**DNS-001** lives in **`dnsleak/`**).
 
-| Layer | Harness (O) | Desk (S) — after run |
-|-------|-------------|------------------------|
-| Page load, HAR, hosts | `probe_urls`, `surface_urls` → `har/`, `har_summary.json`, `web_probes.json` | Phases 1–7 interpretation + company classification |
-| Apex NS, glue | `provider_dns.json` | §H steps 1–4 + [website-exposure §8](website-exposure-methodology.md) for MX, SPF, DMARC, DKIM, TXT tokens, CNAME chains |
-| Third-party inventory | — | Phase 9 table: combine HAR hosts + Phase 8 findings |
+2. **Automated `website_exposure_methodology`** (same run, **`normalized.json`**) performs a **desk automation** projection—including SPF walks, DMARC/DKIM/TXT probing, subdomain CNAME scan, and **`phase9_third_party_inventory`**—tiered distinctly from **tunnel DNS leak tests** (read **`evidence_tier_note`** in JSON). Deep raw detail also under **`raw/<location>/website_exposure/`** when emitted.
 
-Checklist:
+**Phase mapping**
 
-- [ ] For each apex in `provider_domains`, run **Phases 8–9** (or paste output from [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) and extend with SPF/DMARC/DKIM parsing as in the methodology).
+| Layer | Harness (O) — `competitor_surface` | Desk automation — `website_exposure_methodology` | Manual desk (S) — optional deepening |
+|-------|------------------------------------|--------------------------------------------------|---------------------------------------|
+| Page load, HAR, hosts | `probe_urls`, `surface_urls` → `har/`, `har_summary.json` | Uses merged host inventory | Phases 1–7 interpretation + archival narrative |
+| Apex / infra DNS | `provider_dns.json` (authoritative lookups) | **Phase 8** (`phase8_dns_infra` / SPF, DMARC, DKIM probes, …) layered on apex | Full **`dig`** transcript archive if needed |
+| Third-party inventory | HAR-derived hints inside `competitor_surface` | **Phase 9** (`phase9_third_party_inventory`) | Combine with manual SPEC narrative |
+
+Manual checklist (**optional**):
+
+- [ ] For each apex in `provider_domains`, extend with handwritten **Phase 8–9** transcript or paste [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) output when automation **`limits`/errors** require narrative **S**.
 - [ ] Archive dated transcript: `research/desk-<date>-<apex>.txt` (or equivalent).
-- [ ] When writing `vpn-leaks report` narrative, label **O** vs **S**; do not cite desk MX/SPF as proof of **DNS-001** (client resolvers while connected — that is `dnsleak/` **O**).
+- [ ] In reports, distinguish **O** (harness probes + `dnsleak/`), desk automation (**`website_exposure_methodology`**), and manual **S**; **never** cite apex MX/SPF/DMARC automation as tunnel **DNS leak** (**DNS-001**).
 
 ## Artifacts written
 

@@ -15,7 +15,11 @@ from vpn_leaks.config_loader import repo_root
 from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
 from vpn_leaks.reporting.coverage_rollup import build_framework_rollup_payload
 from vpn_leaks.reporting.html_dashboard import build_html_dashboard_context
-from vpn_leaks.reporting.web_exposure import per_location_web_exposure, rollup_web_exposure
+from vpn_leaks.reporting.web_exposure import (
+    methodology_and_pcap_sections,
+    per_location_web_exposure,
+    rollup_web_exposure,
+)
 
 # Default cap for medium-sized fenced JSON (DNS, exit sources, policies, artifacts).
 REPORT_JSON_BLOCK_MAX = 120_000
@@ -361,6 +365,7 @@ def build_detailed_runs(
                 "truncation_notes": truncation_notes,
                 "has_truncated_blocks": bool(truncation_notes),
                 "web_exposure": per_location_web_exposure(data),
+                "methodology_pcap": methodology_and_pcap_sections(data),
             },
         )
     return detailed

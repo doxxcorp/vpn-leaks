@@ -19,8 +19,8 @@ def transition_runs(args: argparse.Namespace, skip_vpn: bool, mode: str) -> bool
 def steps_for_full_run(args: argparse.Namespace, skip_vpn: bool, mode: str) -> int:
     """Major phases per location for a full run (must match `cmd_run` step() calls)."""
     # connect+stabilize, ip, dns, ipv6, webrtc, fp, attribution, policies,
-    # yourinfo, browserleaks, competitor, surface, disconnect, write
-    n = 14
+    # yourinfo, browserleaks, competitor, surface, methodology, disconnect, write
+    n = 15
     if transition_runs(args, skip_vpn, mode):
         n += 1
     return n
@@ -38,6 +38,9 @@ def compute_run_total(
     """Total progress ticks: per-location (skip or full) + one for run summary."""
     full = steps_for_full_run(args, skip_vpn, mode)
     total = 0
+    attach_extra = (
+        1 if (getattr(args, "attach_capture", False) or getattr(args, "with_pcap", False)) else 0
+    )
     for loc in locations:
         loc_id = str(loc.get("id") or "default")
         norm_path = run_root / "locations" / loc_id / "normalized.json"
@@ -45,7 +48,7 @@ def compute_run_total(
             total += 1
         else:
             total += full
-    return total + 1
+    return total + attach_extra + 1
 
 
 class RunProgress:

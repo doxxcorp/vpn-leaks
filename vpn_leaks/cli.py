@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import uuid
@@ -28,16 +29,18 @@ from vpn_leaks.checks.ipv6 import run_ipv6_checks_sync
 from vpn_leaks.checks.surface_probe import run_surface_probes
 from vpn_leaks.checks.transition_tests import run_transition_tests
 from vpn_leaks.checks.webrtc import run_webrtc_check
+from vpn_leaks.checks.website_exposure_methodology import run_website_exposure_methodology
 from vpn_leaks.checks.yourinfo_probe import run_yourinfo_probe
 from vpn_leaks.config_loader import (
     load_attribution_config,
     load_leak_tests_config,
     load_vpn_config,
+    methodology_config_hints,
     normalize_provider_slug,
     repo_root,
 )
 from vpn_leaks.framework import apply_framework
-from vpn_leaks.models import ArtifactIndex, NormalizedRun, RunnerEnv
+from vpn_leaks.models import ArtifactIndex, NormalizedRun, RunnerEnv, WebsiteExposureMethodology
 from vpn_leaks.policy.fetch_policy import fetch_policies
 from vpn_leaks.reporting.exposure_graph import write_exposure_graph
 from vpn_leaks.reporting.generate_reports import (
@@ -66,6 +69,37 @@ def cmd_run(args: argparse.Namespace) -> int:
     vpn_config = load_vpn_config(slug, create_if_missing=True)
     if missing_cfg:
         print(f"Created default VPN config: {cfg_path}", file=sys.stderr)
+    for hint in methodology_config_hints(vpn_config):
+        print(f"Hint: {hint}", file=sys.stderr)
+    if getattr(args, "attach_capture", False) and getattr(args, "with_pcap", False):
+        print(
+            "Use either --attach-capture (existing `capture start` session) "
+            "or --with-pcap (harness-managed tcpdump for this run), not both.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if getattr(args, "attach_capture", False):
+        from vpn_leaks.capture.session import load_active
+
+        if load_active() is None:
+            print(
+                "--attach-capture requires an active PCAP session. "
+                "Run `vpn-leaks capture start` first (see HANDOFF.md).",
+                file=sys.stderr,
+            )
+            return 2
+
+    if getattr(args, "with_pcap", False):
+        from vpn_leaks.capture.session import load_active as load_cap
+
+        if load_cap() is not None:
+            print(
+                "--with-pcap requires no other active capture session. "
+                "`vpn-leaks capture abort` first, or use --attach-capture instead.",
+                file=sys.stderr,
+            )
+            return 2
     leak_cfg = load_leak_tests_config()
     attr_cfg = load_attribution_config()
 
@@ -166,6 +200,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     stabilize = float(leak_cfg.get("stabilize_seconds") or 3)
     skip_vpn = bool(args.skip_vpn or args.dry_run)
     normalized_paths: list[Path] = []
+    fresh_normalized_paths: list[Path] = []
 
     connect_log = run_root / "raw" / "connect.log"
     connect_log.parent.mkdir(parents=True, exist_ok=True)
@@ -189,6 +224,27 @@ def cmd_run(args: argparse.Namespace) -> int:
         ),
         no_progress=args.no_progress,
     )
+
+    capture_finalize_pending = bool(
+        getattr(args, "attach_capture", False) or getattr(args, "with_pcap", False),
+    )
+    loop_completed_normally = False
+
+    if getattr(args, "with_pcap", False):
+        from vpn_leaks.capture.session import start as cap_short_start
+
+        iface = os.environ.get("VPN_LEAKS_CAPTURE_INTERFACE", "en0")
+        wp_desc, wp_err = cap_short_start(interface=str(iface), bpf=None)
+        if wp_err or wp_desc is None:
+            print(wp_err or "with-pcap: tcpdump start failed", file=sys.stderr)
+            return 1
+        log_fp.write(f"with-pcap: tcpdump session {wp_desc.session_id} on {iface}\n")
+        log_fp.flush()
+        print(
+            f"with-pcap: started tcpdump session {wp_desc.session_id} on {iface}",
+            file=sys.stderr,
+        )
+
     try:
         for loc in locations:
             loc_id = str(loc.get("id") or "default")
@@ -341,6 +397,22 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if tr is not None:
                     loc_extra["transition_tests"] = tr
 
+            run_progress.step("Website exposure methodology")
+            _sp_kw = loc_extra.get("surface_probe")
+            surface_probe_kw = _sp_kw if isinstance(_sp_kw, dict) else None
+            try:
+                web_exp = run_website_exposure_methodology(
+                    vpn_config=vpn_config,
+                    competitor_surface=competitor_surface,
+                    surface_probe=surface_probe_kw,
+                    raw_dir=raw_base,
+                    services_contacted=services_contacted,
+                    attr_cfg=attr_cfg,
+                )
+            except Exception as e:
+                err = f"website_exposure_methodology:{e}"[:480]
+                web_exp = WebsiteExposureMethodology(errors=[err])
+
             run_progress.step("VPN disconnect")
             if not skip_vpn:
                 log(f"disconnect: {loc_id}")
@@ -383,6 +455,11 @@ def cmd_run(args: argparse.Namespace) -> int:
                 if (raw_base / "transitions.json").is_file()
                 else None
             )
+            meth_rel = (
+                str((raw_base / "website_exposure").relative_to(repo_root()))
+                if (raw_base / "website_exposure").is_dir()
+                else None
+            )
             artifacts = ArtifactIndex(
                 connect_log=str((run_root / "raw" / "connect.log").relative_to(repo_root())),
                 ip_check_json=str((raw_base / "ip-check.json").relative_to(repo_root())),
@@ -400,6 +477,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 baseline_json=baseline_rel,
                 surface_probe_dir=surf_rel,
                 transitions_json=trans_rel,
+                website_exposure_dir=meth_rel,
             )
 
             normalized = NormalizedRun(
@@ -435,6 +513,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 competitor_surface=competitor_surface,
                 yourinfo_snapshot=yourinfo_snapshot,
                 browserleaks_snapshot=browserleaks_snapshot,
+                website_exposure_methodology=web_exp,
             )
             run_progress.step("Write normalized.json + framework")
             if not args.no_framework:
@@ -443,7 +522,37 @@ def cmd_run(args: argparse.Namespace) -> int:
             norm_path.parent.mkdir(parents=True, exist_ok=True)
             norm_path.write_text(normalized.model_dump_json(indent=2), encoding="utf-8")
             normalized_paths.append(norm_path)
+            fresh_normalized_paths.append(norm_path)
             log(f"wrote {norm_path}")
+
+        else:
+            loop_completed_normally = True
+
+        if capture_finalize_pending:
+            run_progress.step("Finalize PCAP session")
+            from vpn_leaks.capture.finalize_bundle import finalize_capture_and_merge
+
+            finalize_capture_and_merge(
+                run_root=run_root,
+                fresh_norm_paths=fresh_normalized_paths,
+                log=log,
+            )
+    except BaseException:
+        if capture_finalize_pending and (
+            getattr(args, "with_pcap", False) or not loop_completed_normally
+        ):
+            try:
+                from vpn_leaks.capture.finalize_bundle import finalize_capture_and_merge
+
+                log("Finalize PCAP session (after early exit)")
+                finalize_capture_and_merge(
+                    run_root=run_root,
+                    fresh_norm_paths=fresh_normalized_paths,
+                    log=log,
+                )
+            except Exception as exc:  # noqa: BLE001
+                print(f"PCAP finalize error: {exc}", file=sys.stderr)
+        raise
     finally:
         log_fp.close()
 
@@ -576,6 +685,22 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     pr.add_argument(
+        "--attach-capture",
+        action="store_true",
+        help=(
+            "After the run: stop tcpdump from `vpn-leaks capture start`, "
+            "write PCAP under runs/.../raw/<loc>/capture/, merge pcap_summary into normalized.json"
+        ),
+    )
+    pr.add_argument(
+        "--with-pcap",
+        action="store_true",
+        help=(
+            "Start tcpdump when the harness starts (same session envelope as competitive capture); "
+            "finalize PCAP + merge at end (mutually exclusive with --attach-capture)"
+        ),
+    )
+    pr.add_argument(
         "--transition-tests",
         action="store_true",
         help="After probes, poll exit IP across disconnect/reconnect (non-manual_gui only)",
@@ -611,7 +736,98 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gx.set_defaults(func=cmd_graph_export)
 
+    cap_root = sub.add_parser(
+        "capture",
+        help="Long-lived PCAP session (tcpdump). No Wireshark/tshark/mitmproxy.",
+    )
+    csub = cap_root.add_subparsers(dest="cap_cmd", required=True)
+
+    pst = csub.add_parser("start", help="Start tcpdump (often requires sudo)")
+    pst.add_argument(
+        "-i",
+        "--interface",
+        default=None,
+        metavar="IFACE",
+        help="Network interface (default: $VPN_LEAKS_CAPTURE_INTERFACE or en0)",
+    )
+    pst.add_argument(
+        "--bpf",
+        default=None,
+        metavar="EXPR",
+        help="Optional tcpdump filter expression",
+    )
+
+    pst2 = csub.add_parser("status", help="Show active capture session")
+
+    pst3 = csub.add_parser("abort", help="Stop tcpdump and clear session descriptor")
+    pst3.add_argument(
+        "--keep-pcap",
+        action="store_true",
+        help="Keep partial PCAP file in cache (default: delete alongside abort)",
+    )
+
+    for leaf in (pst, pst2, pst3):
+        leaf.set_defaults(func=cmd_capture)
+
+    psum = sub.add_parser(
+        "pcap-summarize",
+        help="Emit pcap_summary.json next to a .pcap (Python/dpkt only)",
+    )
+    psum.add_argument("pcap", help="Path to .pcap file")
+    psum.add_argument("-o", "--output", default=None, help="Output JSON path")
+    psum.set_defaults(func=cmd_pcap_summarize)
+
     return p
+
+
+def cmd_capture(args: argparse.Namespace) -> int:
+    from vpn_leaks.capture.session import abort as cap_abort
+    from vpn_leaks.capture.session import start as cap_start
+    from vpn_leaks.capture.session import status as cap_status
+
+    iface_default = os.environ.get("VPN_LEAKS_CAPTURE_INTERFACE", "en0")
+
+    cmd = getattr(args, "cap_cmd", "")
+    if cmd == "start":
+        iface = args.interface or iface_default
+        desc, err = cap_start(interface=str(iface), bpf=getattr(args, "bpf", None))
+        if err or desc is None:
+            print(err or "capture start failed", file=sys.stderr)
+            return 1
+        print(
+            json.dumps(
+                {"ok": True, "session_id": desc.session_id, **desc.to_json()},
+                indent=2,
+            ),
+        )
+        return 0
+
+    if cmd == "status":
+        desc, info = cap_status()
+        payload: dict[str, object] = {"active": desc is not None, "details": info}
+        if desc is not None:
+            payload["descriptor"] = desc.to_json()
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    if cmd == "abort":
+        ok, msg = cap_abort(discard_pcap=not bool(getattr(args, "keep_pcap", False)))
+        print(msg, file=sys.stderr)
+        return 0 if ok else 1
+
+    print(f"Unknown capture command: {cmd}", file=sys.stderr)
+    return 2
+
+
+def cmd_pcap_summarize(args: argparse.Namespace) -> int:
+    from vpn_leaks.checks.pcap_summarize import write_pcap_summary_json
+
+    pc = Path(args.pcap).resolve()
+    outp = Path(args.output).resolve() if args.output else pc.parent / "pcap_summary.json"
+    outp.parent.mkdir(parents=True, exist_ok=True)
+    write_pcap_summary_json(pc, outp)
+    print(str(outp))
+    return 0
 
 
 def main() -> None:

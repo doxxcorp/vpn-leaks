@@ -47,7 +47,7 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 
 | Field | Notes |
 |-------|--------|
-| `schema_version` | **1.4** (current): optional **`framework`** (findings, question coverage, risk scores, observed endpoints). Older: `1.1`–`1.3` as before (`competitor_surface`, `yourinfo_snapshot`, `ns_hosts`, etc.) |
+| `schema_version` | **1.5** (current): adds **`website_exposure_methodology`** (automated Phases 1–9 desk bundle), **`pcap_derived`** (PCAP summary blob, `schema_version` inside), **`capture_finalize`** (attach-capture audit). Previous **1.4** added **`framework`**. Older: `1.1`–`1.3` as before (`competitor_surface`, `yourinfo_snapshot`, `ns_hosts`, etc.) |
 | `run_id` | Parent run |
 | `timestamp_utc` | Location run start/end |
 | `runner_env` | OS, kernel, browser, vpn_protocol |
@@ -79,8 +79,21 @@ Aligned with `vpn_leaks.models.NormalizedRun` (`schema_version`).
 | `artifacts.baseline_json` | When `--capture-baseline`, relative path to `raw/baseline.json` |
 | `artifacts.surface_probe_dir` | When `surface_urls` configured, `raw/<location_id>/surface_probe/` |
 | `artifacts.transitions_json` | When `--transition-tests` wrote a file, `raw/<location_id>/transitions.json` |
+| `artifacts.website_exposure_dir` | When methodology ran, `raw/<location_id>/website_exposure/` (JSON artifacts) |
+| `artifacts.capture_dir` | When **`--attach-capture`** or **`--with-pcap`** finalized, `raw/<location_id>/capture/` (PCAP + `pcap_summary.json`) |
 | `framework` | SPEC synthesis: findings, `question_coverage`, `risk_scores`, `observed_endpoints` (omit with `--no-framework`) |
+| `website_exposure_methodology` | Desk automation tier: host inventory, resolver sample, Phase 8 DNS audit pointer, Phase 9 third-party inventory — see [website-exposure-methodology.md](website-exposure-methodology.md) |
+| `pcap_derived` | Metadata from Python/dpkt summarizer (flows sample, SNI, cleartext DNS, limits); not a substitute for full PCAP |
+| `capture_finalize` | Session id, timestamps, errors from attach-capture teardown |
 
 **Duplicate detection (operational):** The CLI compares the **preflight** IPv4 against all prior `normalized.json` files for the same `vpn_provider` before creating a new run. That logic is not stored as a single field; it prevents duplicate **runs** for the same exit IP unless `--force`.
 
 Append-only: add fields with new `schema_version` rather than renaming.
+
+## `vpn-leaks graph-export` (`exposure-graph.json`)
+
+| Key | Notes |
+|-----|--------|
+| `graph_schema` | **1.1** — adds optional PCAP-derived observation edges (`pcap_ip_flow`, `pcap_neighbor_ip`, `tls_sni_observed`) when **`pcap_derived`** exists on merged runs |
+
+Nodes may include `tls_sni` observations and additional `ip` nodes labeled from PCAP aggregates; tiering mirrors desk vs client-DNS disclaimers elsewhere.

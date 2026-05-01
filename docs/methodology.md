@@ -14,25 +14,34 @@ The live harness runs steps in this order (see [`vpn_leaks/cli.py`](../vpn_leaks
 
 4. **Run directory** — Create `runs/<run_id>/`, write `run.json`, then `raw/preflight.json`, then proceed per location.
 
-5. **Per location (tunnel must already match your intent)**  
-   - **Connect** — Unless **`--skip-vpn` / `--dry-run`**, adapter connect (or manual GUI prompt).  
-   - **Stabilize** — Cooldown from config.  
-   - **Exit IP** — Full multi-endpoint capture to `raw/<location_id>/ip-check.json`.  
-   - **Leak suite** — DNS, IPv6, WebRTC, optional fingerprint.  
-   - **Attribution** — RIPEstat, Team Cymru, PeeringDB, optional GeoLite.  
-   - **Policy** — Fetch VPN (and optional underlay) URLs; hash + store HTML.  
-   - **Disconnect** — Unless skipped.  
-   - **Write** — `locations/<location_id>/normalized.json`.
+5. **Per location (tunnel must already match your intent)** — executed in order (same as [`vpn_leaks/cli.py`](../vpn_leaks/cli.py)):
+
+   1. **Connect** — Unless **`--skip-vpn` / `--dry-run`**, adapter connect (or manual GUI prompt).  
+   2. **Stabilize** — Cooldown from `leak-tests.yaml`.  
+   3. **Exit IP** — Full multi-endpoint capture → `raw/<location_id>/ip-check.json`.  
+   4. **Leak suite** — DNS leaks, IPv6, WebRTC, optional fingerprint snapshots.  
+   5. **Attribution** — RIPEstat, Team Cymru, PeeringDB, optional GeoLite → `attribution.json` (etc.).  
+   6. **Privacy policies** — Fetch URLs from `policy_urls` / optional `underlay_policy_urls`; hash HTML + excerpts.  
+   7. **yourinfo.ai** — Playwright HAR + excerpt (unless **`--skip-yourinfo`**).  
+   8. **BrowserLeaks** — Pinned pages (unless **`--skip-browserleaks`** / disabled in config).  
+   9. **Competitor probes** — When `competitor_probe` is set in provider YAML: apex DNS, web/HAR, portals, transit, stray JSON (individual phases skippable with **`--skip-competitor-*`**).  
+   10. **Surface probes** — When `surface_urls` is configured: tagged Playwright loads + HAR (`surface_probe/`).  
+   11. **Transition tests** — Optional (**`--transition-tests`**); reconnect polling where the adapter applies.  
+   12. **Website exposure methodology** — Automated desk bundle (**Phases 1–9 projection**) into **`normalized.json.website_exposure_methodology`** and `raw/<location_id>/website_exposure/`; fail-soft per phase. Prerequisites: principally **`competitor_probe.provider_domains`** (stderr **hints** from `methodology_config_hints` when incomplete). Runs **before** disconnect in the harness.  
+   13. **Disconnect** — Unless **`--skip-vpn`**.  
+   14. **Write** — Apply SPEC framework (**`--no-framework`** to skip) → **`locations/<location_id>/normalized.json`**.
 
 6. **Repeat** — Next location in the resolved list (often one location per run when using auto + GUI VPN).
 
-7. **Summary** — `runs/<run_id>/summary.md`.
+7. **PCAP finalize (optional)** — If **`--attach-capture`** (active session from `vpn-leaks capture start`) **or** **`--with-pcap`** (harness started tcpdump at run beginning): stop **tcpdump**, copy PCAP to **`runs/<run_id>/raw/<location_id>/capture/`**, write **`pcap_summary.json`** (Python/**dpkt**), merge **`pcap_derived`** and **`artifacts.capture_dir`** (+ **`capture_finalize`** audit fields) into each **newly written** location’s **`normalized.json`**. Mutually exclusive flags; **`--with-pcap`** conflicts with another active **`capture`** session ([competitive-capture-playbook.md](competitive-capture-playbook.md)).
+
+8. **Summary** — `runs/<run_id>/summary.md`.
 
 For **vendor GUI only** (e.g. NordVPN macOS app), connect **before** running and use **`--skip-vpn`** so the harness does not prompt for connect/disconnect; preflight still reflects the active tunnel.
 
 ## Standard run loop (conceptual — one location)
 
-Aligned with [vpn-leaks.md](../vpn-leaks.md): account ready → connect → stabilize → exit IP → leak suite → attribution → policy → disconnect → repeat. The numbered sequence above is how the **implemented** CLI orders work, including preflight and duplicate detection before heavy I/O.
+Aligned with [vpn-leaks.md](../vpn-leaks.md): connect → stabilize → exit IP → leak suite → attribution → policies → optional probes (yourinfo, browserleaks, competitor, surface) → optional transition tests → **website exposure methodology** → disconnect → write `normalized.json`. The numbered sequence above is how the **implemented** CLI orders work, including preflight and duplicate detection before heavy I/O.
 
 ## Isolation and reproducibility
 
@@ -80,8 +89,12 @@ Align questions to probes; not every question needs every probe.
 2. **Leak heuristics** — DNS (`dns_servers_observed`, `dns_leak_flag`), WebRTC, IPv6.
 3. **Exit attribution** — `attribution` (RIPEstat, Team Cymru, PeeringDB, optional GeoLite).
 4. **Policies** — `policies` (VPN + optional underlay URLs), hashes and summaries.
-5. **Optional** — `competitor_surface` (apex DNS, NS glue attribution, web/CDN, HAR summary, portals, transit) when `competitor_probe` is configured. See [competitor-probe-checklist.md](competitor-probe-checklist.md) for YAML fields.
-6. **Optional** — `yourinfo_snapshot` unless `--skip-yourinfo`.
+5. **Optional** — `competitor_surface` when `competitor_probe` is configured ([competitor-probe-checklist.md](competitor-probe-checklist.md)).
+6. **Optional** — `surface_probe` / **`extra.surface_probe`** when `surface_urls` is set.
+7. **Optional** — `yourinfo_snapshot` unless **`--skip-yourinfo`**.
+8. **Optional** — `browserleaks_snapshot` unless skipped.
+9. **Optional** — `website_exposure_methodology` desk-automation tier when apex domains (**`provider_domains`**) allow Phase 8–9 projection ([data-dictionary](data-dictionary.md), [website-exposure-methodology §10](website-exposure-methodology.md)).
+10. **Optional** — `pcap_derived` + `artifacts.capture_dir` after **`--attach-capture`** or **`--with-pcap`** finalize.
 
 ### Reproducibility
 
@@ -94,19 +107,24 @@ Align questions to probes; not every question needs every probe.
 - Leak flags are **heuristics** from client-observable tests; **“no leak”** means the harness did not flag an issue under those conditions, not a proof of privacy against all adversaries or all traffic paths.
 - Provider apex DNS and **NS glue** attribution (see [data-dictionary](data-dictionary.md)) describe **public DNS/routing relationships**, not VPN tunnel contents.
 
-### Website third-party exposure — desk pass (after `vpn-leaks run`)
+### Website third-party exposure — automated vs manual deepening
 
-The harness captures **observed (O)** web and apex DNS probes when `competitor_probe` and `surface_urls` are configured ([competitor-probe-checklist.md](competitor-probe-checklist.md)). It does **not** run the full **email / platform DNS** audit (MX, SPF, DMARC, DKIM, TXT verification tokens, mail/support CNAME chains).
+**During `vpn-leaks run` (automated — first-class in `normalized.json`):**
 
-For SPEC and supplemental questions about **third-party supply chain** (beyond HAR hosts), run a **systematic desk (S)** pass **after** a successful run, **same day**, and record which resolver you used for `dig`:
+- The harness merges **OBSERVED (O)** signals from **`competitor_probe`** (apex DNS/`provider_dns.json`, web/HAR, portals, transit) and optional **`surface_urls`** / **`surface_probe`** into **`competitor_surface`** / **`extra.surface_probe`**.
+- It additionally runs **`website_exposure_methodology`**: compact Phases **1–9 projection** — including SPF include walk, DMARC/DKIM/TXT probing, subdomain CNAME scan, and **`phase9_third_party_inventory`** with **`evidence_tier: desk_automation`** and an explicit **`evidence_tier_note`** (desk automation, **not** the same tier as client DNS-leak probes). Raw JSON lives under **`raw/<location_id>/website_exposure/`** when populated.
+- On **stderr**, **`methodology_config_hints`** reminds you if **`competitor_probe.provider_domains`** is empty (Phase 8–9 automation largely skipped), **`surface_urls`** is empty (weaker host inventory), or **`policy_urls`** is empty (no marketing policy HTML fetched). Mapping table: [website-exposure-methodology.md §10](website-exposure-methodology.md).
 
-1. Follow [website-exposure-methodology.md](website-exposure-methodology.md) **Phases 8–9** for each apex in `competitor_probe.provider_domains`.
-2. Archive the transcript (e.g. `research/desk-<date>-<apex>.txt`) — same pattern as [research-questions-and-evidence.md](research-questions-and-evidence.md) §H.
-3. When you run **`vpn-leaks report --provider <slug>`**, cite **O** paths into `runs/...` for harness data and **S** for desk findings. Do **not** treat desk apex/email DNS as evidence for **DNS-001** (client resolvers **while connected** — that is `dnsleak/` **O**).
+**Optional manual deepening (S / narrative archival):**
 
-Optional: [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) prints a Phase-8-style `dig` bundle for one or more domains (stdout suitable for pasting into an archive file).
+Use when you need **full `dig`/transcript archival**, narrative-only evidence tiers, or edge cases (**SPF permerror**, blocked resolvers). Same day as the run — record which resolver you used:
+
+1. Follow [website-exposure-methodology.md](website-exposure-methodology.md) for manual Phases **8–9** transcripts per apex ([research-questions-and-evidence.md](research-questions-and-evidence.md) §H pattern).
+2. Archive (e.g. `research/desk-<date>-<apex>.txt`) or use [scripts/desk_dns_audit.sh](../scripts/desk_dns_audit.sh) for a Phase-8-style `dig` bundle (stdout paste-friendly).
+
+When writing **`vpn-leaks report`** narrative, keep **desk / automation** apex and email infra separate from **`dnsleak/`** tunnel resolver evidence (**DNS-001**). See evidence tiers in [research-questions-and-evidence.md](research-questions-and-evidence.md).
 
 ### Aggregates and graphs
 
-- Rollup markdown: `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md`.
-- Exposure graph export (nodes/edges for analysis or 3D viewer): `vpn-leaks graph-export` — see [README](../README.md).
+- Rollup markdown + HTML dashboard: **`vpn-leaks report --provider <slug>`** → **`VPNs/<SLUG>.md`** and **`VPNs/<SLUG>.html`** (includes **website-exposure methodology** and **PCAP-derived** subsections when `normalized.json` carries those blocks).
+- Exposure graph (`vpn_leaks/reporting/exposure_graph.py`): **`vpn-leaks graph-export`** emits **`graph_schema` 1.1** payloads that can add PCAP-derived observation edges (**`pcap_ip_flow`**, **`tls_sni_observed`**, etc.) whenever **`pcap_derived`** is present on merged runs — see [data-dictionary § graph-export](data-dictionary.md) and [viewer/README](../viewer/README.md).

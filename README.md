@@ -52,7 +52,7 @@ This project measures **client-observable** privacy exposure—leaks, attributio
 ## Security
 
 - **Never commit VPN credentials.** Use environment variables or an encrypted secrets store.
-- **Packet capture is off by default** (`--pcap` if added later); test traffic can still contain sensitive data.
+- **Packet capture is optional** (`capture start` + `run --attach-capture`, or `run --with-pcap`). Treat PCAP as sensitive operational data (tokens, IPs, endpoints).
 - Third-party leak-test sites may log your exit IP and user agent; the harness records which endpoints were contacted.
 
 ## Setup
@@ -62,6 +62,8 @@ cd /path/to/vpn-leaks
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+# Optional placeholder extra for future PCAP fingerprint addons (currently empty; core parsing uses dpkt):
+# pip install -e ".[dev,pcap]"
 playwright install chromium
 ```
 
@@ -95,6 +97,28 @@ vpn-leaks run --provider example --dry-run --force
 - Adapters with `manual_gui` pause for connect/disconnect unless you use **`--skip-vpn`**.
 - **`--skip-yourinfo`** skips the third-party yourinfo.ai benchmark (saves time if the page is slow).
 
+### Packet capture (tcpdump → `pcap_derived`)
+
+PCAP stays **outside** Wireshark/`tshark`/mitmproxy on the supported path—summarization is **Python/`dpkt`** (`pcap_summary.json`). Default interface is **`en0`** or override with **`VPN_LEAKS_CAPTURE_INTERFACE`**. **`tcpdump`** usually needs **sudo** on macOS (see [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md), [HANDOFF.md](HANDOFF.md)).
+
+| Mode | When | Commands |
+|------|------|-----------|
+| **Competitive** (signup / install / marketing in PCAP) | Default competitive story — start PCAP *before* browser/app work | **`vpn-leaks capture start`** (`-i`/ `--interface iface`, optional `--bpf` filter) … then on-VPN **`vpn-leaks run --provider <slug> --skip-vpn --attach-capture`** |
+| **Harness window only** | No prior `capture start`; PCAP covers the harness run only | **`vpn-leaks run --provider <slug> --skip-vpn --with-pcap`** (**mutually exclusive** with **`--attach-capture`**; no other active **`capture`** session) |
+| **Standalone repair / inspection** | Re-emit **`pcap_summary.json`** next to an existing PCAP | **`vpn-leaks pcap-summarize <file.pcap> [-o out.json]`** |
+
+Session state lives under **`.vpn-leaks/capture/`** (ignored by git); finalized bundles land at **`runs/<run_id>/raw/<location_id>/capture/`**. See **[docs/data-dictionary.md](docs/data-dictionary.md)** for **`pcap_derived`**, **`capture_finalize`**, **`artifacts.capture_dir`**.
+
+### Website-exposure methodology (automated)
+
+Every full run can populate **`normalized.json`** → **`website_exposure_methodology`** (desk automation tier — **not** the same interpretation as **`dns_servers_observed`** / DNS leak flags). Prerequisites in **`configs/vpns/<slug>.yaml`**:
+
+- **`competitor_probe.provider_domains`** — Apex domains driving Phase **8–9** depth; empty domains skip most of automation (CLI prints **hints** on stderr).
+- **`surface_urls`** — Optional; broadens host inventory from HAR/surface matrix.
+- **`policy_urls`** — Optional but recommended; empty list skips policy HTML fetch (hint on stderr).
+
+Reports add a **methodology + PCAP** subsection when data exists. Evidence tiers (**O** vs desk automation vs manual **S**): [docs/research-questions-and-evidence.md](docs/research-questions-and-evidence.md). Full manual workflow and phase definitions: [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md). Run order detail: [docs/methodology.md](docs/methodology.md).
+
 ### NordVPN (macOS app or other GUI)
 
 Connect in the **NordVPN app** first, then run with **`--skip-vpn`** so the harness does not drive the adapter. Prefer **omitting `--locations`** so the active server is reflected via **geo + exit IP** in the config and report.
@@ -112,7 +136,7 @@ Artifacts: `runs/<run_id>/` (gitignored), including `raw/preflight.json`.
 |--------|---------|
 | Per-VPN rollup | `vpn-leaks report --provider <slug>` → `VPNs/<SLUG>.md` and **`VPNs/<SLUG>.html`** (HTML includes SPEC framework coverage bars, embedded **3D exposure graph** from the same data as `graph-export`, plus the full markdown body). For reliable loading of the graph script, serve the folder over HTTP (e.g. `python3 -m http.server` in `VPNs/`) instead of opening the file directly via `file:`. |
 | Underlay (ASN) | `vpn-leaks report --provider <slug> --asn <n>` → `PROVIDERS/AS<n>.md` |
-| Exposure graph (nodes/edges JSON) | `vpn-leaks graph-export [--provider <slug>] [-o exposure-graph.json]` — then open [viewer/](viewer/) (see [viewer/README.md](viewer/README.md)) |
+| Exposure graph (nodes/edges JSON) | `vpn-leaks graph-export [--provider <slug>] [-o exposure-graph.json]` — then open [viewer/](viewer/) (see [viewer/README.md](viewer/README.md)). When runs include **`pcap_derived`**, export **graph_schema 1.1** may add PCAP-derived edges (see [docs/data-dictionary.md](docs/data-dictionary.md)). |
 
 ### GitHub Pages (github.io)
 

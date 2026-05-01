@@ -413,13 +413,11 @@ phase maps to automated harness features:
 | WHOIS / ASN | `attribution/merge.py` (RIPEstat + Cymru + PeeringDB) | `configs/tools/attribution.yaml` |
 | Classify hosts | `framework/endpoints.py` + `classification_rules.yaml` | Auto during `--no-framework` is off |
 | DNS audit (NS/MX/SPF/TXT) | `competitor_probes.run_provider_dns()` (NS, A, AAAA, TXT, MX, CAA + glue attribution) | `competitor_probe.provider_domains` in YAML |
-| Document | `vpn-leaks report --provider <slug>` | Generates `VPNs/<SLUG>.md` + `.html` |
+| Phase 8–9 desk bundle | `website_exposure_methodology` in `vpn-leaks run` ([`vpn_leaks/checks/website_exposure_methodology.py`](../vpn_leaks/checks/website_exposure_methodology.py)) | **Requires** apex domains via `competitor_probe.provider_domains` (and HAR/surface hosts benefit inventory); output in `normalized.json` + `raw/.../website_exposure/` |
+| PCAP-derived remotes / SNI / DNS (competitive runs) | `pcap_derived` after `run --attach-capture` or `vpn-leaks pcap-summarize` | See [competitive-capture-playbook.md](competitive-capture-playbook.md) |
+| Document | `vpn-leaks report --provider <slug>` | Generates `VPNs/<SLUG>.md` + `.html` (methodology + PCAP subsection when present) |
 
-**Note:** The harness `run_provider_dns()` already queries NS, A, AAAA,
-TXT, MX, and CAA records and resolves NS glue IPs with attribution. The
-manual Phase 8 methodology is useful for deeper investigation (SPF chain
-walking, DKIM selector probing, CNAME subdomain scanning, cross-domain
-correlation) that goes beyond what the automated probe covers today.
+**Automation vs manual residual:** The run pipeline now projects **Phases 1–7** (host/DNS/classification hints from HAR + resolver samples) and **Phase 8** (SPF walk, DMARC parse, DKIM selector probes, bounded subdomain CNAME scan, TXT token extraction where applicable) and **Phase 9** (unified third-party inventory with provenance) into **`website_exposure_methodology`**, fail-soft per phase. Gaps (`limits`, resolver timeouts, **`permerror`** SPF, absent selectors) remain explicit in JSON—repeat or extend with **manual** transcript + [scripts/desk_dns_audit.sh](scripts/desk_dns_audit.sh) / [research/desk-exposure-template.md](research/desk-exposure-template.md) when you need narrative-only evidence tiers.
 
 ### Adding a new provider
 

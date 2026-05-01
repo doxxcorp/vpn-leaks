@@ -11,7 +11,7 @@ from typing import Any
 from vpn_leaks.config_loader import repo_root
 from vpn_leaks.reporting.generate_reports import collect_normalized_runs
 
-GRAPH_SCHEMA = "1.0"
+GRAPH_SCHEMA = "1.1"
 
 
 def _policy_id(url: str) -> str:
@@ -20,8 +20,9 @@ def _policy_id(url: str) -> str:
 
 def build_exposure_graph(provider_slug: str | None = None) -> dict[str, Any]:
     """
-    Nodes: vpn, domain, ns, ip, asn, policy_url.
-    Edges: exit_ip, attributed_as, provider_apex_domain, delegates_ns, ns_glue, policy_document.
+    Nodes: vpn, domain, ns, ip, asn, policy_url, tls_sni (from PCAP).
+    Edges: exit_ip, attributed_as, provider_apex_domain, delegates_ns, ns_glue,
+    policy_document, pcap_ip_flow (optional), tls_sni_observed (optional).
     """
     rows = collect_normalized_runs(provider_slug)
     nodes: dict[str, dict[str, Any]] = {}
@@ -125,6 +126,52 @@ def build_exposure_graph(provider_slug: str | None = None) -> dict[str, Any]:
                             attribution_role="provider_ns_glue",
                         )
                         edge(ipid, asn_id, "attributed_as", **prov)
+
+        pd_raw = data.get("pcap_derived")
+        if isinstance(pd_raw, dict):
+            for row in pd_raw.get("top_inet_pairs_sample") or []:
+                if not isinstance(row, dict):
+                    continue
+                sa = row.get("src")
+                sb = row.get("dst")
+                if not isinstance(sa, str) or not isinstance(sb, str):
+                    continue
+                ipa = f"ip:{sa}"
+                ipb = f"ip:{sb}"
+                node(ipa, "ip", sa, address=sa, source="pcap_derived")
+                node(ipb, "ip", sb, address=sb, source="pcap_derived")
+                edge(
+                    vpn_id,
+                    ipa,
+                    "pcap_neighbor_ip",
+                    flow_peer=sb,
+                    **prov,
+                )
+                edge(
+                    ipa,
+                    ipb,
+                    "pcap_ip_flow",
+                    bytes_observed=row.get("bytes"),
+                    **prov,
+                )
+            snis_raw = pd_raw.get("tls_clienthello_snis_unique") or []
+            if isinstance(snis_raw, str):
+                snis_raw = []
+            limit = 0
+            for sni in snis_raw:
+                if not isinstance(sni, str) or not sni.strip():
+                    continue
+                sid = "sni:" + sni.strip().lower()[:220]
+                node(
+                    sid,
+                    "tls_sni",
+                    sni.strip().lower()[:120],
+                    hostname=sni.strip().lower(),
+                )
+                edge(vpn_id, sid, "tls_sni_observed", **prov)
+                limit += 1
+                if limit >= 96:
+                    break
 
     return {
         "graph_schema": GRAPH_SCHEMA,

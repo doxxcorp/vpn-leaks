@@ -1,0 +1,27 @@
+provider_name: Mullvad
+slug: mullvad
+connection_mode: manual_gui
+locations: []
+credentials:
+  username_env: null
+  password_env: null
+policy_urls:
+- https://mullvad.net/en/help/policy-guarantees/
+competitor_probe:
+  provider_domains:
+  - mullvad.net
+  probe_urls:
+  - https://mullvad.net/en/
+  portal_hosts:
+  - mullvad.net
+surface_urls:
+- page_type: home
+  url: https://mullvad.net/en/
+- page_type: pricing
+  url: https://mullvad.net/en/account/
+- page_type: signup
+  url: https://mullvad.net/en/account/
+- page_type: download
+  url: https://mullvad.net/en/download/desktop/
+- page_type: help
+  url: https://mullvad.net/en/help/

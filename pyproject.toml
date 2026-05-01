@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dnspython>=2.6.0",
+    "dpkt>=1.9.8",
     "tqdm>=4.66.0",
     "httpx>=0.27.0",
     "markdown>=3.5",
@@ -24,6 +25,8 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.4.0",
 ]
+# Future optional JA3/JA4 / fingerprint tooling (core summarizer uses `dpkt` only).
+pcap = []
 
 [project.scripts]
 vpn-leaks = "vpn_leaks.cli:main"

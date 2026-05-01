@@ -1,0 +1,25 @@
+provider_name: ExpressVPN
+slug: expressvpn
+connection_mode: manual_gui
+locations: []
+credentials:
+  username_env: null
+  password_env: null
+policy_urls:
+- https://www.expressvpn.com/privacy-policy
+competitor_probe:
+  provider_domains:
+  - expressvpn.com
+  probe_urls:
+  - https://www.expressvpn.com/
+  portal_hosts:
+  - www.expressvpn.com
+surface_urls:
+- page_type: home
+  url: https://www.expressvpn.com/
+- page_type: pricing
+  url: https://www.expressvpn.com/order
+- page_type: signup
+  url: https://www.expressvpn.com/
+- page_type: support
+  url: https://www.expressvpn.com/support/
