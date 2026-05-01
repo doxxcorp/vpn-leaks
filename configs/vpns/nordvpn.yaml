@@ -26,6 +26,8 @@ locations:
   label: Hamburg, Hamburg, Germany
 - id: us-california-san-jose-224
   label: San Jose, California, United States
+- id: us-california-san-francisco-200
+  label: San Francisco, California, United States
 credentials:
   username_env: null
   password_env: null

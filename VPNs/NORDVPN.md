@@ -1,0 +1,27434 @@
+# Nordvpn (nordvpn)
+
+- **Report generated:** 2026-05-01T08:46:35.797967+00:00
+- **Runs included:** nordvpn-20260501T083320Z-1aceb65e, nordvpn-20260501T084027Z-7f1f4459
+- **Normalized locations:** 2
+
+> **How to read this report**
+>
+> - The **Matrix**, **Leak summary**, and **Underlay (ASNs)** sections below are a **high-level rollup only**.
+> - **Per-location benchmarks** (exit IP, DNS, WebRTC, IPv6, fingerprint, attribution, policies, services, artifacts, YourInfo, competitor probes, and the full JSON record) are in **`## Detailed runs`** — they are **not omitted**; scroll or open this file as plain text if the preview shows only the first screen.
+> - The **canonical** machine-readable record for each location is always `runs/<run_id>/locations/<location_id>/normalized.json` (paths are repeated under each run). For very large JSON, use your editor or a JSON viewer rather than Markdown preview alone.
+
+## Matrix
+
+| Field | Value |
+|-------|-------|
+| Connection modes observed | manual_gui |
+| Locations covered | 2 |
+
+## Executive summary (SPEC framework)
+
+
+- **Rollup severity (max across runs):** `LOW`
+- **Question coverage (merged across locations, one row per SPEC ID):** counts below sum to **42** question(s) in the bank (42 total). Status for each ID is the **strictest** across benchmark rows: unanswered > partially answered > answered > not testable dynamically.
+  - answered: 8
+  - partially answered: 30
+  - unanswered: 0
+  - not testable dynamically: 4
+- **Reading `answered`:** for some **DYNAMIC_PARTIAL** IDs (e.g. **FP-001**), **`answered`** means the harness captured the intended evidence class in `normalized.json`, not that the English question is fully settled by desk review—interpret using per-ID summaries, category context, and raw artifacts.
+
+**Top severity findings (HIGH/CRITICAL)**
+
+
+- *None flagged in this rollup.*
+
+
+## SPEC question coverage (full table)
+
+| ID | Status | Category | Question | Summary | Next steps |
+|----|--------|----------|----------|---------|------------|
+| `IDENTITY-001` | `partially_answered` | identity_correlation | What identifiers are assigned to the user, app install, browser session, and device? | Browser/session signals captured via fingerprint and optional YourInfo probe. | Run with fingerprint + YourInfo probes enabled; compare `fingerprint_snapshot` and `yourinfo_snapshot` in normalized.json. See RUN-STEPS.md (benchmark phases). |
+| `IDENTITY-006` | `partially_answered` | identity_correlation | Are there long-lived client identifiers transmitted during auth or app startup? | Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints). | Browser `services_contacted` is partial; for app auth traffic use external capture or vendor docs (D). |
+| `IDENTITY-009` | `partially_answered` | identity_correlation | Is the browser fingerprinting surface strong enough to re-identify the same user across sessions? | Fingerprint and BrowserLeaks captures present for re-identification risk assessment. | Enable fingerprint capture; without it re-ID risk stays unassessed. |
+| `SIGNUP-001` | `partially_answered` | signup_payment | What third parties are involved during signup? | Third-party/CDN signals may appear in competitor web probes and HAR artifacts. | Set `competitor_probe` + `surface_urls` for signup/checkout in the provider YAML; re-run `vpn-leaks run`. |
+| `SIGNUP-004` | `partially_answered` | signup_payment | Are analytics or marketing scripts loaded during signup or checkout? | Third-party/CDN signals may appear in competitor web probes and HAR artifacts. | Same as signup surface — competitor web HAR and `har_summary.json`. |
+| `SIGNUP-010` | `partially_answered` | signup_payment | Are these surfaces behind a CDN/WAF? | Third-party/CDN signals may appear in competitor web probes and HAR artifacts. | Enable competitor web probes; check `cdn_headers` / `web_probes` in competitor_surface. |
+| `WEB-001` | `partially_answered` | website_portal | Where is the marketing site hosted (DNS/routing level)? | Apex DNS/NS data recorded for configured provider domains. | Set `competitor_probe.provider_domains` (and related probes); for desk truth use `dig apex NS` + glue WHOIS (see docs/research-questions-and-evidence.md §H). |
+| `WEB-004` | `partially_answered` | website_portal | What CDN/WAF is used? | Response headers / CDN signatures captured in web probes. | Enable web/portal probes; headers show CDN/WAF signals. Compare with desk `curl -I` if needed. |
+| `WEB-008` | `partially_answered` | website_portal | Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs? | Review web probe headers, redirects, and HAR for origin leaks. | Enable competitor probes and review HAR / redirects in raw artifacts. |
+| `DNS-001` | `answered` | dns | Which DNS resolvers are used while connected? | Resolver tiers observed (local + external). | — |
+| `DNS-002` | `partially_answered` | dns | Are DNS requests tunneled (consistent with VPN exit)? | Leak flag=False; see notes. | Heuristic: no obvious public resolver IPs parsed from external page — Compare resolver IPs to exit; read `dns_leak_notes` (heuristic). Capture baseline off-VPN if comparing. |
+| `DNS-003` | `partially_answered` | dns | Is there DNS fallback to ISP/router/public resolvers? | Leak flag=False; see notes. | Heuristic: no obvious public resolver IPs parsed from external page — Same as DNS-002; transition tests help — run with `--transition-tests` when supported. |
+| `DNS-004` | `partially_answered` | dns | Does DNS leak during connect/disconnect/reconnect? | Connect/disconnect DNS not sampled; use --transition-tests when supported. | Run `vpn-leaks run` with `--transition-tests` (see RUN-STEPS.md). |
+| `DNS-009` | `partially_answered` | dns | Are DoH or DoT endpoints used? | DoH/DoT not isolated from resolver snapshot; inspect raw captures. | Inspect raw DNS captures / resolver lists; DoH/DoT may not be isolated in summary alone. |
+| `DNS-011` | `partially_answered` | dns | Are resolvers first-party or third-party? | Leak flag=False; see notes. | Heuristic: no obvious public resolver IPs parsed from external page — Attribute resolver IPs (O); compare to exit ASN (I/D). |
+| `IP-001` | `answered` | real_ip_leak | Is the real public IPv4 exposed while connected? | Exit IPv4 185.187.168.200; leak flags dns=False webrtc=False ipv6=False. | — |
+| `IP-002` | `partially_answered` | real_ip_leak | Is the real public IPv6 exposed while connected? | No IPv6 exit or IPv6 not returned by endpoints. | Enable IPv6 path in environment; check `ipv6/` artifacts when present. |
+| `IP-006` | `answered` | real_ip_leak | Is the real IP exposed through WebRTC? | WebRTC candidates captured; leak flag=False. | — |
+| `IP-007` | `partially_answered` | real_ip_leak | Is the local LAN IP exposed through WebRTC or browser APIs? | Inspect host candidates vs LAN; see webrtc_notes. | Exit IP appears in candidate set (expected for tunneled public) — Inspect host vs srflx candidates in `webrtc_candidates`. |
+| `IP-014` | `partially_answered` | real_ip_leak | Do leak-check sites disagree about observed IP identity? | All 3 echo endpoints agree on IPv4 185.187.168.200. | Compare `exit_ip_sources` entries for disagreement. |
+| `CTRL-002` | `partially_answered` | control_plane | Which domains and IPs are contacted after the tunnel is up? | Post-harness service list captured. | `services_contacted` in `normalized.json` lists only URLs and probes this harness actually ran (not full-device traffic). Run a fuller benchmark: avoid `--skip-browserleaks` and competitor skip flags where you need those surfaces; add `competitor_probe` / portal / `surface_urls` in the provider YAML per RUN-STEPS.md; add more locations for diversity. For VPN app background traffic, use external capture—see CTRL-003. |
+| `CTRL-003` | `not_testable_dynamically` | control_plane | Which control-plane endpoints are used for auth/config/session management? | Auth/control-plane inventory requires internal docs or app instrumentation. | DOCUMENT_RESEARCH: vendor docs, app MITM, or support (D). |
+| `CTRL-004` | `partially_answered` | control_plane | Which telemetry endpoints are contacted during connection? | Infer from services_contacted and classified endpoints. | Classify `services_contacted` hosts; app telemetry needs traffic capture (see TELEM-*). |
+| `CTRL-009` | `partially_answered` | control_plane | Is the control plane behind a CDN/WAF? | CDN/WAF hints from web headers. | Enable portal/web probes (`portal_probes`); check `https_cdn_headers`. |
+| `EXIT-001` | `answered` | exit_infrastructure | What exit IP is assigned for each region? | Exit IPv4 185.187.168.200 for location us-california-san-francisco-200. | — |
+| `EXIT-002` | `answered` | exit_infrastructure | What ASN announces the exit IP? | ASN 212238 — CDNEXT Datacamp Limited | — |
+| `EXIT-003` | `answered` | exit_infrastructure | What organization owns the IP range? | ASN 212238 — CDNEXT Datacamp Limited | — |
+| `EXIT-004` | `partially_answered` | exit_infrastructure | What reverse DNS exists for the exit node? | PTR lookup errors: ptr_v4: The DNS query name does not exist: 200.168.187.185.in-addr.arpa. | Check raw `exit_dns.json` / attribution for rDNS when stored. |
+| `EXIT-005` | `partially_answered` | exit_infrastructure | Does the observed geolocation match the advertised location? | Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States'). | Compare `extra.exit_geo` to `vpn_location_label`; add more regions to validate. |
+| `THIRDWEB-001` | `partially_answered` | third_party_web | What external JS files are loaded on the site? | See web HAR + competitor_surface for external scripts/analytics. | Enable `competitor_probe` + marketing URLs; scripts listed in `web_probes.json`. |
+| `THIRDWEB-003` | `partially_answered` | third_party_web | What analytics providers are present? | See web HAR + competitor_surface for external scripts/analytics. | HAR + `har_summary.json` tracker_candidates when competitor probes run. |
+| `THIRDWEB-012` | `partially_answered` | third_party_web | What cookies are set by first-party and third-party scripts? | See web HAR + competitor_surface for external scripts/analytics. | Review HAR for Set-Cookie; summary may be partial. |
+| `FP-001` | `answered` | browser_tracking | Does the site attempt browser fingerprinting? | Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence). | — |
+| `FP-011` | `answered` | browser_tracking | Does WebRTC run on provider pages? | WebRTC exercised by harness on leak-test pages. | — |
+| `TELEM-001` | `not_testable_dynamically` | telemetry_app | Does the app talk to telemetry vendors? | App telemetry requires traffic capture or binary analysis; not proven by this harness alone. | INTERNAL_UNVERIFIABLE in harness; use binary/network analysis or vendor disclosures (D). |
+| `TELEM-004` | `not_testable_dynamically` | telemetry_app | Does the app send connection events to telemetry systems? | App telemetry requires traffic capture or binary analysis; not proven by this harness alone. | Same as TELEM-001. |
+| `OS-001` | `partially_answered` | os_specific | On macOS/Windows/Linux, do helper processes bypass the tunnel? | OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run. | Process-level bypass not in default harness; external tooling or manual checks. |
+| `FAIL-001` | `partially_answered` | failure_state | What leaks during initial connection? | Not sampled; optional --transition-tests or manual observation. | Use `--transition-tests` for connect-phase leaks when supported. |
+| `FAIL-003` | `partially_answered` | failure_state | What leaks during reconnect? | Not sampled; optional --transition-tests or manual observation. | Use `--transition-tests` for reconnect leaks when supported. |
+| `FAIL-004` | `not_testable_dynamically` | failure_state | What leaks if the VPN app crashes? | Crash/kill leak tests not run in this harness by default. | Crash/kill scenarios not in default harness; fault injection or manual test. |
+| `LOG-001` | `partially_answered` | logging_retention | What is the provider likely able to log based on observed traffic? | Infer logging surface from observable endpoints and services_contacted. | Review `services_contacted` + endpoint classifications; pair with policy/audit (D). |
+| `LOG-005` | `partially_answered` | logging_retention | Are there contradictions between observed traffic and no-logs marketing claims? | Policy text captured; compare claims to observed traffic manually. | Fetch policies (`policy_urls` in provider YAML); compare marketing to ISAE/DPAs (D). See docs/research-questions-and-evidence.md. |
+
+## How to close gaps
+
+Questions still **unanswered** or only **partially answered** (merged status). Use **Next steps** above; this list is the same IDs in short form.
+
+
+
+- **`IDENTITY-001`** (`partially_answered`): Run with fingerprint + YourInfo probes enabled; compare `fingerprint_snapshot` and `yourinfo_snapshot` in normalized.json. See RUN-STEPS.md (benchmark phases).
+
+- **`IDENTITY-006`** (`partially_answered`): Browser `services_contacted` is partial; for app auth traffic use external capture or vendor docs (D).
+
+- **`IDENTITY-009`** (`partially_answered`): Enable fingerprint capture; without it re-ID risk stays unassessed.
+
+- **`SIGNUP-001`** (`partially_answered`): Set `competitor_probe` + `surface_urls` for signup/checkout in the provider YAML; re-run `vpn-leaks run`.
+
+- **`SIGNUP-004`** (`partially_answered`): Same as signup surface — competitor web HAR and `har_summary.json`.
+
+- **`SIGNUP-010`** (`partially_answered`): Enable competitor web probes; check `cdn_headers` / `web_probes` in competitor_surface.
+
+- **`WEB-001`** (`partially_answered`): Set `competitor_probe.provider_domains` (and related probes); for desk truth use `dig apex NS` + glue WHOIS (see docs/research-questions-and-evidence.md §H).
+
+- **`WEB-004`** (`partially_answered`): Enable web/portal probes; headers show CDN/WAF signals. Compare with desk `curl -I` if needed.
+
+- **`WEB-008`** (`partially_answered`): Enable competitor probes and review HAR / redirects in raw artifacts.
+
+- **`DNS-002`** (`partially_answered`): Heuristic: no obvious public resolver IPs parsed from external page — Compare resolver IPs to exit; read `dns_leak_notes` (heuristic). Capture baseline off-VPN if comparing.
+
+- **`DNS-003`** (`partially_answered`): Heuristic: no obvious public resolver IPs parsed from external page — Same as DNS-002; transition tests help — run with `--transition-tests` when supported.
+
+- **`DNS-004`** (`partially_answered`): Run `vpn-leaks run` with `--transition-tests` (see RUN-STEPS.md).
+
+- **`DNS-009`** (`partially_answered`): Inspect raw DNS captures / resolver lists; DoH/DoT may not be isolated in summary alone.
+
+- **`DNS-011`** (`partially_answered`): Heuristic: no obvious public resolver IPs parsed from external page — Attribute resolver IPs (O); compare to exit ASN (I/D).
+
+- **`IP-002`** (`partially_answered`): Enable IPv6 path in environment; check `ipv6/` artifacts when present.
+
+- **`IP-007`** (`partially_answered`): Exit IP appears in candidate set (expected for tunneled public) — Inspect host vs srflx candidates in `webrtc_candidates`.
+
+- **`IP-014`** (`partially_answered`): Compare `exit_ip_sources` entries for disagreement.
+
+- **`CTRL-002`** (`partially_answered`): `services_contacted` in `normalized.json` lists only URLs and probes this harness actually ran (not full-device traffic). Run a fuller benchmark: avoid `--skip-browserleaks` and competitor skip flags where you need those surfaces; add `competitor_probe` / portal / `surface_urls` in the provider YAML per RUN-STEPS.md; add more locations for diversity. For VPN app background traffic, use external capture—see CTRL-003.
+
+- **`CTRL-004`** (`partially_answered`): Classify `services_contacted` hosts; app telemetry needs traffic capture (see TELEM-*).
+
+- **`CTRL-009`** (`partially_answered`): Enable portal/web probes (`portal_probes`); check `https_cdn_headers`.
+
+- **`EXIT-004`** (`partially_answered`): Check raw `exit_dns.json` / attribution for rDNS when stored.
+
+- **`EXIT-005`** (`partially_answered`): Compare `extra.exit_geo` to `vpn_location_label`; add more regions to validate.
+
+- **`THIRDWEB-001`** (`partially_answered`): Enable `competitor_probe` + marketing URLs; scripts listed in `web_probes.json`.
+
+- **`THIRDWEB-003`** (`partially_answered`): HAR + `har_summary.json` tracker_candidates when competitor probes run.
+
+- **`THIRDWEB-012`** (`partially_answered`): Review HAR for Set-Cookie; summary may be partial.
+
+- **`OS-001`** (`partially_answered`): Process-level bypass not in default harness; external tooling or manual checks.
+
+- **`FAIL-001`** (`partially_answered`): Use `--transition-tests` for connect-phase leaks when supported.
+
+- **`FAIL-003`** (`partially_answered`): Use `--transition-tests` for reconnect leaks when supported.
+
+- **`LOG-001`** (`partially_answered`): Review `services_contacted` + endpoint classifications; pair with policy/audit (D).
+
+- **`LOG-005`** (`partially_answered`): Fetch policies (`policy_urls` in provider YAML); compare marketing to ISAE/DPAs (D). See docs/research-questions-and-evidence.md.
+
+
+
+## Analysis of collected evidence
+
+### Scope
+
+- **Benchmark rows in this report:** 2 (one row per `normalized.json` location).
+- **Merge rule:** For each SPEC question ID, the status shown in the table is the **strictest** across rows: unanswered > partially_answered > answered > not_testable_dynamically.
+
+### Risk and findings
+
+- **Rollup severity (max across runs):** `LOW`
+- **HIGH / CRITICAL framework findings:** none in this rollup.
+
+### By category (merged coverage)
+
+#### browser_tracking
+
+- **FP-001** (answered): Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence).
+- **FP-011** (answered): WebRTC exercised by harness on leak-test pages.
+
+#### control_plane
+
+- **CTRL-002** (partial): Post-harness service list captured.
+- **CTRL-003** (`not_testable_dynamically`): Auth/control-plane inventory requires internal docs or app instrumentation.
+- **CTRL-004** (partial): Infer from services_contacted and classified endpoints.
+- **CTRL-009** (partial): CDN/WAF hints from web headers.
+
+#### dns
+
+- **DNS-001** (answered): Resolver tiers observed (local + external).
+- **DNS-002** (partial): Leak flag=False; see notes.
+- **DNS-003** (partial): Leak flag=False; see notes.
+- **DNS-004** (partial): Connect/disconnect DNS not sampled; use --transition-tests when supported.
+- **DNS-009** (partial): DoH/DoT not isolated from resolver snapshot; inspect raw captures.
+- **DNS-011** (partial): Leak flag=False; see notes.
+
+#### exit_infrastructure
+
+- **EXIT-001** (answered): Exit IPv4 185.187.168.200 for location us-california-san-francisco-200.
+- **EXIT-002** (answered): ASN 212238 — CDNEXT Datacamp Limited
+- **EXIT-003** (answered): ASN 212238 — CDNEXT Datacamp Limited
+- **EXIT-004** (partial): PTR lookup errors: ptr_v4: The DNS query name does not exist: 200.168.187.185.in-addr.arpa.
+- **EXIT-005** (partial): Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States').
+
+#### failure_state
+
+- **FAIL-001** (partial): Not sampled; optional --transition-tests or manual observation.
+- **FAIL-003** (partial): Not sampled; optional --transition-tests or manual observation.
+- **FAIL-004** (`not_testable_dynamically`): Crash/kill leak tests not run in this harness by default.
+
+#### identity_correlation
+
+- **IDENTITY-001** (partial): Browser/session signals captured via fingerprint and optional YourInfo probe.
+- **IDENTITY-006** (partial): Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).
+- **IDENTITY-009** (partial): Fingerprint and BrowserLeaks captures present for re-identification risk assessment.
+
+#### logging_retention
+
+- **LOG-001** (partial): Infer logging surface from observable endpoints and services_contacted.
+- **LOG-005** (partial): Policy text captured; compare claims to observed traffic manually.
+
+#### os_specific
+
+- **OS-001** (partial): OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.
+
+#### real_ip_leak
+
+- **IP-001** (answered): Exit IPv4 185.187.168.200; leak flags dns=False webrtc=False ipv6=False.
+- **IP-002** (partial): No IPv6 exit or IPv6 not returned by endpoints.
+- **IP-006** (answered): WebRTC candidates captured; leak flag=False.
+- **IP-007** (partial): Inspect host candidates vs LAN; see webrtc_notes.
+- **IP-014** (partial): All 3 echo endpoints agree on IPv4 185.187.168.200.
+
+#### signup_payment
+
+- **SIGNUP-001** (partial): Third-party/CDN signals may appear in competitor web probes and HAR artifacts.
+- **SIGNUP-004** (partial): Third-party/CDN signals may appear in competitor web probes and HAR artifacts.
+- **SIGNUP-010** (partial): Third-party/CDN signals may appear in competitor web probes and HAR artifacts.
+
+#### telemetry_app
+
+- **TELEM-001** (`not_testable_dynamically`): App telemetry requires traffic capture or binary analysis; not proven by this harness alone.
+- **TELEM-004** (`not_testable_dynamically`): App telemetry requires traffic capture or binary analysis; not proven by this harness alone.
+
+#### third_party_web
+
+- **THIRDWEB-001** (partial): See web HAR + competitor_surface for external scripts/analytics.
+- **THIRDWEB-003** (partial): See web HAR + competitor_surface for external scripts/analytics.
+- **THIRDWEB-012** (partial): See web HAR + competitor_surface for external scripts/analytics.
+
+#### website_portal
+
+- **WEB-001** (partial): Apex DNS/NS data recorded for configured provider domains.
+- **WEB-004** (partial): Response headers / CDN signatures captured in web probes.
+- **WEB-008** (partial): Review web probe headers, redirects, and HAR for origin leaks.
+
+### Limitations
+
+- Leak flags and DNS notes are **heuristic / harness-defined**; read raw `runs/.../raw/` artifacts for full context.
+- **Observed leak flags (any location):** DNS=False, WebRTC=False, IPv6=False.
+- **App telemetry (TELEM-001, TELEM-004)** and some control-plane details are **not** proven by browser-only harness paths; use **D** (documents) or external traffic studies where applicable.
+- **Desk research (S)** (e.g. apex `dig`, glue WHOIS) is not auto-merged into this report; compare to `competitor_probe` / provider DNS when both exist.
+
+
+
+
+## Leak summary
+
+| Location | DNS leak | WebRTC leak | IPv6 leak |
+|----------|----------|-------------|-----------|
+| San Jose, CA, USA | False | False | False |
+| San Francisco, CA, USA | False | False | False |
+
+
+## Underlay (ASNs)
+
+
+- **AS212238:** CDNEXT Datacamp Limited
+
+
+## Website and DNS surface (third-party exposure)
+
+Interpretation, manual desk steps, and evidence tiers (O / S / I): [docs/website-exposure-methodology.md](../docs/website-exposure-methodology.md).
+
+
+### HAR-derived signals (merged across locations)
+
+| Metric | Count |
+|--------|-------|
+| Unique request hosts | 10 |
+| Tracker / analytics candidates | 1 |
+| CDN candidates | 2 |
+
+
+**Tracker / analytics hostnames (sample, up to 32):** `www.googletagmanager.com`
+
+
+
+**CDN hostnames (sample, up to 24):** `s1.nordcdn.com`, `sb.nordcdn.com`
+
+
+
+### Provider DNS (apex, from `competitor_probe`)
+
+| Domain | NS (sample) | MX (sample) | TXT (sample) | IPv6 apex |
+|--------|-------------|-------------|--------------|-----------|
+| `nordvpn.com` | lily.ns.cloudflare.com, seth.ns.cloudflare.com | 1 aspmx.l.google.com, 5 alt1.aspmx.l.google.com, 5 alt2.aspmx.l.google.com (+2 more) | MS=ms60989570, MS=ms69824556 (+5 more) | no AAAA (IPv4-only apex) |
+
+
+
+
+### Surface URL matrix (`surface_urls`)
+
+| page_type | URL | HTTP status |
+|-----------|-----|-------------|
+| home | https://www.nordvpn.com/ | 403 |
+| pricing | https://nordvpn.com/pricing/ | 403 |
+| signup | https://my.nordaccount.com/ | 200 |
+| checkout | https://nordcheckout.com/ | 403 |
+| support | https://support.nordvpn.com/ | 200 |
+
+
+
+
+**Portal hosts probed:** `my.nordaccount.com`
+
+
+
+**Competitor probe URLs (sample):** https://nordvpn.com/; https://nordvpn.com/
+
+
+
+
+---
+
+## Detailed runs
+
+**Included in this report** (each subsection below mirrors one `normalized.json`):
+
+
+1. `nordvpn-20260501T083320Z-1aceb65e` / `us-california-san-jose-224` — `runs/nordvpn-20260501T083320Z-1aceb65e/locations/us-california-san-jose-224/normalized.json`
+
+2. `nordvpn-20260501T084027Z-7f1f4459` / `us-california-san-francisco-200` — `runs/nordvpn-20260501T084027Z-7f1f4459/locations/us-california-san-francisco-200/normalized.json`
+
+
+Large JSON fields use size caps in this markdown file; when an excerpt hits a cap, a **note** appears at the start of that run’s section listing what was capped. **On-disk `normalized.json` is always complete.**
+
+
+
+### nordvpn-20260501T083320Z-1aceb65e / us-california-san-jose-224
+
+
+
+- **vpn_provider:** nordvpn
+- **Label:** San Jose, California, United States
+- **Path:** `runs/nordvpn-20260501T083320Z-1aceb65e/locations/us-california-san-jose-224/normalized.json`
+- **schema_version:** 1.4
+- **timestamp_utc:** 2026-05-01T08:37:11.986157+00:00
+- **connection_mode:** manual_gui
+
+#### Runner environment
+
+```json
+{
+  "os": "Darwin 25.4.0",
+  "kernel": "25.4.0",
+  "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+  "browser": null,
+  "vpn_protocol": "manual_gui",
+  "vpn_client": null
+}
+```
+
+#### Exit IP
+
+| Field | Value |
+|-------|-------|
+| exit_ip_v4 | 185.211.32.224 |
+| exit_ip_v6 | None |
+
+**exit_ip_sources**
+
+```json
+[
+  {
+    "url": "https://api.ipify.org",
+    "ipv4": "185.211.32.224",
+    "ipv6": null,
+    "raw_excerpt": "185.211.32.224",
+    "error": null
+  },
+  {
+    "url": "https://api64.ipify.org",
+    "ipv4": "185.211.32.224",
+    "ipv6": null,
+    "raw_excerpt": "185.211.32.224",
+    "error": null
+  },
+  {
+    "url": "https://api.ipify.org?format=json",
+    "ipv4": "185.211.32.224",
+    "ipv6": null,
+    "raw_excerpt": "{\"ip\":\"185.211.32.224\"}",
+    "error": null
+  }
+]
+```
+
+#### DNS
+
+| Field | Value |
+|-------|-------|
+| dns_leak_flag | False |
+| dns_leak_notes | Heuristic: no obvious public resolver IPs parsed from external page |
+
+**dns_servers_observed**
+
+```json
+[
+  {
+    "tier": "local",
+    "detail": "resolv.conf nameserver lines (Unix)",
+    "servers": [
+      "100.64.0.2"
+    ]
+  },
+  {
+    "tier": "local",
+    "detail": "getaddrinfo('whoami.akamai.net')",
+    "servers": [
+      "185.211.32.224"
+    ]
+  },
+  {
+    "tier": "external",
+    "detail": "ipleak_dns",
+    "servers": [
+      "185.211.32.224"
+    ]
+  }
+]
+```
+
+#### WebRTC
+
+| Field | Value |
+|-------|-------|
+| webrtc_leak_flag | False |
+| webrtc_notes | Exit IP appears in candidate set (expected for tunneled public) |
+
+
+
+| type | protocol | address | port | raw (may be shortened in table) |
+|------|----------|---------|------|--------------------------------|
+| host | udp | 2246e8f0-e496-4f41-93d8-965b8d404c7e.local | 58835 | `candidate:2280904095 1 udp 2113937151 2246e8f0-e496-4f41-93d8-965b8d404c7e.local 58835 typ host generation 0 ufrag 7QR4 network-cost 999` |
+| srflx | udp | 185.211.32.224 | 4083 | `candidate:2457007007 1 udp 1677729535 185.211.32.224 4083 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag 7QR4 network-cost 999` |
+
+
+#### IPv6
+
+| Field | Value |
+|-------|-------|
+| ipv6_status | unsupported_or_no_ipv6 |
+| ipv6_leak_flag | False |
+| ipv6_notes | No IPv6 observed via curl or IP endpoints |
+
+#### Fingerprint
+
+
+```json
+{
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+  "language": "en-US",
+  "hardwareConcurrency": 16,
+  "platform": "MacIntel"
+}
+```
+
+
+#### Attribution
+
+```json
+{
+  "asn": 212238,
+  "holder": "CDNEXT Datacamp Limited",
+  "country": null,
+  "confidence": 0.7,
+  "confidence_notes": "ASNs seen: [212238]",
+  "supporting_sources": [
+    {
+      "name": "ripestat",
+      "asn": 212238,
+      "holder": "CDNEXT Datacamp Limited",
+      "country": null,
+      "raw": {
+        "prefix_overview": {
+          "messages": [
+            [
+              "warning",
+              "Given resource is not announced but result has been aligned to first-level less-specific (185.211.32.0/24)."
+            ]
+          ],
+          "see_also": [],
+          "version": "1.3",
+          "data_call_name": "prefix-overview",
+          "data_call_status": "supported",
+          "cached": false,
+          "query_id": "20260501083340-a4ceb4de-35c9-496b-bca0-b5d8f1b696d8",
+          "process_time": 64,
+          "server_id": "app198",
+          "build_version": "v0.9.15-2026.04.30",
+          "pipeline": "1248748",
+          "status": "ok",
+          "status_code": 200,
+          "time": "2026-05-01T08:33:40.839435",
+          "data": {
+            "is_less_specific": true,
+            "announced": true,
+            "asns": [
+              {
+                "asn": 212238,
+                "holder": "CDNEXT Datacamp Limited"
+              }
+            ],
+            "related_prefixes": [],
+            "resource": "185.211.32.0/24",
+            "type": "prefix",
+            "block": {
+              "resource": "185.0.0.0/8",
+              "desc": "RIPE NCC (Status: ALLOCATED)",
+              "name": "IANA IPv4 Address Space Registry"
+            },
+            "actual_num_related": 0,
+            "query_time": "2026-05-01T00:00:00",
+            "num_filtered_out": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "team_cymru",
+      "asn": 212238,
+      "holder": null,
+      "country": null,
+      "raw": {
+        "asn": 212238,
+        "raw_line": "212238 | 185.211.32.0/24 | DE | ripencc | 2017-06-30",
+        "parts": [
+          "212238",
+          "185.211.32.0/24",
+          "DE",
+          "ripencc",
+          "2017-06-30"
+        ],
+        "disclaimer": [
+          "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+        ]
+      }
+    },
+    {
+      "name": "peeringdb",
+      "asn": null,
+      "holder": null,
+      "country": null,
+      "raw": {
+        "error": "Client error '404 Not Found' for url 'https://www.peeringdb.com/api/net?asn=212238'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+      }
+    }
+  ],
+  "disclaimers": [
+    "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+  ]
+}
+```
+
+#### Policies
+
+```json
+[
+  {
+    "role": "vpn",
+    "url": "https://nordvpn.com/privacy-policy/",
+    "fetched_at_utc": "2026-05-01T08:34:22.451002+00:00",
+    "sha256": "4ce87e9975cdbe1fd22009407f255c78369629bf549512ed609c84c13c469e40",
+    "summary_bullets": [
+      "Mentions logging (keyword hit; review source)"
+    ]
+  },
+  {
+    "role": "vpn",
+    "url": "https://my.nordaccount.com/legal/privacy-policy/",
+    "fetched_at_utc": "2026-05-01T08:34:25.741323+00:00",
+    "sha256": "83733551c405d0f3d7fc47feed294af38f94c7298ddd1a1d2cca31ed29df770d",
+    "summary_bullets": [
+      "Mentions retention (keyword hit; review source)",
+      "Mentions logging (keyword hit; review source)",
+      "Mentions law enforcement (keyword hit; review source)",
+      "Mentions third parties (keyword hit; review source)",
+      "Mentions telemetry (keyword hit; review source)"
+    ]
+  }
+]
+```
+
+#### Services contacted
+
+
+
+
+- `attribution:methodology:104.16.155.111`
+
+- `attribution:methodology:104.16.156.111`
+
+- `attribution:methodology:104.16.208.203`
+
+- `attribution:methodology:104.17.160.135`
+
+- `attribution:methodology:104.17.223.153`
+
+- `attribution:methodology:104.18.42.225`
+
+- `attribution:methodology:104.19.159.190`
+
+- `attribution:methodology:142.251.214.40`
+
+- `attribution:methodology:172.64.145.31`
+
+- `attribution:methodology:216.198.53.11`
+
+- `attribution:methodology:216.198.53.3`
+
+- `attribution:methodology:216.198.54.11`
+
+- `attribution:methodology:216.198.54.3`
+
+- `attribution:methodology:2606:4700::6810:9b6f`
+
+- `attribution:methodology:2606:4700::6810:9c6f`
+
+- `attribution:methodology:2607:f8b0:4005:803::2008`
+
+- `attribution:methodology:2a06:98c1:3101::6812:2ae1`
+
+- `attribution:methodology:2a06:98c1:3107::ac40:911f`
+
+- `attribution:ns_glue:108.162.192.130`
+
+- `attribution:ns_glue:108.162.193.142`
+
+- `attribution:ns_glue:172.64.32.130`
+
+- `attribution:ns_glue:172.64.33.142`
+
+- `attribution:ns_glue:173.245.58.130`
+
+- `attribution:ns_glue:173.245.59.142`
+
+- `attribution:ns_glue:2606:4700:50::adf5:3a82`
+
+- `attribution:ns_glue:2606:4700:58::adf5:3b8e`
+
+- `attribution:ns_glue:2803:f800:50::6ca2:c082`
+
+- `attribution:ns_glue:2803:f800:50::6ca2:c18e`
+
+- `attribution:ns_glue:2a06:98c1:50::ac40:2082`
+
+- `attribution:ns_glue:2a06:98c1:50::ac40:218e`
+
+- `browserleaks.com:playwright_chromium`
+
+- `competitor_probe:enabled`
+
+- `competitor_probe:har_summary`
+
+- `dns:cname_scan:api.nordvpn.com`
+
+- `dns:cname_scan:autodiscover.nordvpn.com`
+
+- `dns:cname_scan:blog.nordvpn.com`
+
+- `dns:cname_scan:docs.nordvpn.com`
+
+- `dns:cname_scan:help.nordvpn.com`
+
+- `dns:cname_scan:mail.nordvpn.com`
+
+- `dns:cname_scan:status.nordvpn.com`
+
+- `dns:cname_scan:support.nordvpn.com`
+
+- `dns:dkim:default._domainkey.nordvpn.com`
+
+- `dns:dkim:google._domainkey.nordvpn.com`
+
+- `dns:dkim:k1._domainkey.nordvpn.com`
+
+- `dns:dkim:mail._domainkey.nordvpn.com`
+
+- `dns:dkim:s1._domainkey.nordvpn.com`
+
+- `dns:dkim:s2._domainkey.nordvpn.com`
+
+- `dns:dkim:selector1._domainkey.nordvpn.com`
+
+- `dns:dkim:selector2._domainkey.nordvpn.com`
+
+- `dns:dkim:smtp._domainkey.nordvpn.com`
+
+- `dns:dkim:zendesk1._domainkey.nordvpn.com`
+
+- `dns:dkim:zendesk2._domainkey.nordvpn.com`
+
+- `dns:dmarc:_dmarc.nordvpn.com`
+
+- `dns:lookup:nordvpn.com`
+
+- `dns:ns_glue:lily.ns.cloudflare.com`
+
+- `dns:ns_glue:seth.ns.cloudflare.com`
+
+- `dns:resolve:d.nordvpn.com`
+
+- `dns:resolve:my.nordaccount.com`
+
+- `dns:resolve:nordcheckout.com`
+
+- `dns:resolve:nordvpn.com`
+
+- `dns:resolve:s1.nordcdn.com`
+
+- `dns:resolve:sb.nordcdn.com`
+
+- `dns:resolve:static.zdassets.com`
+
+- `dns:resolve:support.nordvpn.com`
+
+- `dns:resolve:www.googletagmanager.com`
+
+- `dns:resolve:www.nordvpn.com`
+
+- `fingerprint:playwright_navigator`
+
+- `https://api.ipify.org`
+
+- `https://api.ipify.org?format=json`
+
+- `https://api64.ipify.org`
+
+- `https://browserleaks.com/dns`
+
+- `https://browserleaks.com/ip`
+
+- `https://browserleaks.com/tls`
+
+- `https://browserleaks.com/webrtc`
+
+- `https://ipleak.net/`
+
+- `https://ipwho.is/185.211.32.224`
+
+- `https://my.nordaccount.com/`
+
+- `https://my.nordaccount.com/legal/privacy-policy/`
+
+- `https://nordcheckout.com/`
+
+- `https://nordvpn.com/`
+
+- `https://nordvpn.com/pricing/`
+
+- `https://nordvpn.com/privacy-policy/`
+
+- `https://support.nordvpn.com/`
+
+- `https://test-ipv6.com/`
+
+- `https://www.nordvpn.com/`
+
+- `policy:playwright_chromium`
+
+- `spf:txt:_spf.google.com`
+
+- `spf:txt:icloud.com`
+
+- `spf:txt:mail.zendesk.com`
+
+- `spf:txt:nordvpn.com`
+
+- `surface_probe:har_summary`
+
+- `transit:local_traceroute`
+
+- `webrtc:local_playwright_chromium`
+
+- `yourinfo.ai:playwright_chromium`
+
+
+#### Artifacts (paths)
+
+```json
+{
+  "connect_log": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/connect.log",
+  "ip_check_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/ip-check.json",
+  "dnsleak_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/dnsleak",
+  "webrtc_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/webrtc",
+  "ipv6_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/ipv6",
+  "fingerprint_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/fingerprint",
+  "attribution_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/attribution.json",
+  "asn_prefixes_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/asn_prefixes.json",
+  "exit_dns_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/exit_dns.json",
+  "policy_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/policy",
+  "competitor_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe",
+  "browserleaks_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/browserleaks_probe",
+  "yourinfo_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/yourinfo_probe",
+  "baseline_json": null,
+  "surface_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe",
+  "transitions_json": null,
+  "website_exposure_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure",
+  "capture_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/capture"
+}
+```
+
+#### YourInfo (yourinfo.ai benchmark)
+
+
+```json
+{
+  "url": "https://yourinfo.ai/",
+  "final_url": "https://yourinfo.ai/",
+  "status": 200,
+  "title": "YourInfo.ai",
+  "text_excerpt": "RESEARCHING YOUR INFORMATION...\n20\nQuerying intelligence databases...\n\nConcerned about your digital privacy?\n\ndoxx.net - Secure networking for humans\n ",
+  "text_excerpt_truncated": false,
+  "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/yourinfo_probe/yourinfo.har",
+  "cdn_headers": {},
+  "error": null
+}
+```
+
+**Visible text excerpt** (length may be capped in this report):
+
+~~~
+RESEARCHING YOUR INFORMATION...
+20
+Querying intelligence databases...
+
+Concerned about your digital privacy?
+
+doxx.net - Secure networking for humans
+ 
+~~~
+
+
+
+
+#### SPEC framework (findings, coverage, risk)
+
+
+Overall **LOW** · leak **INFO** · third-party **MEDIUM** · correlation **MEDIUM**
+
+```json
+{
+  "question_bank_version": "1",
+  "test_matrix_version": "1",
+  "findings": [
+    {
+      "id": "finding-yourinfo-e1695689",
+      "category": "third_party_web",
+      "title": "Third-party benchmark page loaded (yourinfo.ai)",
+      "description": "HAR and page excerpt captured for competitive benchmark; third parties may observe exit IP and browser metadata.",
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "kind": "inferred",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "yourinfo_snapshot",
+          "note": null
+        }
+      ],
+      "affected_data_types": [
+        "public_ip",
+        "user_agent",
+        "browser_fingerprint"
+      ],
+      "recipients": [
+        "yourinfo.ai",
+        "asset_hosts"
+      ],
+      "test_conditions": "connected_state_benchmark",
+      "reproducibility_notes": null
+    }
+  ],
+  "question_coverage": [
+    {
+      "question_id": "IDENTITY-001",
+      "question_text": "What identifiers are assigned to the user, app install, browser session, and device?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Browser/session signals captured via fingerprint and optional YourInfo probe.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "yourinfo_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "browserleaks_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IDENTITY-006",
+      "question_text": "Are there long-lived client identifiers transmitted during auth or app startup?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IDENTITY-009",
+      "question_text": "Is the browser fingerprinting surface strong enough to re-identify the same user across sessions?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Fingerprint and BrowserLeaks captures present for re-identification risk assessment.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "browserleaks_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-001",
+      "question_text": "What third parties are involved during signup?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-004",
+      "question_text": "Are analytics or marketing scripts loaded during signup or checkout?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-010",
+      "question_text": "Are these surfaces behind a CDN/WAF?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-001",
+      "question_text": "Where is the marketing site hosted (DNS/routing level)?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Apex DNS/NS data recorded for configured provider domains.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.provider_dns",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-004",
+      "question_text": "What CDN/WAF is used?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Response headers / CDN signatures captured in web probes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.web_probes",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-008",
+      "question_text": "Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Review web probe headers, redirects, and HAR for origin leaks.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-001",
+      "question_text": "Which DNS resolvers are used while connected?",
+      "category": "dns",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Resolver tiers observed (local + external).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-002",
+      "question_text": "Are DNS requests tunneled (consistent with VPN exit)?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "DNS-003",
+      "question_text": "Is there DNS fallback to ISP/router/public resolvers?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "DNS-004",
+      "question_text": "Does DNS leak during connect/disconnect/reconnect?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Connect/disconnect DNS not sampled; use --transition-tests when supported.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-009",
+      "question_text": "Are DoH or DoT endpoints used?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "DoH/DoT not isolated from resolver snapshot; inspect raw captures.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-011",
+      "question_text": "Are resolvers first-party or third-party?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "IP-001",
+      "question_text": "Is the real public IPv4 exposed while connected?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Exit IPv4 185.211.32.224; leak flags dns=False webrtc=False ipv6=False.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_v4",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IP-002",
+      "question_text": "Is the real public IPv6 exposed while connected?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "partially_answered",
+      "answer_summary": "No IPv6 exit or IPv6 not returned by endpoints.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IP-006",
+      "question_text": "Is the real IP exposed through WebRTC?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "WebRTC candidates captured; leak flag=False.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_leak_flag",
+          "note": null
+        }
+      ],
+      "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+    },
+    {
+      "question_id": "IP-007",
+      "question_text": "Is the local LAN IP exposed through WebRTC or browser APIs?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Inspect host candidates vs LAN; see webrtc_notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        }
+      ],
+      "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+    },
+    {
+      "question_id": "IP-014",
+      "question_text": "Do leak-check sites disagree about observed IP identity?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "All 3 echo endpoints agree on IPv4 185.211.32.224.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-002",
+      "question_text": "Which domains and IPs are contacted after the tunnel is up?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Post-harness service list captured.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-003",
+      "question_text": "Which control-plane endpoints are used for auth/config/session management?",
+      "category": "control_plane",
+      "testability": "DOCUMENT_RESEARCH",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "Auth/control-plane inventory requires internal docs or app instrumentation.",
+      "evidence_refs": [],
+      "notes": "DOCUMENT_RESEARCH"
+    },
+    {
+      "question_id": "CTRL-004",
+      "question_text": "Which telemetry endpoints are contacted during connection?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Infer from services_contacted and classified endpoints.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-009",
+      "question_text": "Is the control plane behind a CDN/WAF?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "CDN/WAF hints from web headers.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.web_probes",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-001",
+      "question_text": "What exit IP is assigned for each region?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Exit IPv4 185.211.32.224 for location us-california-san-jose-224.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_v4",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-002",
+      "question_text": "What ASN announces the exit IP?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "attribution",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-003",
+      "question_text": "What organization owns the IP range?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "attribution",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-004",
+      "question_text": "What reverse DNS exists for the exit node?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "PTR lookup errors: ptr_v4: The DNS query name does not exist: 224.32.211.185.in-addr.arpa.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "artifacts.exit_dns_json",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-005",
+      "question_text": "Does the observed geolocation match the advertised location?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Consistent: exit_geo.location_label matches vpn_location_label ('San Jose, California, United States').",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "extra.exit_geo",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "vpn_location_label",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-001",
+      "question_text": "What external JS files are loaded on the site?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-003",
+      "question_text": "What analytics providers are present?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-012",
+      "question_text": "What cookies are set by first-party and third-party scripts?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FP-001",
+      "question_text": "Does the site attempt browser fingerprinting?",
+      "category": "browser_tracking",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "answered",
+      "answer_summary": "Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FP-011",
+      "question_text": "Does WebRTC run on provider pages?",
+      "category": "browser_tracking",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "WebRTC exercised by harness on leak-test pages.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "TELEM-001",
+      "question_text": "Does the app talk to telemetry vendors?",
+      "category": "telemetry_app",
+      "testability": "INTERNAL_UNVERIFIABLE",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+      "evidence_refs": [],
+      "notes": "INTERNAL_UNVERIFIABLE"
+    },
+    {
+      "question_id": "TELEM-004",
+      "question_text": "Does the app send connection events to telemetry systems?",
+      "category": "telemetry_app",
+      "testability": "INTERNAL_UNVERIFIABLE",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+      "evidence_refs": [],
+      "notes": "INTERNAL_UNVERIFIABLE"
+    },
+    {
+      "question_id": "OS-001",
+      "question_text": "On macOS/Windows/Linux, do helper processes bypass the tunnel?",
+      "category": "os_specific",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "runner_env",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-001",
+      "question_text": "What leaks during initial connection?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-003",
+      "question_text": "What leaks during reconnect?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-004",
+      "question_text": "What leaks if the VPN app crashes?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "Crash/kill leak tests not run in this harness by default.",
+      "evidence_refs": [],
+      "notes": "DYNAMIC_PARTIAL"
+    },
+    {
+      "question_id": "LOG-001",
+      "question_text": "What is the provider likely able to log based on observed traffic?",
+      "category": "logging_retention",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Infer logging surface from observable endpoints and services_contacted.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "LOG-005",
+      "question_text": "Are there contradictions between observed traffic and no-logs marketing claims?",
+      "category": "logging_retention",
+      "testability": "DOCUMENT_RESEARCH",
+      "answer_status": "partially_answered",
+      "answer_summary": "Policy text captured; compare claims to observed traffic manually.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "policies",
+          "note": null
+        }
+      ],
+      "notes": null
+    }
+  ],
+  "risk_scores": {
+    "overall_severity": "LOW",
+    "leak_severity": "INFO",
+    "correlation_risk": "MEDIUM",
+    "third_party_exposure": "MEDIUM",
+    "notes": [
+      "Competitor web/portal probes executed.",
+      "Large services_contacted list."
+    ]
+  },
+  "observed_endpoints": [
+    {
+      "host": "api.ipify.org",
+      "classification": "third_party_analytics",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "api64.ipify.org",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "attribution",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "browserleaks.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "competitor_probe",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "dns",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "fingerprint",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "ipleak.net",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "ipwho.is",
+      "classification": "unknown",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "my.nordaccount.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "nordcheckout.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "policy",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "spf",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "support.nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "surface_probe",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "test-ipv6.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "transit",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "webrtc",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "www.nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "yourinfo.ai",
+      "classification": "unknown",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+
+#### Website & DNS surface (summary)
+
+
+| Metric | This location |
+|--------|---------------|
+| Unique request hosts | 10 |
+| Tracker candidates | 1 |
+| CDN candidates | 2 |
+
+
+**Provider DNS (apex)**
+
+| Domain | NS (sample) | MX (sample) | IPv6 apex |
+|--------|-------------|-------------|-----------|
+| `nordvpn.com` | lily.ns.cloudflare.com, seth.ns.cloudflare.com | 1 aspmx.l.google.com, 5 alt1.aspmx.l.google.com, 5 alt2.aspmx.l.google.com (+2 more) | no AAAA (IPv4-only apex) |
+
+
+
+
+**Surface URLs**
+
+| page_type | URL | status |
+|-----------|-----|--------|
+| home | https://www.nordvpn.com/ | 403 |
+| pricing | https://nordvpn.com/pricing/ | 403 |
+| signup | https://my.nordaccount.com/ | 200 |
+| checkout | https://nordcheckout.com/ | 403 |
+| support | https://support.nordvpn.com/ | 200 |
+
+
+
+
+
+#### Automated website-exposure methodology & PCAP
+
+
+**Desk automation note:** Desk automation of website-exposure methodology (Phases 1–9). Do not conflate with client resolver / DNS-leak observations (O); see docs/research-questions-and-evidence.md.
+
+| Third-party inventory rows | Phase-8 domains with deep audit |
+|---------------------------|--------------------------------|
+| 22 | 1 |
+
+**Inventory (sample)**
+
+| Company (hypothesis) | Role | How discovered |
+|---------------------|------|----------------|
+| www.googletagmanager.com | website_script_or_beacon | har_tracker_hint |
+| s1.nordcdn.com | cdn_or_edge | har_cdn_hint |
+| sb.nordcdn.com | cdn_or_edge | har_cdn_hint |
+| Google | email_mx_inferred | apex_mx |
+| Cloudflare | dns_authority_inferred | ns |
+| Google | domain_verification_txt | txt |
+| DKIM:google | email_signing_inferred | dkim_txt |
+| DKIM:zendesk1 | email_signing_inferred | dkim_txt |
+| DKIM:zendesk2 | email_signing_inferred | dkim_txt |
+| DKIM:default | email_signing_inferred | dkim_txt |
+| DKIM:s1 | email_signing_inferred | dkim_txt |
+| DKIM:s2 | email_signing_inferred | dkim_txt |
+| DKIM:k1 | email_signing_inferred | dkim_txt |
+| DKIM:selector1 | email_signing_inferred | dkim_txt |
+| DKIM:selector2 | email_signing_inferred | dkim_txt |
+| DKIM:smtp | email_signing_inferred | dkim_txt |
+| DKIM:mail | email_signing_inferred | dkim_txt |
+| SparkPost/Bird | transactional_email_inferred | cname |
+| Zendesk | support_platform_inferred | cname |
+| Google | spf_email_sender_inferred | spf_include |
+| Zendesk | spf_email_sender_inferred | spf_include |
+| (provider first-party) | marketing_and_app_surface | config_urls |
+
+
+
+**Methodology limits:** *Does_not_replace_human_narrative_for_executive_disclosure*; *Cloudflare_or_bot_WAF_may_distort_HAR_coverage*
+
+
+
+
+
+**PCAP-derived metadata** (no Wireshark; see `pcap_derived` in JSON)
+
+| Unique flows (estimate) | Packets (total) |
+|-------------------------|-----------------|
+| 1037 | 122250 |
+
+
+**TLS SNI (sample):** `api2.cursor.sh`, `mobile.events.data.microsoft.com`
+
+
+**Cleartext DNS names (UDP/53 sample):** `7fc280bc.datadoghq.com`, `accounts.google.com`, `ad.doubleclick.net`, `analytics.google.com`, `api.github.com`, `api2.cursor.sh`, `api3.cursor.sh`, `app-na2.hubspot.com`, `applepay.cdn-apple.com`, `auth.nordaccount.com`, `b._dns-sd._udp.0.0.5.10.in-addr.arpa`, `browser-intake-us5-datadoghq.com`, `challenges.cloudflare.com`, `chat.google.com`, `clients4.google.com`, `clientservices.googleapis.com`, `cm.nordvpn.com`, `collector.github.com`, `content-autofill.googleapis.com`, `d.nordaccount.com`, `d.nordvpn.com`, `db._dns-sd._udp.0.0.5.10.in-addr.arpa`, `debug.nordsec.com`, `debug.nordvpn.com`, `docs.google.com`, `easylist-downloads.adblockplus.org`, `encrypted-tbn0.gstatic.com`, `google.com`, `googleads.g.doubleclick.net`, `ic.nordcdn.com`, `iframe-card.nordpayments.com`, `lb._dns-sd._udp.0.0.5.10.in-addr.arpa`, `lh3.googleusercontent.com`, `mail.google.com`, `nordaccount.com`, `nordvpn.com`, `oauthaccountmanager.googleapis.com`, `ogads-pa.clients6.google.com`, `ogs.google.com`, `optimizationguide-pa.googleapis.com`, `order.nordvpn.com`, `passwordsleakcheck-pa.googleapis.com`, `play.google.com`, `s1.nordaccount.com`, `s1.nordcdn.com`, `signaler-pa.youtube.com`, `ssl.gstatic.com`, `stats.g.doubleclick.net`
+
+
+**PCAP interpretation limits:** *ECH_ESNI_not_visible*; *DoH_not_inferred_from_udp_53*; *tcp_segmentation_may_fragment_clienthello*; *inner_vpn_payload_may_be_opaque*; *flows_sample_kept_top_512*
+
+
+
+
+**Capture finalize:** session_id=b83934130e78
+
+
+#### Competitor surface (provider YAML probes)
+
+
+```json
+{
+  "provider_dns": {
+    "domains": {
+      "nordvpn.com": {
+        "ns": [
+          "lily.ns.cloudflare.com",
+          "seth.ns.cloudflare.com"
+        ],
+        "a": [
+          "104.16.208.203",
+          "104.19.159.190"
+        ],
+        "aaaa": [],
+        "error": null,
+        "txt": [
+          "MS=ms60989570",
+          "MS=ms69824556",
+          "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+          "oneuptime=2fYJpBXRQsmY3Py",
+          "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+          "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+          "MS=ms41624661"
+        ],
+        "mx": [
+          "1 aspmx.l.google.com",
+          "5 alt1.aspmx.l.google.com",
+          "5 alt2.aspmx.l.google.com",
+          "10 alt3.aspmx.l.google.com",
+          "10 alt4.aspmx.l.google.com"
+        ],
+        "caa": [],
+        "rr_errors": {
+          "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+        }
+      }
+    },
+    "ns_hosts": {
+      "lily.ns.cloudflare.com": {
+        "a": [
+          "108.162.192.130",
+          "172.64.32.130",
+          "173.245.58.130"
+        ],
+        "aaaa": [
+          "2606:4700:50::adf5:3a82",
+          "2803:f800:50::6ca2:c082",
+          "2a06:98c1:50::ac40:2082"
+        ],
+        "ip_attribution": {
+          "108.162.192.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (108.162.192.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "108.162.192.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083455-9caa6229-43c3-45d0-a1c1-6d8c2d14df07",
+                    "process_time": 45,
+                    "server_id": "app162",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:34:55.770554",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "108.162.192.0/20"
+                      ],
+                      "resource": "108.162.192.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "108.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                  "parts": [
+                    "13335",
+                    "108.162.192.0/20",
+                    "US",
+                    "arin",
+                    "2011-10-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "data": [
+                    {
+                      "id": 4224,
+                      "org_id": 4715,
+                      "name": "Cloudflare",
+                      "aka": "",
+                      "name_long": "",
+                      "website": "https://www.cloudflare.com",
+                      "social_media": [
+                        {
+                          "service": "website",
+                          "identifier": "https://www.cloudflare.com"
+                        }
+                      ],
+                      "asn": 13335,
+                      "looking_glass": "",
+                      "route_server": "",
+                      "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                      "info_type": "Content",
+                      "info_types": [
+                        "Content"
+                      ],
+                      "info_prefixes4": 80000,
+                      "info_prefixes6": 30000,
+                      "info_traffic": "",
+                      "info_ratio": "Mostly Outbound",
+                      "info_scope": "Global",
+                      "info_unicast": true,
+                      "info_multicast": false,
+                      "info_ipv6": true,
+                      "info_never_via_route_servers": false,
+                      "ix_count": 352,
+                      "fac_count": 222,
+                      "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                      "netixlan_updated": "2026-04-29T17:03:32Z",
+                      "netfac_updated": "2026-04-01T18:35:35Z",
+                      "poc_updated": "2025-12-04T21:15:09Z",
+                      "policy_url": "https://www.cloudflare.com/peering-policy/",
+                      "policy_general": "Open",
+                      "policy_locations": "Preferred",
+                      "policy_ratio": false,
+                      "policy_contracts": "Not Required",
+                      "allow_ixp_update": false,
+                      "status_dashboard": "https://www.cloudflarestatus.com/",
+                      "rir_status": "ok",
+                      "rir_status_updated": "2024-06-26T04:47:55Z",
+                      "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                      "created": "2011-09-06T19:40:05Z",
+                      "updated": "2026-04-29T17:00:30Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {}
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "172.64.32.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (172.64.32.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "172.64.32.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083457-23f017ac-3b12-4d23-90e0-bf345351cd76",
+                    "process_time": 73,
+                    "server_id": "app163",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:34:57.548794",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "172.64.32.0/20"
+                      ],
+                      "resource": "172.64.32.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "172.0.0.0/8",
+                        "desc": "Administered by ARIN",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 172.64.32.0/20 | US | arin | 2015-02-25",
+                  "parts": [
+                    "13335",
+                    "172.64.32.0/20",
+                    "US",
+                    "arin",
+                    "2015-02-25"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "data": [
+                    {
+                      "id": 4224,
+                      "org_id": 4715,
+                      "name": "Cloudflare",
+                      "aka": "",
+                      "name_long": "",
+                      "website": "https://www.cloudflare.com",
+                      "social_media": [
+                        {
+                          "service": "website",
+                          "identifier": "https://www.cloudflare.com"
+                        }
+                      ],
+                      "asn": 13335,
+                      "looking_glass": "",
+                      "route_server": "",
+                      "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                      "info_type": "Content",
+                      "info_types": [
+                        "Content"
+                      ],
+                      "info_prefixes4": 80000,
+                      "info_prefixes6": 30000,
+                      "info_traffic": "",
+                      "info_ratio": "Mostly Outbound",
+                      "info_scope": "Global",
+                      "info_unicast": true,
+                      "info_multicast": false,
+                      "info_ipv6": true,
+                      "info_never_via_route_servers": false,
+                      "ix_count": 352,
+                      "fac_count": 222,
+                      "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                      "netixlan_updated": "2026-04-29T17:03:32Z",
+                      "netfac_updated": "2026-04-01T18:35:35Z",
+                      "poc_updated": "2025-12-04T21:15:09Z",
+                      "policy_url": "https://www.cloudflare.com/peering-policy/",
+                      "policy_general": "Open",
+                      "policy_locations": "Preferred",
+                      "policy_ratio": false,
+                      "policy_contracts": "Not Required",
+                      "allow_ixp_update": false,
+                      "status_dashboard": "https://www.cloudflarestatus.com/",
+                      "rir_status": "ok",
+                      "rir_status_updated": "2024-06-26T04:47:55Z",
+                      "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                      "created": "2011-09-06T19:40:05Z",
+                      "updated": "2026-04-29T17:00:30Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {}
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "173.245.58.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (173.245.58.0/24)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083459-229d8413-dbec-4313-aea0-d484eb178a60",
+                    "process_time": 59,
+                    "server_id": "app198",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:34:59.277429",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "173.245.58.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "173.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 173.245.58.0/24 | US | arin | 2010-12-28",
+                  "parts": [
+                    "13335",
+                    "173.245.58.0/24",
+                    "US",
+                    "arin",
+                    "2010-12-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "2606:4700:50::adf5:3a82": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "2606:4700::/36"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083500-08396151-2d88-4d5d-8e32-d58ac5ebb524",
+                    "process_time": 59,
+                    "server_id": "app199",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:00.763712",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "2606:4700::/36"
+                      ],
+                      "resource": "2606:4700:50::/44",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2600::/12",
+                        "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2803:f800:50::6ca2:c082": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083501-477408fb-61ae-454e-af6c-c475ff1e4c39",
+                    "process_time": 59,
+                    "server_id": "app198",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:02.011715",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2803:f800:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2800::/12",
+                        "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2a06:98c1:50::ac40:2082": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083503-948be1f3-993b-4015-a5ed-70d8d52d74a0",
+                    "process_time": 76,
+                    "server_id": "app193",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:03.304352",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2a06:98c1:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2a00::/12",
+                        "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          }
+        },
+        "error": null
+      },
+      "seth.ns.cloudflare.com": {
+        "a": [
+          "108.162.193.142",
+          "172.64.33.142",
+          "173.245.59.142"
+        ],
+        "aaaa": [
+          "2606:4700:58::adf5:3b8e",
+          "2803:f800:50::6ca2:c18e",
+          "2a06:98c1:50::ac40:218e"
+        ],
+        "ip_attribution": {
+          "108.162.193.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (108.162.193.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "108.162.192.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083504-0197d819-a7eb-4b56-b968-aefcb775bbb8",
+                    "process_time": 45,
+                    "server_id": "app181",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:04.622059",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "108.162.192.0/20"
+                      ],
+                      "resource": "108.162.193.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "108.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                  "parts": [
+                    "13335",
+                    "108.162.192.0/20",
+                    "US",
+                    "arin",
+                    "2011-10-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "172.64.33.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (172.64.33.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "172.64.32.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083506-8dd48e09-fe01-4e95-9f44-59b2faa36733",
+                    "process_time": 59,
+                    "server_id": "app176",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:06.258300",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "172.64.32.0/20"
+                      ],
+                      "resource": "172.64.33.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "172.0.0.0/8",
+                        "desc": "Administered by ARIN",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 172.64.33.0/24 | US | arin | 2015-02-25",
+                  "parts": [
+                    "13335",
+                    "172.64.33.0/24",
+                    "US",
+                    "arin",
+                    "2015-02-25"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "173.245.59.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (173.245.59.0/24)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083507-3b6ad160-1f3f-4f5f-8938-e1a5f334a2dd",
+                    "process_time": 47,
+                    "server_id": "app189",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:07.648192",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "173.245.59.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "173.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 173.245.59.0/24 | US | arin | 2010-12-28",
+                  "parts": [
+                    "13335",
+                    "173.245.59.0/24",
+                    "US",
+                    "arin",
+                    "2010-12-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "2606:4700:58::adf5:3b8e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "2606:4700::/36"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083508-bb461e6c-0e86-4a1a-ba44-9261c45ced5a",
+                    "process_time": 43,
+                    "server_id": "app180",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:09.013246",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "2606:4700::/36"
+                      ],
+                      "resource": "2606:4700:50::/44",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2600::/12",
+                        "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2803:f800:50::6ca2:c18e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501083510-95fe0741-5b88-4537-8bf8-214d6d777c3b",
+                    "process_time": 45,
+                    "server_id": "app190",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:10.385087",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2803:f800:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2800::/12",
+                        "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2a06:98c1:50::ac40:218e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": true,
+                    "query_id": "20260501083511-ea82eb4e-0eb1-4c59-94fe-98bd41cea770",
+                    "process_time": 2,
+                    "server_id": "app193",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:35:11.600249",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2a06:98c1:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2a00::/12",
+                        "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          }
+        },
+        "error": null
+      }
+    }
+  },
+  "web_probes": [
+    {
+      "url": "https://nordvpn.com/",
+      "error": null,
+      "status": 403,
+      "final_url": "https://nordvpn.com/",
+      "cdn_headers": {
+        "cf-ray": "9f4d75c75da67aca-SJC",
+        "server": "cloudflare"
+      },
+      "scripts": [
+        "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75c75da67aca"
+      ],
+      "images": [],
+      "captcha_third_party": false,
+      "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe/har/d945f098fbd5bb50.har"
+    }
+  ],
+  "har_summary": {
+    "har_files": [
+      {
+        "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe/har/d945f098fbd5bb50.har",
+        "entry_count": 3,
+        "unique_hosts": [
+          "nordvpn.com"
+        ],
+        "unique_schemes": [
+          "https"
+        ],
+        "tracker_candidates": [],
+        "cdn_candidates": [],
+        "error": null
+      }
+    ],
+    "merged_unique_hosts": [
+      "nordvpn.com"
+    ],
+    "merged_tracker_candidates": [],
+    "merged_cdn_candidates": []
+  },
+  "portal_probes": [
+    {
+      "host": "my.nordaccount.com",
+      "a": [
+        "104.18.42.225",
+        "172.64.145.31"
+      ],
+      "aaaa": [
+        "2a06:98c1:3101::6812:2ae1",
+        "2a06:98c1:3107::ac40:911f"
+      ],
+      "https_status": 200,
+      "https_cdn_headers": {
+        "cf-ray": "9f4d75c908ac4705-SJC",
+        "server": "cloudflare"
+      },
+      "error": null
+    }
+  ],
+  "transit": {
+    "target": "185.211.32.224",
+    "command": [
+      "traceroute",
+      "-n",
+      "-m",
+      "15",
+      "-w",
+      "2",
+      "185.211.32.224"
+    ],
+    "stdout": " 1  * * *\n 2  * * *\n 3  * * *\n 4  * * *\n 5  * * *\n 6  * * *\n 7  * * *\n 8  * * *\n 9  * * *\n10  * * *\n11  * * *\n12  * * *\n13  * * *\n14  * * *\n15  * * *\n",
+    "stderr": "traceroute to 185.211.32.224 (185.211.32.224), 15 hops max, 40 byte packets\n",
+    "hops": [],
+    "returncode": 0
+  },
+  "stray_json": [],
+  "errors": []
+}
+```
+
+
+
+#### Extra
+
+```json
+{
+  "exit_geo": {
+    "source": "ipwho.is",
+    "ip": "185.211.32.224",
+    "country_code": "US",
+    "region": "California",
+    "city": "San Jose",
+    "connection": {
+      "asn": 212238,
+      "org": "Packethub S.A.",
+      "isp": "Datacamp Limited",
+      "domain": "packethub.net"
+    },
+    "location_id": "us-california-san-jose-224",
+    "location_label": "San Jose, California, United States"
+  },
+  "surface_probe": {
+    "probes": [
+      {
+        "url": "https://www.nordvpn.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d75cd3b72405d-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75cd3b72405d"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5e0529734c192de1.har",
+        "page_type": "home"
+      },
+      {
+        "url": "https://nordvpn.com/pricing/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/pricing/",
+        "cdn_headers": {
+          "cf-ray": "9f4d75ce6f124c7c-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75ce6f124c7c"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/3cec43152ba057c5.har",
+        "page_type": "pricing"
+      },
+      {
+        "url": "https://my.nordaccount.com/",
+        "error": null,
+        "status": 200,
+        "final_url": "https://my.nordaccount.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d75cfd98c4b96-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://my.nordaccount.com/assets/runtime.c392954944a8670a35e1.js",
+          "https://my.nordaccount.com/assets/_formatjs.defaultvendors.3392aa991e49cee93825.js",
+          "https://my.nordaccount.com/assets/regenerator-runtime.defaultvendors.51d6a9d25a2ced4bdb8d.js",
+          "https://my.nordaccount.com/assets/promise-polyfill.defaultvendors.0c84317ed01865b3a6b7.js",
+          "https://my.nordaccount.com/assets/index.0a207e294320c8f97477.js",
+          "https://my.nordaccount.com/assets/_nordsec.defaultvendors.572e2f3be6ffe304f907.chunk.js",
+          "https://my.nordaccount.com/assets/date-fns.defaultvendors.592977043c7d4561d202.chunk.js",
+          "https://my.nordaccount.com/assets/_nord.defaultvendors.d152b9e1023813f041a0.chunk.js",
+          "https://my.nordaccount.com/assets/_sentry.defaultvendors.cb843f853a70d0457cf7.chunk.js",
+          "https://my.nordaccount.com/assets/_sentry-internal.defaultvendors.034bb8b1a0fa856b19d5.chunk.js",
+          "https://my.nordaccount.com/assets/graphql.defaultvendors.2db91e2e25496ff503bb.chunk.js",
+          "https://my.nordaccount.com/assets/react-intl.defaultvendors.7dee90d1f00605a61702.chunk.js",
+          "https://my.nordaccount.com/assets/graphql-request.defaultvendors.443f485a7486fe535145.chunk.js",
+          "https://my.nordaccount.com/assets/_reduxjs.defaultvendors.cf22344d94cd257e0ad1.chunk.js",
+          "https://my.nordaccount.com/assets/react-transition-group.defaultvendors.dd1544ee5d0353a1c51c.chunk.js",
+          "https://my.nordaccount.com/assets/uuid.defaultvendors.eead893baec50d1e9c23.chunk.js",
+          "https://my.nordaccount.com/assets/_babel.defaultvendors.a1d59fe84220e0220774.chunk.js",
+          "https://my.nordaccount.com/assets/react.defaultvendors.78aad35d08a5b3d4089d.chunk.js",
+          "https://my.nordaccount.com/assets/react-dom.defaultvendors.995c811c86640d85b25b.chunk.js",
+          "https://my.nordaccount.com/assets/intl-messageformat.defaultvendors.7b440f2a12314e045ce0.chunk.js",
+          "https://my.nordaccount.com/assets/prop-types.defaultvendors.35bd4599905121b4452f.chunk.js",
+          "https://my.nordaccount.com/assets/react-toastify.defaultvendors.5cabe679c5d3067cb6ec.chunk.js",
+          "https://my.nordaccount.com/assets/dom-helpers.defaultvendors.6e73bc321922b4f6a074.chunk.js",
+          "https://my.nordaccount.com/assets/use-sync-external-store.defaultvendors.ed9ee8ffe42909d13b1a.chunk.js",
+          "https://my.nordaccount.com/assets/scheduler.defaultvendors.38f1999b87de9d343cd9.chunk.js",
+          "https://my.nordaccount.com/assets/react-inlinesvg.defaultvendors.9660e72138e0765193b0.chunk.js",
+          "https://my.nordaccount.com/assets/react-from-dom.defaultvendors.ce5a33ecaecdd67f6892.chunk.js",
+          "https://my.nordaccount.com/assets/react-redux.defaultvendors.d25fa91400ca42cc077f.chunk.js",
+          "https://my.nordaccount.com/assets/js-cookie.defaultvendors.002fb3f4fa5e9d95333e.chunk.js",
+          "https://my.nordaccount.com/assets/immer.defaultvendors.f09e5118b557d6cdcdb0.chunk.js",
+          "https://my.nordaccount.com/assets/clsx.defaultvendors.1faa6083987170b4864e.chunk.js",
+          "https://my.nordaccount.com/assets/_standard-schema.defaultvendors.7e58377df74678c66197.chunk.js",
+          "https://my.nordaccount.com/assets/classnames.defaultvendors.8bc90ba6e8b07a8e8fdd.chunk.js",
+          "https://my.nordaccount.com/assets/react-side-effect.defaultvendors.9c3f593d125d4faecd0c.chunk.js",
+          "https://my.nordaccount.com/assets/react-router.defaultvendors.2d8e01f4a19789f330cc.chunk.js",
+          "https://my.nordaccount.com/assets/react-router-dom.defaultvendors.c5cd25bb13582d235275.chunk.js",
+          "https://my.nordaccount.com/assets/react-intersection-observer.defaultvendors.e59fbfabd9c2e27a0b4f.chunk.js",
+          "https://my.nordaccount.com/assets/react-helmet.defaultvendors.e672b2f66b3b7791a6ca.chunk.js",
+          "https://my.nordaccount.com/assets/react-fast-compare.defaultvendors.f8ff413dc4d3d3df402f.chunk.js",
+          "https://my.nordaccount.com/assets/react-content-loader.defaultvendors.81dc6c8ab0aa44f988b4.chunk.js",
+          "https://my.nordaccount.com/assets/object-assign.defaultvendors.de37ca6a3967ba95f8af.chunk.js",
+          "https://my.nordaccount.com/assets/lodash.isequal.defaultvendors.d7e8a9adee14363904ac.chunk.js",
+          "https://my.nordaccount.com/assets/humps.defaultvendors.167737137fffcf45e86d.chunk.js",
+          "https://my.nordaccount.com/assets/filter-obj.defaultvendors.b61346464b8b6744fe2d.chunk.js",
+          "https://my.nordaccount.com/assets/file-saver.defaultvendors.625061e1f589bdd1fe21.chunk.js",
+          "https://my.nordaccount.com/assets/exenv.defaultvendors.1b7ed5150cf28a7b2477.chunk.js",
+          "https://my.nordaccount.com/assets/decode-uri-component.defaultvendors.e5a971eb831f6f752650.chunk.js",
+          "https://my.nordaccount.com/assets/cross-fetch.defaultvendors.68e7cd14aa67eafb4cb6.chunk.js",
+          "https://my.nordaccount.com/assets/strict-uri-encode.defaultvendors.a5dacf95bccb8a807452.chunk.js",
+          "https://my.nordaccount.com/assets/split-on-first.defaultvendors.8d1e4c5402299b8ba208.chunk.js",
+          "https://my.nordaccount.com/assets/query-string.defaultvendors.87128a48e251ff40f71f.chunk.js",
+          "https://my.nordaccount.com/assets/_remix-run.defaultvendors.a8dbbdf30892d10b61af.chunk.js",
+          "https://my.nordaccount.com/assets/4666.3d565fb961595aa6fb72.chunk.js"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/0096221d6f12d382.har",
+        "page_type": "signup"
+      },
+      {
+        "url": "https://nordcheckout.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/pricing?redirected_from=nordcheckout.com%2F",
+        "cdn_headers": {
+          "cf-ray": "9f4d75d6fe973117-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75d6fe973117"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5c4416295d131e0b.har",
+        "page_type": "checkout"
+      },
+      {
+        "url": "https://support.nordvpn.com/",
+        "error": null,
+        "status": 200,
+        "final_url": "https://support.nordvpn.com/hc/en-us",
+        "cdn_headers": {
+          "cf-ray": "9f4d75db0d35ad44-SJC",
+          "via": "zorg",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://www.googletagmanager.com/gtm.js?id=GTM-WX5CH8",
+          "https://s1.nordcdn.com/d/consent/prod/init.js?isGdpr=true",
+          "https://s1.nordcdn.com/d/nordvpn/prod/index.js?cu=https://d.nordvpn.com/1/cc&p=nordvpn&sni=1",
+          "https://www.googletagmanager.com/gtag/js?id=G-LEXMJ1N516",
+          "https://support.nordvpn.com/hc/en-us",
+          "https://support.nordvpn.com/hc/theming_assets/01KM5FCEA8DSAWC4R1R69CE38Q",
+          "https://s1.nordcdn.com/d/consent/prod/main.js",
+          "https://s1.nordcdn.com/nordvpn/3.816.0/js/unsupported-fallback.min.js",
+          "https://support.nordvpn.com/hc/theming_assets/01K8QJJ1GZQYMV2VYPKWCY7KC7",
+          "https://support.nordvpn.com/hc/theming_assets/01KHNYSGHVJ2VS6PMDB39EB2SB",
+          "https://static.zdassets.com/hc/assets/en-us.a8c200c80dbfa8b39d39.js",
+          "https://static.zdassets.com/hc/assets/hc_enduser-d9740dff469f88fb0ddbf825653eb95c.js",
+          "https://support.nordvpn.com/hc/theming_assets/757086/445532/script.js?digest=45872676122001"
+        ],
+        "images": [
+          "https://sb.nordcdn.com/m/83d4a4bd1d9eb5e5/original/woman-box-nord-vpn-md-svg.svg",
+          "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/app-store.svg",
+          "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/google-play.svg",
+          "https://sb.nordcdn.com/m/2a99ab6c9cf051ac/original/credit-cards.svg"
+        ],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/23c88e21719d1a9b.har",
+        "page_type": "support"
+      }
+    ],
+    "surface_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe",
+    "har_summary": {
+      "har_files": [
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5e0529734c192de1.har",
+          "entry_count": 5,
+          "unique_hosts": [
+            "nordvpn.com",
+            "www.nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/3cec43152ba057c5.har",
+          "entry_count": 3,
+          "unique_hosts": [
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/0096221d6f12d382.har",
+          "entry_count": 57,
+          "unique_hosts": [
+            "my.nordaccount.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5c4416295d131e0b.har",
+          "entry_count": 5,
+          "unique_hosts": [
+            "nordcheckout.com",
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/23c88e21719d1a9b.har",
+          "entry_count": 30,
+          "unique_hosts": [
+            "d.nordvpn.com",
+            "s1.nordcdn.com",
+            "sb.nordcdn.com",
+            "static.zdassets.com",
+            "support.nordvpn.com",
+            "www.googletagmanager.com"
+          ],
+          "unique_schemes": [
+            "blob",
+            "https"
+          ],
+          "tracker_candidates": [
+            "www.googletagmanager.com"
+          ],
+          "cdn_candidates": [
+            "s1.nordcdn.com",
+            "sb.nordcdn.com"
+          ],
+          "error": null
+        }
+      ],
+      "merged_unique_hosts": [
+        "d.nordvpn.com",
+        "my.nordaccount.com",
+        "nordcheckout.com",
+        "nordvpn.com",
+        "s1.nordcdn.com",
+        "sb.nordcdn.com",
+        "static.zdassets.com",
+        "support.nordvpn.com",
+        "www.googletagmanager.com",
+        "www.nordvpn.com"
+      ],
+      "merged_tracker_candidates": [
+        "www.googletagmanager.com"
+      ],
+      "merged_cdn_candidates": [
+        "s1.nordcdn.com",
+        "sb.nordcdn.com"
+      ]
+    }
+  }
+}
+```
+
+#### Complete normalized record (verbatim)
+
+Same content as `normalized.json` for this location; only a ~2 MiB safety cap can shorten this fenced block.
+
+```json
+{
+  "schema_version": "1.4",
+  "run_id": "nordvpn-20260501T083320Z-1aceb65e",
+  "timestamp_utc": "2026-05-01T08:37:11.986157+00:00",
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": "manual_gui",
+    "vpn_client": null
+  },
+  "vpn_provider": "nordvpn",
+  "vpn_location_id": "us-california-san-jose-224",
+  "vpn_location_label": "San Jose, California, United States",
+  "connection_mode": "manual_gui",
+  "exit_ip_v4": "185.211.32.224",
+  "exit_ip_v6": null,
+  "exit_ip_sources": [
+    {
+      "url": "https://api.ipify.org",
+      "ipv4": "185.211.32.224",
+      "ipv6": null,
+      "raw_excerpt": "185.211.32.224",
+      "error": null
+    },
+    {
+      "url": "https://api64.ipify.org",
+      "ipv4": "185.211.32.224",
+      "ipv6": null,
+      "raw_excerpt": "185.211.32.224",
+      "error": null
+    },
+    {
+      "url": "https://api.ipify.org?format=json",
+      "ipv4": "185.211.32.224",
+      "ipv6": null,
+      "raw_excerpt": "{\"ip\":\"185.211.32.224\"}",
+      "error": null
+    }
+  ],
+  "dns_servers_observed": [
+    {
+      "tier": "local",
+      "detail": "resolv.conf nameserver lines (Unix)",
+      "servers": [
+        "100.64.0.2"
+      ]
+    },
+    {
+      "tier": "local",
+      "detail": "getaddrinfo('whoami.akamai.net')",
+      "servers": [
+        "185.211.32.224"
+      ]
+    },
+    {
+      "tier": "external",
+      "detail": "ipleak_dns",
+      "servers": [
+        "185.211.32.224"
+      ]
+    }
+  ],
+  "dns_leak_flag": false,
+  "dns_leak_notes": "Heuristic: no obvious public resolver IPs parsed from external page",
+  "webrtc_candidates": [
+    {
+      "candidate_type": "host",
+      "protocol": "udp",
+      "address": "2246e8f0-e496-4f41-93d8-965b8d404c7e.local",
+      "port": 58835,
+      "raw": "candidate:2280904095 1 udp 2113937151 2246e8f0-e496-4f41-93d8-965b8d404c7e.local 58835 typ host generation 0 ufrag 7QR4 network-cost 999"
+    },
+    {
+      "candidate_type": "srflx",
+      "protocol": "udp",
+      "address": "185.211.32.224",
+      "port": 4083,
+      "raw": "candidate:2457007007 1 udp 1677729535 185.211.32.224 4083 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag 7QR4 network-cost 999"
+    }
+  ],
+  "webrtc_leak_flag": false,
+  "webrtc_notes": "Exit IP appears in candidate set (expected for tunneled public)",
+  "ipv6_status": "unsupported_or_no_ipv6",
+  "ipv6_leak_flag": false,
+  "ipv6_notes": "No IPv6 observed via curl or IP endpoints",
+  "fingerprint_snapshot": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+    "language": "en-US",
+    "hardwareConcurrency": 16,
+    "platform": "MacIntel"
+  },
+  "attribution": {
+    "asn": 212238,
+    "holder": "CDNEXT Datacamp Limited",
+    "country": null,
+    "confidence": 0.7,
+    "confidence_notes": "ASNs seen: [212238]",
+    "supporting_sources": [
+      {
+        "name": "ripestat",
+        "asn": 212238,
+        "holder": "CDNEXT Datacamp Limited",
+        "country": null,
+        "raw": {
+          "prefix_overview": {
+            "messages": [
+              [
+                "warning",
+                "Given resource is not announced but result has been aligned to first-level less-specific (185.211.32.0/24)."
+              ]
+            ],
+            "see_also": [],
+            "version": "1.3",
+            "data_call_name": "prefix-overview",
+            "data_call_status": "supported",
+            "cached": false,
+            "query_id": "20260501083340-a4ceb4de-35c9-496b-bca0-b5d8f1b696d8",
+            "process_time": 64,
+            "server_id": "app198",
+            "build_version": "v0.9.15-2026.04.30",
+            "pipeline": "1248748",
+            "status": "ok",
+            "status_code": 200,
+            "time": "2026-05-01T08:33:40.839435",
+            "data": {
+              "is_less_specific": true,
+              "announced": true,
+              "asns": [
+                {
+                  "asn": 212238,
+                  "holder": "CDNEXT Datacamp Limited"
+                }
+              ],
+              "related_prefixes": [],
+              "resource": "185.211.32.0/24",
+              "type": "prefix",
+              "block": {
+                "resource": "185.0.0.0/8",
+                "desc": "RIPE NCC (Status: ALLOCATED)",
+                "name": "IANA IPv4 Address Space Registry"
+              },
+              "actual_num_related": 0,
+              "query_time": "2026-05-01T00:00:00",
+              "num_filtered_out": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "team_cymru",
+        "asn": 212238,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "asn": 212238,
+          "raw_line": "212238 | 185.211.32.0/24 | DE | ripencc | 2017-06-30",
+          "parts": [
+            "212238",
+            "185.211.32.0/24",
+            "DE",
+            "ripencc",
+            "2017-06-30"
+          ],
+          "disclaimer": [
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        }
+      },
+      {
+        "name": "peeringdb",
+        "asn": null,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "error": "Client error '404 Not Found' for url 'https://www.peeringdb.com/api/net?asn=212238'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+        }
+      }
+    ],
+    "disclaimers": [
+      "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+    ]
+  },
+  "policies": [
+    {
+      "role": "vpn",
+      "url": "https://nordvpn.com/privacy-policy/",
+      "fetched_at_utc": "2026-05-01T08:34:22.451002+00:00",
+      "sha256": "4ce87e9975cdbe1fd22009407f255c78369629bf549512ed609c84c13c469e40",
+      "summary_bullets": [
+        "Mentions logging (keyword hit; review source)"
+      ]
+    },
+    {
+      "role": "vpn",
+      "url": "https://my.nordaccount.com/legal/privacy-policy/",
+      "fetched_at_utc": "2026-05-01T08:34:25.741323+00:00",
+      "sha256": "83733551c405d0f3d7fc47feed294af38f94c7298ddd1a1d2cca31ed29df770d",
+      "summary_bullets": [
+        "Mentions retention (keyword hit; review source)",
+        "Mentions logging (keyword hit; review source)",
+        "Mentions law enforcement (keyword hit; review source)",
+        "Mentions third parties (keyword hit; review source)",
+        "Mentions telemetry (keyword hit; review source)"
+      ]
+    }
+  ],
+  "services_contacted": [
+    "attribution:methodology:104.16.155.111",
+    "attribution:methodology:104.16.156.111",
+    "attribution:methodology:104.16.208.203",
+    "attribution:methodology:104.17.160.135",
+    "attribution:methodology:104.17.223.153",
+    "attribution:methodology:104.18.42.225",
+    "attribution:methodology:104.19.159.190",
+    "attribution:methodology:142.251.214.40",
+    "attribution:methodology:172.64.145.31",
+    "attribution:methodology:216.198.53.11",
+    "attribution:methodology:216.198.53.3",
+    "attribution:methodology:216.198.54.11",
+    "attribution:methodology:216.198.54.3",
+    "attribution:methodology:2606:4700::6810:9b6f",
+    "attribution:methodology:2606:4700::6810:9c6f",
+    "attribution:methodology:2607:f8b0:4005:803::2008",
+    "attribution:methodology:2a06:98c1:3101::6812:2ae1",
+    "attribution:methodology:2a06:98c1:3107::ac40:911f",
+    "attribution:ns_glue:108.162.192.130",
+    "attribution:ns_glue:108.162.193.142",
+    "attribution:ns_glue:172.64.32.130",
+    "attribution:ns_glue:172.64.33.142",
+    "attribution:ns_glue:173.245.58.130",
+    "attribution:ns_glue:173.245.59.142",
+    "attribution:ns_glue:2606:4700:50::adf5:3a82",
+    "attribution:ns_glue:2606:4700:58::adf5:3b8e",
+    "attribution:ns_glue:2803:f800:50::6ca2:c082",
+    "attribution:ns_glue:2803:f800:50::6ca2:c18e",
+    "attribution:ns_glue:2a06:98c1:50::ac40:2082",
+    "attribution:ns_glue:2a06:98c1:50::ac40:218e",
+    "browserleaks.com:playwright_chromium",
+    "competitor_probe:enabled",
+    "competitor_probe:har_summary",
+    "dns:cname_scan:api.nordvpn.com",
+    "dns:cname_scan:autodiscover.nordvpn.com",
+    "dns:cname_scan:blog.nordvpn.com",
+    "dns:cname_scan:docs.nordvpn.com",
+    "dns:cname_scan:help.nordvpn.com",
+    "dns:cname_scan:mail.nordvpn.com",
+    "dns:cname_scan:status.nordvpn.com",
+    "dns:cname_scan:support.nordvpn.com",
+    "dns:dkim:default._domainkey.nordvpn.com",
+    "dns:dkim:google._domainkey.nordvpn.com",
+    "dns:dkim:k1._domainkey.nordvpn.com",
+    "dns:dkim:mail._domainkey.nordvpn.com",
+    "dns:dkim:s1._domainkey.nordvpn.com",
+    "dns:dkim:s2._domainkey.nordvpn.com",
+    "dns:dkim:selector1._domainkey.nordvpn.com",
+    "dns:dkim:selector2._domainkey.nordvpn.com",
+    "dns:dkim:smtp._domainkey.nordvpn.com",
+    "dns:dkim:zendesk1._domainkey.nordvpn.com",
+    "dns:dkim:zendesk2._domainkey.nordvpn.com",
+    "dns:dmarc:_dmarc.nordvpn.com",
+    "dns:lookup:nordvpn.com",
+    "dns:ns_glue:lily.ns.cloudflare.com",
+    "dns:ns_glue:seth.ns.cloudflare.com",
+    "dns:resolve:d.nordvpn.com",
+    "dns:resolve:my.nordaccount.com",
+    "dns:resolve:nordcheckout.com",
+    "dns:resolve:nordvpn.com",
+    "dns:resolve:s1.nordcdn.com",
+    "dns:resolve:sb.nordcdn.com",
+    "dns:resolve:static.zdassets.com",
+    "dns:resolve:support.nordvpn.com",
+    "dns:resolve:www.googletagmanager.com",
+    "dns:resolve:www.nordvpn.com",
+    "fingerprint:playwright_navigator",
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org",
+    "https://browserleaks.com/dns",
+    "https://browserleaks.com/ip",
+    "https://browserleaks.com/tls",
+    "https://browserleaks.com/webrtc",
+    "https://ipleak.net/",
+    "https://ipwho.is/185.211.32.224",
+    "https://my.nordaccount.com/",
+    "https://my.nordaccount.com/legal/privacy-policy/",
+    "https://nordcheckout.com/",
+    "https://nordvpn.com/",
+    "https://nordvpn.com/pricing/",
+    "https://nordvpn.com/privacy-policy/",
+    "https://support.nordvpn.com/",
+    "https://test-ipv6.com/",
+    "https://www.nordvpn.com/",
+    "policy:playwright_chromium",
+    "spf:txt:_spf.google.com",
+    "spf:txt:icloud.com",
+    "spf:txt:mail.zendesk.com",
+    "spf:txt:nordvpn.com",
+    "surface_probe:har_summary",
+    "transit:local_traceroute",
+    "webrtc:local_playwright_chromium",
+    "yourinfo.ai:playwright_chromium"
+  ],
+  "artifacts": {
+    "connect_log": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/connect.log",
+    "ip_check_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/ip-check.json",
+    "dnsleak_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/dnsleak",
+    "webrtc_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/webrtc",
+    "ipv6_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/ipv6",
+    "fingerprint_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/fingerprint",
+    "attribution_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/attribution.json",
+    "asn_prefixes_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/asn_prefixes.json",
+    "exit_dns_json": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/exit_dns.json",
+    "policy_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/policy",
+    "competitor_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe",
+    "browserleaks_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/browserleaks_probe",
+    "yourinfo_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/yourinfo_probe",
+    "baseline_json": null,
+    "surface_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe",
+    "transitions_json": null,
+    "website_exposure_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure",
+    "capture_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/capture"
+  },
+  "competitor_surface": {
+    "provider_dns": {
+      "domains": {
+        "nordvpn.com": {
+          "ns": [
+            "lily.ns.cloudflare.com",
+            "seth.ns.cloudflare.com"
+          ],
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null,
+          "txt": [
+            "MS=ms60989570",
+            "MS=ms69824556",
+            "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+            "oneuptime=2fYJpBXRQsmY3Py",
+            "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+            "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+            "MS=ms41624661"
+          ],
+          "mx": [
+            "1 aspmx.l.google.com",
+            "5 alt1.aspmx.l.google.com",
+            "5 alt2.aspmx.l.google.com",
+            "10 alt3.aspmx.l.google.com",
+            "10 alt4.aspmx.l.google.com"
+          ],
+          "caa": [],
+          "rr_errors": {
+            "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+          }
+        }
+      },
+      "ns_hosts": {
+        "lily.ns.cloudflare.com": {
+          "a": [
+            "108.162.192.130",
+            "172.64.32.130",
+            "173.245.58.130"
+          ],
+          "aaaa": [
+            "2606:4700:50::adf5:3a82",
+            "2803:f800:50::6ca2:c082",
+            "2a06:98c1:50::ac40:2082"
+          ],
+          "ip_attribution": {
+            "108.162.192.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (108.162.192.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "108.162.192.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083455-9caa6229-43c3-45d0-a1c1-6d8c2d14df07",
+                      "process_time": 45,
+                      "server_id": "app162",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:34:55.770554",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "108.162.192.0/20"
+                        ],
+                        "resource": "108.162.192.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "108.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                    "parts": [
+                      "13335",
+                      "108.162.192.0/20",
+                      "US",
+                      "arin",
+                      "2011-10-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "data": [
+                      {
+                        "id": 4224,
+                        "org_id": 4715,
+                        "name": "Cloudflare",
+                        "aka": "",
+                        "name_long": "",
+                        "website": "https://www.cloudflare.com",
+                        "social_media": [
+                          {
+                            "service": "website",
+                            "identifier": "https://www.cloudflare.com"
+                          }
+                        ],
+                        "asn": 13335,
+                        "looking_glass": "",
+                        "route_server": "",
+                        "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                        "info_type": "Content",
+                        "info_types": [
+                          "Content"
+                        ],
+                        "info_prefixes4": 80000,
+                        "info_prefixes6": 30000,
+                        "info_traffic": "",
+                        "info_ratio": "Mostly Outbound",
+                        "info_scope": "Global",
+                        "info_unicast": true,
+                        "info_multicast": false,
+                        "info_ipv6": true,
+                        "info_never_via_route_servers": false,
+                        "ix_count": 352,
+                        "fac_count": 222,
+                        "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                        "netixlan_updated": "2026-04-29T17:03:32Z",
+                        "netfac_updated": "2026-04-01T18:35:35Z",
+                        "poc_updated": "2025-12-04T21:15:09Z",
+                        "policy_url": "https://www.cloudflare.com/peering-policy/",
+                        "policy_general": "Open",
+                        "policy_locations": "Preferred",
+                        "policy_ratio": false,
+                        "policy_contracts": "Not Required",
+                        "allow_ixp_update": false,
+                        "status_dashboard": "https://www.cloudflarestatus.com/",
+                        "rir_status": "ok",
+                        "rir_status_updated": "2024-06-26T04:47:55Z",
+                        "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                        "created": "2011-09-06T19:40:05Z",
+                        "updated": "2026-04-29T17:00:30Z",
+                        "status": "ok"
+                      }
+                    ],
+                    "meta": {}
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "172.64.32.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (172.64.32.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "172.64.32.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083457-23f017ac-3b12-4d23-90e0-bf345351cd76",
+                      "process_time": 73,
+                      "server_id": "app163",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:34:57.548794",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "172.64.32.0/20"
+                        ],
+                        "resource": "172.64.32.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "172.0.0.0/8",
+                          "desc": "Administered by ARIN",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 172.64.32.0/20 | US | arin | 2015-02-25",
+                    "parts": [
+                      "13335",
+                      "172.64.32.0/20",
+                      "US",
+                      "arin",
+                      "2015-02-25"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "data": [
+                      {
+                        "id": 4224,
+                        "org_id": 4715,
+                        "name": "Cloudflare",
+                        "aka": "",
+                        "name_long": "",
+                        "website": "https://www.cloudflare.com",
+                        "social_media": [
+                          {
+                            "service": "website",
+                            "identifier": "https://www.cloudflare.com"
+                          }
+                        ],
+                        "asn": 13335,
+                        "looking_glass": "",
+                        "route_server": "",
+                        "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                        "info_type": "Content",
+                        "info_types": [
+                          "Content"
+                        ],
+                        "info_prefixes4": 80000,
+                        "info_prefixes6": 30000,
+                        "info_traffic": "",
+                        "info_ratio": "Mostly Outbound",
+                        "info_scope": "Global",
+                        "info_unicast": true,
+                        "info_multicast": false,
+                        "info_ipv6": true,
+                        "info_never_via_route_servers": false,
+                        "ix_count": 352,
+                        "fac_count": 222,
+                        "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                        "netixlan_updated": "2026-04-29T17:03:32Z",
+                        "netfac_updated": "2026-04-01T18:35:35Z",
+                        "poc_updated": "2025-12-04T21:15:09Z",
+                        "policy_url": "https://www.cloudflare.com/peering-policy/",
+                        "policy_general": "Open",
+                        "policy_locations": "Preferred",
+                        "policy_ratio": false,
+                        "policy_contracts": "Not Required",
+                        "allow_ixp_update": false,
+                        "status_dashboard": "https://www.cloudflarestatus.com/",
+                        "rir_status": "ok",
+                        "rir_status_updated": "2024-06-26T04:47:55Z",
+                        "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                        "created": "2011-09-06T19:40:05Z",
+                        "updated": "2026-04-29T17:00:30Z",
+                        "status": "ok"
+                      }
+                    ],
+                    "meta": {}
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "173.245.58.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (173.245.58.0/24)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083459-229d8413-dbec-4313-aea0-d484eb178a60",
+                      "process_time": 59,
+                      "server_id": "app198",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:34:59.277429",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "173.245.58.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "173.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 173.245.58.0/24 | US | arin | 2010-12-28",
+                    "parts": [
+                      "13335",
+                      "173.245.58.0/24",
+                      "US",
+                      "arin",
+                      "2010-12-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "2606:4700:50::adf5:3a82": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "2606:4700::/36"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083500-08396151-2d88-4d5d-8e32-d58ac5ebb524",
+                      "process_time": 59,
+                      "server_id": "app199",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:00.763712",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "2606:4700::/36"
+                        ],
+                        "resource": "2606:4700:50::/44",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2600::/12",
+                          "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2803:f800:50::6ca2:c082": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083501-477408fb-61ae-454e-af6c-c475ff1e4c39",
+                      "process_time": 59,
+                      "server_id": "app198",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:02.011715",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2803:f800:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2800::/12",
+                          "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2a06:98c1:50::ac40:2082": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083503-948be1f3-993b-4015-a5ed-70d8d52d74a0",
+                      "process_time": 76,
+                      "server_id": "app193",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:03.304352",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2a06:98c1:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2a00::/12",
+                          "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            }
+          },
+          "error": null
+        },
+        "seth.ns.cloudflare.com": {
+          "a": [
+            "108.162.193.142",
+            "172.64.33.142",
+            "173.245.59.142"
+          ],
+          "aaaa": [
+            "2606:4700:58::adf5:3b8e",
+            "2803:f800:50::6ca2:c18e",
+            "2a06:98c1:50::ac40:218e"
+          ],
+          "ip_attribution": {
+            "108.162.193.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (108.162.193.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "108.162.192.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083504-0197d819-a7eb-4b56-b968-aefcb775bbb8",
+                      "process_time": 45,
+                      "server_id": "app181",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:04.622059",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "108.162.192.0/20"
+                        ],
+                        "resource": "108.162.193.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "108.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                    "parts": [
+                      "13335",
+                      "108.162.192.0/20",
+                      "US",
+                      "arin",
+                      "2011-10-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "172.64.33.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (172.64.33.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "172.64.32.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083506-8dd48e09-fe01-4e95-9f44-59b2faa36733",
+                      "process_time": 59,
+                      "server_id": "app176",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:06.258300",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "172.64.32.0/20"
+                        ],
+                        "resource": "172.64.33.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "172.0.0.0/8",
+                          "desc": "Administered by ARIN",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 172.64.33.0/24 | US | arin | 2015-02-25",
+                    "parts": [
+                      "13335",
+                      "172.64.33.0/24",
+                      "US",
+                      "arin",
+                      "2015-02-25"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "173.245.59.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (173.245.59.0/24)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083507-3b6ad160-1f3f-4f5f-8938-e1a5f334a2dd",
+                      "process_time": 47,
+                      "server_id": "app189",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:07.648192",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "173.245.59.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "173.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 173.245.59.0/24 | US | arin | 2010-12-28",
+                    "parts": [
+                      "13335",
+                      "173.245.59.0/24",
+                      "US",
+                      "arin",
+                      "2010-12-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "2606:4700:58::adf5:3b8e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "2606:4700::/36"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083508-bb461e6c-0e86-4a1a-ba44-9261c45ced5a",
+                      "process_time": 43,
+                      "server_id": "app180",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:09.013246",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "2606:4700::/36"
+                        ],
+                        "resource": "2606:4700:50::/44",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2600::/12",
+                          "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2803:f800:50::6ca2:c18e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501083510-95fe0741-5b88-4537-8bf8-214d6d777c3b",
+                      "process_time": 45,
+                      "server_id": "app190",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:10.385087",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2803:f800:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2800::/12",
+                          "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2a06:98c1:50::ac40:218e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": true,
+                      "query_id": "20260501083511-ea82eb4e-0eb1-4c59-94fe-98bd41cea770",
+                      "process_time": 2,
+                      "server_id": "app193",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:35:11.600249",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2a06:98c1:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2a00::/12",
+                          "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            }
+          },
+          "error": null
+        }
+      }
+    },
+    "web_probes": [
+      {
+        "url": "https://nordvpn.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d75c75da67aca-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75c75da67aca"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe/har/d945f098fbd5bb50.har"
+      }
+    ],
+    "har_summary": {
+      "har_files": [
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe/har/d945f098fbd5bb50.har",
+          "entry_count": 3,
+          "unique_hosts": [
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        }
+      ],
+      "merged_unique_hosts": [
+        "nordvpn.com"
+      ],
+      "merged_tracker_candidates": [],
+      "merged_cdn_candidates": []
+    },
+    "portal_probes": [
+      {
+        "host": "my.nordaccount.com",
+        "a": [
+          "104.18.42.225",
+          "172.64.145.31"
+        ],
+        "aaaa": [
+          "2a06:98c1:3101::6812:2ae1",
+          "2a06:98c1:3107::ac40:911f"
+        ],
+        "https_status": 200,
+        "https_cdn_headers": {
+          "cf-ray": "9f4d75c908ac4705-SJC",
+          "server": "cloudflare"
+        },
+        "error": null
+      }
+    ],
+    "transit": {
+      "target": "185.211.32.224",
+      "command": [
+        "traceroute",
+        "-n",
+        "-m",
+        "15",
+        "-w",
+        "2",
+        "185.211.32.224"
+      ],
+      "stdout": " 1  * * *\n 2  * * *\n 3  * * *\n 4  * * *\n 5  * * *\n 6  * * *\n 7  * * *\n 8  * * *\n 9  * * *\n10  * * *\n11  * * *\n12  * * *\n13  * * *\n14  * * *\n15  * * *\n",
+      "stderr": "traceroute to 185.211.32.224 (185.211.32.224), 15 hops max, 40 byte packets\n",
+      "hops": [],
+      "returncode": 0
+    },
+    "stray_json": [],
+    "errors": []
+  },
+  "yourinfo_snapshot": {
+    "url": "https://yourinfo.ai/",
+    "final_url": "https://yourinfo.ai/",
+    "status": 200,
+    "title": "YourInfo.ai",
+    "text_excerpt": "RESEARCHING YOUR INFORMATION...\n20\nQuerying intelligence databases...\n\nConcerned about your digital privacy?\n\ndoxx.net - Secure networking for humans\n ",
+    "text_excerpt_truncated": false,
+    "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/yourinfo_probe/yourinfo.har",
+    "cdn_headers": {},
+    "error": null
+  },
+  "browserleaks_snapshot": {
+    "pages": [
+      {
+        "url": "https://browserleaks.com/ip",
+        "final_url": "https://browserleaks.com/ip",
+        "status": 200,
+        "title": "My IP Address - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nWhat Is My IP Address\nMy IP Address\nIP Address\t185.211.32.224\nHostname\tn/a\nIP Address Location\nCountry\tUnited States (US)\nState/Region\tCalifornia\nCity\tSan Francisco\nISP\tDatacamp Limited\nOrganization\tPackethub S.A\nNetwork\tAS212238 Datacamp Limited (VPN, VPSH, TOR, CONTENT)\nUsage Type\tCorporate / Hosting\nTimezone\tAmerica/Los_Angeles (PDT)\nLocal Time\tFri, 01 May 2026 01:34:32 -0700\nCoordinates\t37.7749,-122.4190\nIPv6 Leak Test\nIPv6 Address\tn/a\nWebRTC Leak Test\nLocal IP Address\tn/a\nPublic IP Address\t185.211.32.224\nDNS Leak Test\nTest Results\t\nRun DNS Leak Test\n\nTCP/IP Fingerprint\nOS\tAndroid\nMTU\t1500\nLink Type\tEthernet or modem\nDistance\t17 Hops\nJA4T\t65535_2-4-8-1-3_1460_9\nTLS Fingerprint\nJA4\tt13d1516h2_8daaf6152771_d8a2da3f94cd\nJA3 Hash\td96bef4f8eef1c9a8125d3f515079f71\nHTTP/2 Fingerprint\nAkamai Hash\t52d84b11737d980aef856699f885ca86\nHTTP Headers\nraw headers\n\nRequest\tGET /ip HTTP/2.0\nSec-CH-UA\t\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"\nSec-CH-UA-Mobile\t?0\nSec-CH-UA-Platform\t\"macOS\"\nUpgrade-Insecure-Requests\t1\nUser-Agent\tMozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36\nAccept\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nSec-Fetch-Site\tnone\nSec-Fetch-Mode\tnavigate\nSec-Fetch-User\t?1\nSec-Fetch-Dest\tdocument\nAccept-Encoding\tgzip, deflate, br, zstd\nPriority\tu=0, i\nHost\tbrowserleaks.com\nTor Relay Details\nRelays\tThis IP is not identified to be a Tor Relay\nWhere is My IP\n\nIP Address Whois\nSource Registry\tRIPE NCC\nNet Range\t185.211.32.0 - 185.211.32.255\nCIDR\t185.211.32.0/24\nName\tPackethub-L20221011\nHandle\t185.211.32.0 - 185.211.32.255\nParent Handle\t185.211.32.0 - 185.211.34.255\nNet Type\tASSIGNED PA\nCountry\tUnited States\nRegistration\tMon, 23 Jun 2025 11:38:03 GMT\nLast Changed\tMon, 23 Jun 2025 11:38:03 GMT\nDescription\tPackethub S.A.\nFull Name\tAlina Gatsaniuk\nHandle\tAG25300-RIPE\nEntity Roles\tAdministrative, Technical\nTelephone\t+5078336503\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tDe-kis2-1-mnt\nHandle\tDe-kis2-1-mnt\nEntity Roles\tRegistrant\nFull Name\tPackethub S.A.\nHandle\tORG-PS409-RIPE\nEntity Roles\tRegistrant\nTelephone\t+5078336503\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tPackethub S.A. IT Department\nHandle\tPSID1-RIPE\nEntity Roles\tAbuse\nEmail\tabuse@packethub.tech\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tTERRATRANSIT-MNT\nHandle\tTERRATRANSIT-MNT\nEntity Roles\tRegistrant\nIP Geolocation by DB-IP\nFurther Reading\nLeave a Comment (456)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/dns",
+        "final_url": "https://browserleaks.com/dns",
+        "status": 200,
+        "title": "DNS Leak Test - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nDNS Leak Test\n\nIncorrect network configurations or faulty VPN/proxy software can lead to your device sending DNS requests directly to your ISP's server, potentially enabling ISPs or other third parties to monitor your online activity.\n\nThe DNS Leak Test is a tool used to determine which DNS servers your browser is using to resolve domain names. This test attempts to resolve 50 randomly generated domain names, of which 25 are IPv4-only and 25 are IPv6-only.\n\nYour IP Address\nIP Address\t185.211.32.224\nISP\tDatacamp Limited\nLocation\tUnited States, San Francisco\nDNS Leak Test\nTest Results\tFound 14 Servers, 1 ISP, 1 Location\nYour DNS Servers\t\nIP Address :\tISP :\tLocation :\n185.211.32.223\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.224\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.225\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.226\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.227\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.228\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.229\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.230\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.231\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.232\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.233\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.234\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.235\tDatacamp Limited\tUnited States, San Francisco\n185.211.32.236\tDatacamp Limited\tUnited States, San Francisco\nLeave a Comment (245)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/webrtc",
+        "final_url": "https://browserleaks.com/webrtc",
+        "status": 200,
+        "title": "WebRTC Leak Test - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nWebRTC Leak Test\nYour Remote IP\nIPv4 Address\t185.211.32.224\nIPv6 Address\t-\nWebRTC Support Detection\nRTCPeerConnection\t\n✔\nTrue\nRTCDataChannel\t\n✔\nTrue\nYour WebRTC IP\nWebRTC Leak Test\t\n✔\nNo Leak\nLocal IP Address\t-\nPublic IP Address\t185.211.32.224\nSession Description\nSDP Log\t\n\nMedia Devices\nAPI Support\t\n✔\nTrue\nAudio Permissions\t\n?\nPrompt\nVideo Permissions\t\n?\nPrompt\nMedia Devices\t    kind: audioinput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\n    kind: videoinput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\n    kind: audiooutput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\nHow to Disable WebRTC\nFurther Reading\nLeave a Comment (221)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/tls",
+        "final_url": "https://browserleaks.com/tls",
+        "status": 200,
+        "title": "TLS Client Test - TLS Fingerprinting - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nTLS Client Test\n\nThis page displays your web browser's SSL/TLS capabilities, including supported TLS protocols, cipher suites, extensions, and key exchange groups. It highlights any weak or insecure options and generates a TLS fingerprint in JA3/JA4 formats. Additionally, it tests how your browser handles insecure mixed content requests.\n\nYour Web Browser\nHTTP User-Agent\tMozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36\nProtocol Support\nTLS 1.3\t\n✔\nEnabled\nTLS 1.2\t\n✔\nEnabled\nTLS 1.1\t\n✖\nDisabled (Good)\nTLS 1.0\t\n✖\nDisabled (Good)\nMixed Content Test\nActive Content\t\n✔\nBlocked\nPassive Content\t\n✔\nUpgraded to HTTPS\nTLS Fingerprint\nJA4\t\nt13d1516h2_8daaf6152771_d8a2da3f94cd\n\nJA4_o\tt13d1516h2_acb858a92679_744e8c95c28f\nJA3\t776682b7be9fba669a523e98624e532a\nJA3_n\t8e19337e7524d2573be54efb2b0784c9\nTLS Handshake\ndec values\n\nTLS Protocol\t\n0x0304\nTLS 1.3\n\nCipher Suite\t\n0x1301\nTLS_AES_128_GCM_SHA256\nRecommended\nTLS 1.3\n\nKey Exchange\t\n0x11EC\nX25519MLKEM768\n\nSignature Scheme\t\n0x0403\necdsa_secp256r1_sha256\n\nEncrypted Client Hello\nECH Success\t\n✖\nFalse\nOuter SNI\ttls.browserleaks.com\nInner SNI\tn/a\nSupported Cipher Suites (in order as received)\nCipher Suites\t\n0xEAEA\nGREASE\n\n\n0x1301\nTLS_AES_128_GCM_SHA256\nRecommended\nTLS 1.3\n\n\n0x1302\nTLS_AES_256_GCM_SHA384\nRecommended\nTLS 1.3\n\n\n0x1303\nTLS_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.3\n\n\n0xC02B\nTLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\nRecommended\nTLS 1.2\n\n\n0xC02F\nTLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256\nRecommended\nTLS 1.2\n\n\n0xC02C\nTLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384\nRecommended\nTLS 1.2\n\n\n0xC030\nTLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384\nRecommended\nTLS 1.2\n\n\n0xCCA9\nTLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.2\n\n\n0xCCA8\nTLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.2\n\n\n0xC013\nTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA\nCBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0xC014\nTLS_ECDHE_RSA_WITH_AES_256_CBC_SHA\nCBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0x009C\nTLS_RSA_WITH_AES_128_GCM_SHA256\nNO PFS\nTLS 1.2\n\n\n0x009D\nTLS_RSA_WITH_AES_256_GCM_SHA384\nNO PFS\nTLS 1.2\n\n\n0x002F\nTLS_RSA_WITH_AES_128_CBC_SHA\nNO PFS, CBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0x0035\nTLS_RSA_WITH_AES_256_CBC_SHA\nNO PFS, CBC, SHA-1\nTLS 1.0,1.1,1.2\nSupported TLS Extensions (in order as received)\n\nTLS Extensions\t\n0xAAAA\nGREASE\n\n\n0x0023\nsession_ticket\n\n\n0xFE0D\nencrypted_client_hello\n\n\n0xFF01\nrenegotiation_info\n\n\n0x001B\ncompress_certificate\n\n\n0x0017\nextended_main_secret\n\n\n0x0033\nkey_share\n\n\n0x000D\nsignature_algorithms\n\n\n0x0000\nserver_name\n\n\n0x002B\nsupported_versions\n\n\n0x000B\nec_point_formats\n\n\n0x0012\nsigned_certificate_timestamp\n\n\n0x0010\napplication_layer_protocol_negotiation\n\n\n0x000A\nsupported_groups\n\n\n0x0005\nstatus_request\n\n\n0x44CD\napplication_settings\n\n\n0x002D\npsk_key_exchange_modes\n\n\n0x7A7A\nGREASE\n\napplication_layer_protocol_negotiation\nprotocol_name_list\th2\nhttp/1.1\napplication_settings\nsupported_protocols\th2\ncompress_certificate\nalgorithms\t\n0x0002\nbrotli\n\nec_point_formats\nec_point_format_list\t\n0x0000\nuncompressed\n\nencrypted_client_hello\ntype\touter\nkdf_id\t\n0x0001\nHKDF-SHA256\n\naead_id\t\n0x0001\nAES-128-GCM\n\nconfig_id\t223\nenc_length\t32\npayload_length\t240\nkey_share\nclient_shares\t\n0x3A3A\nGREASE\n\n\n0x11EC\nX25519MLKEM768\n\n\n0x001D\nx25519\n\npsk_key_exchange_modes\nke_modes\t\n0x0001\npsk_dhe_ke\n\nserver_name\nserver_name\ttls.brow",
+        "text_excerpt_truncated": true,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      }
+    ],
+    "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/browserleaks_probe/browserleaks.har",
+    "error": null
+  },
+  "framework": {
+    "question_bank_version": "1",
+    "test_matrix_version": "1",
+    "findings": [
+      {
+        "id": "finding-yourinfo-e1695689",
+        "category": "third_party_web",
+        "title": "Third-party benchmark page loaded (yourinfo.ai)",
+        "description": "HAR and page excerpt captured for competitive benchmark; third parties may observe exit IP and browser metadata.",
+        "severity": "LOW",
+        "confidence": "HIGH",
+        "kind": "inferred",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "yourinfo_snapshot",
+            "note": null
+          }
+        ],
+        "affected_data_types": [
+          "public_ip",
+          "user_agent",
+          "browser_fingerprint"
+        ],
+        "recipients": [
+          "yourinfo.ai",
+          "asset_hosts"
+        ],
+        "test_conditions": "connected_state_benchmark",
+        "reproducibility_notes": null
+      }
+    ],
+    "question_coverage": [
+      {
+        "question_id": "IDENTITY-001",
+        "question_text": "What identifiers are assigned to the user, app install, browser session, and device?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Browser/session signals captured via fingerprint and optional YourInfo probe.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "yourinfo_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "browserleaks_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IDENTITY-006",
+        "question_text": "Are there long-lived client identifiers transmitted during auth or app startup?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IDENTITY-009",
+        "question_text": "Is the browser fingerprinting surface strong enough to re-identify the same user across sessions?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Fingerprint and BrowserLeaks captures present for re-identification risk assessment.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "browserleaks_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-001",
+        "question_text": "What third parties are involved during signup?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-004",
+        "question_text": "Are analytics or marketing scripts loaded during signup or checkout?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-010",
+        "question_text": "Are these surfaces behind a CDN/WAF?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-001",
+        "question_text": "Where is the marketing site hosted (DNS/routing level)?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Apex DNS/NS data recorded for configured provider domains.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.provider_dns",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-004",
+        "question_text": "What CDN/WAF is used?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Response headers / CDN signatures captured in web probes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.web_probes",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-008",
+        "question_text": "Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Review web probe headers, redirects, and HAR for origin leaks.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-001",
+        "question_text": "Which DNS resolvers are used while connected?",
+        "category": "dns",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Resolver tiers observed (local + external).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-002",
+        "question_text": "Are DNS requests tunneled (consistent with VPN exit)?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "DNS-003",
+        "question_text": "Is there DNS fallback to ISP/router/public resolvers?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "DNS-004",
+        "question_text": "Does DNS leak during connect/disconnect/reconnect?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Connect/disconnect DNS not sampled; use --transition-tests when supported.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-009",
+        "question_text": "Are DoH or DoT endpoints used?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "DoH/DoT not isolated from resolver snapshot; inspect raw captures.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-011",
+        "question_text": "Are resolvers first-party or third-party?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "IP-001",
+        "question_text": "Is the real public IPv4 exposed while connected?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Exit IPv4 185.211.32.224; leak flags dns=False webrtc=False ipv6=False.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_v4",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IP-002",
+        "question_text": "Is the real public IPv6 exposed while connected?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "partially_answered",
+        "answer_summary": "No IPv6 exit or IPv6 not returned by endpoints.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IP-006",
+        "question_text": "Is the real IP exposed through WebRTC?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "WebRTC candidates captured; leak flag=False.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_leak_flag",
+            "note": null
+          }
+        ],
+        "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+      },
+      {
+        "question_id": "IP-007",
+        "question_text": "Is the local LAN IP exposed through WebRTC or browser APIs?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Inspect host candidates vs LAN; see webrtc_notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          }
+        ],
+        "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+      },
+      {
+        "question_id": "IP-014",
+        "question_text": "Do leak-check sites disagree about observed IP identity?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "All 3 echo endpoints agree on IPv4 185.211.32.224.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-002",
+        "question_text": "Which domains and IPs are contacted after the tunnel is up?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Post-harness service list captured.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-003",
+        "question_text": "Which control-plane endpoints are used for auth/config/session management?",
+        "category": "control_plane",
+        "testability": "DOCUMENT_RESEARCH",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "Auth/control-plane inventory requires internal docs or app instrumentation.",
+        "evidence_refs": [],
+        "notes": "DOCUMENT_RESEARCH"
+      },
+      {
+        "question_id": "CTRL-004",
+        "question_text": "Which telemetry endpoints are contacted during connection?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Infer from services_contacted and classified endpoints.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-009",
+        "question_text": "Is the control plane behind a CDN/WAF?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "CDN/WAF hints from web headers.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.web_probes",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-001",
+        "question_text": "What exit IP is assigned for each region?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Exit IPv4 185.211.32.224 for location us-california-san-jose-224.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_v4",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-002",
+        "question_text": "What ASN announces the exit IP?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "attribution",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-003",
+        "question_text": "What organization owns the IP range?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "attribution",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-004",
+        "question_text": "What reverse DNS exists for the exit node?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "PTR lookup errors: ptr_v4: The DNS query name does not exist: 224.32.211.185.in-addr.arpa.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "artifacts.exit_dns_json",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-005",
+        "question_text": "Does the observed geolocation match the advertised location?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Consistent: exit_geo.location_label matches vpn_location_label ('San Jose, California, United States').",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "extra.exit_geo",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "vpn_location_label",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-001",
+        "question_text": "What external JS files are loaded on the site?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-003",
+        "question_text": "What analytics providers are present?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-012",
+        "question_text": "What cookies are set by first-party and third-party scripts?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FP-001",
+        "question_text": "Does the site attempt browser fingerprinting?",
+        "category": "browser_tracking",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "answered",
+        "answer_summary": "Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FP-011",
+        "question_text": "Does WebRTC run on provider pages?",
+        "category": "browser_tracking",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "WebRTC exercised by harness on leak-test pages.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "TELEM-001",
+        "question_text": "Does the app talk to telemetry vendors?",
+        "category": "telemetry_app",
+        "testability": "INTERNAL_UNVERIFIABLE",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+        "evidence_refs": [],
+        "notes": "INTERNAL_UNVERIFIABLE"
+      },
+      {
+        "question_id": "TELEM-004",
+        "question_text": "Does the app send connection events to telemetry systems?",
+        "category": "telemetry_app",
+        "testability": "INTERNAL_UNVERIFIABLE",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+        "evidence_refs": [],
+        "notes": "INTERNAL_UNVERIFIABLE"
+      },
+      {
+        "question_id": "OS-001",
+        "question_text": "On macOS/Windows/Linux, do helper processes bypass the tunnel?",
+        "category": "os_specific",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "runner_env",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-001",
+        "question_text": "What leaks during initial connection?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-003",
+        "question_text": "What leaks during reconnect?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-004",
+        "question_text": "What leaks if the VPN app crashes?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "Crash/kill leak tests not run in this harness by default.",
+        "evidence_refs": [],
+        "notes": "DYNAMIC_PARTIAL"
+      },
+      {
+        "question_id": "LOG-001",
+        "question_text": "What is the provider likely able to log based on observed traffic?",
+        "category": "logging_retention",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Infer logging surface from observable endpoints and services_contacted.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "LOG-005",
+        "question_text": "Are there contradictions between observed traffic and no-logs marketing claims?",
+        "category": "logging_retention",
+        "testability": "DOCUMENT_RESEARCH",
+        "answer_status": "partially_answered",
+        "answer_summary": "Policy text captured; compare claims to observed traffic manually.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "policies",
+            "note": null
+          }
+        ],
+        "notes": null
+      }
+    ],
+    "risk_scores": {
+      "overall_severity": "LOW",
+      "leak_severity": "INFO",
+      "correlation_risk": "MEDIUM",
+      "third_party_exposure": "MEDIUM",
+      "notes": [
+        "Competitor web/portal probes executed.",
+        "Large services_contacted list."
+      ]
+    },
+    "observed_endpoints": [
+      {
+        "host": "api.ipify.org",
+        "classification": "third_party_analytics",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "api64.ipify.org",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "attribution",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "browserleaks.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "competitor_probe",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "dns",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "fingerprint",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "ipleak.net",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "ipwho.is",
+        "classification": "unknown",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "my.nordaccount.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "nordcheckout.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "policy",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "spf",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "support.nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "surface_probe",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "test-ipv6.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "transit",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "webrtc",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "www.nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "yourinfo.ai",
+        "classification": "unknown",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      }
+    ]
+  },
+  "website_exposure_methodology": {
+    "methodology_schema_version": "1.0",
+    "evidence_tier_note": "Desk automation of website-exposure methodology (Phases 1–9). Do not conflate with client resolver / DNS-leak observations (O); see docs/research-questions-and-evidence.md.",
+    "phases": {
+      "1_fetch": "urls_from_config_and_har_summaries",
+      "2_extract": "hosts_parsed_via_urlparse",
+      "3_dedupe": "unique_hosts=10",
+      "4_resolve": "A_AAAA_optional_public_ip_attribution",
+      "5_whois_via_attribution": "sample_only_for_selected_public_ips",
+      "6_classify": "har_tracker_cdn_hints_plus_unknown_bucket",
+      "7_document": "machine_json_hosts_inventory_plus_resolver_samples",
+      "8_dns_infra": "spf_walk_dkim_dmarc_cname_scan",
+      "9_inventory": "rows=22"
+    },
+    "hosts_inventory": {
+      "unique_hosts": [
+        "d.nordvpn.com",
+        "my.nordaccount.com",
+        "nordcheckout.com",
+        "nordvpn.com",
+        "s1.nordcdn.com",
+        "sb.nordcdn.com",
+        "static.zdassets.com",
+        "support.nordvpn.com",
+        "www.googletagmanager.com",
+        "www.nordvpn.com"
+      ],
+      "approx_count": 10,
+      "sources": {
+        "competitor_har": [
+          "nordvpn.com"
+        ],
+        "surface_har": [
+          "d.nordvpn.com",
+          "my.nordaccount.com",
+          "nordcheckout.com",
+          "nordvpn.com",
+          "s1.nordcdn.com",
+          "sb.nordcdn.com",
+          "static.zdassets.com",
+          "support.nordvpn.com",
+          "www.googletagmanager.com",
+          "www.nordvpn.com"
+        ]
+      }
+    },
+    "resolver_results": {
+      "by_host": {
+        "d.nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "my.nordaccount.com": {
+          "a": [
+            "104.18.42.225",
+            "172.64.145.31"
+          ],
+          "aaaa": [
+            "2a06:98c1:3101::6812:2ae1",
+            "2a06:98c1:3107::ac40:911f"
+          ],
+          "error": null
+        },
+        "nordcheckout.com": {
+          "a": [
+            "104.17.160.135",
+            "104.17.223.153"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "s1.nordcdn.com": {
+          "a": [
+            "104.16.155.111",
+            "104.16.156.111"
+          ],
+          "aaaa": [
+            "2606:4700::6810:9b6f",
+            "2606:4700::6810:9c6f"
+          ],
+          "error": null
+        },
+        "sb.nordcdn.com": {
+          "a": [
+            "104.16.155.111",
+            "104.16.156.111"
+          ],
+          "aaaa": [
+            "2606:4700::6810:9b6f",
+            "2606:4700::6810:9c6f"
+          ],
+          "error": null
+        },
+        "static.zdassets.com": {
+          "a": [
+            "216.198.53.3",
+            "216.198.54.3"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "support.nordvpn.com": {
+          "a": [
+            "216.198.53.11",
+            "216.198.54.11"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "www.googletagmanager.com": {
+          "a": [
+            "142.251.214.40"
+          ],
+          "aaaa": [
+            "2607:f8b0:4005:803::2008"
+          ],
+          "error": null
+        },
+        "www.nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        }
+      },
+      "ip_attribution_sample": {
+        "104.16.208.203": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.208.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083647-096bb1cb-89d8-44b2-ada3-5e5485af27b5",
+                  "process_time": 48,
+                  "server_id": "app181",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:47.460792",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.208.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.208.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.208.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 4224,
+                    "org_id": 4715,
+                    "name": "Cloudflare",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://www.cloudflare.com"
+                      }
+                    ],
+                    "asn": 13335,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 80000,
+                    "info_prefixes6": 30000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 352,
+                    "fac_count": 222,
+                    "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                    "netixlan_updated": "2026-04-29T17:03:32Z",
+                    "netfac_updated": "2026-04-01T18:35:35Z",
+                    "poc_updated": "2025-12-04T21:15:09Z",
+                    "policy_url": "https://www.cloudflare.com/peering-policy/",
+                    "policy_general": "Open",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "https://www.cloudflarestatus.com/",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                    "created": "2011-09-06T19:40:05Z",
+                    "updated": "2026-04-29T17:00:30Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.19.159.190": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.19.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083648-2429d02c-b031-4196-8b54-72fa2921b255",
+                  "process_time": 46,
+                  "server_id": "app168",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:48.826704",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.19.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.19.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.19.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 4224,
+                    "org_id": 4715,
+                    "name": "Cloudflare",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://www.cloudflare.com"
+                      }
+                    ],
+                    "asn": 13335,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 80000,
+                    "info_prefixes6": 30000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 352,
+                    "fac_count": 222,
+                    "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                    "netixlan_updated": "2026-04-29T17:03:32Z",
+                    "netfac_updated": "2026-04-01T18:35:35Z",
+                    "poc_updated": "2025-12-04T21:15:09Z",
+                    "policy_url": "https://www.cloudflare.com/peering-policy/",
+                    "policy_general": "Open",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "https://www.cloudflarestatus.com/",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                    "created": "2011-09-06T19:40:05Z",
+                    "updated": "2026-04-29T17:00:30Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.18.42.225": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.18.42.0/24)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "104.18.32.0/19"
+                    },
+                    {
+                      "relation": "less-specific",
+                      "resource": "104.18.32.0/20"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083650-b3d24b34-2c6b-42cd-8289-ef8501aadaf4",
+                  "process_time": 64,
+                  "server_id": "app193",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:50.208806",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "104.18.32.0/19",
+                      "104.18.32.0/20"
+                    ],
+                    "resource": "104.18.42.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 2,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.18.32.0/19 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.18.32.0/19",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "172.64.145.31": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (172.64.145.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083651-080732f3-cabd-48b3-834a-ff1074a053ef",
+                  "process_time": 49,
+                  "server_id": "app194",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:51.416603",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "172.64.145.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "172.0.0.0/8",
+                      "desc": "Administered by ARIN",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 172.64.145.0/24 | US | arin | 2015-02-25",
+                "parts": [
+                  "13335",
+                  "172.64.145.0/24",
+                  "US",
+                  "arin",
+                  "2015-02-25"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2a06:98c1:3101::6812:2ae1": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3101::/48)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083652-36c4a20d-b0af-4cd0-8a0a-6475d9287c80",
+                  "process_time": 61,
+                  "server_id": "app196",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:52.622880",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "2a06:98c1:3101::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2a00::/12",
+                      "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "2a06:98c1:3107::ac40:911f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3107::/48)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083653-f01e1d55-1715-4679-9a5e-39d3a28771ac",
+                  "process_time": 62,
+                  "server_id": "app177",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:53.674680",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "2a06:98c1:3107::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2a00::/12",
+                      "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "104.17.160.135": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.17.160.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083654-27fd47f2-9ae4-4b2c-baaf-d8ab30d52d06",
+                  "process_time": 59,
+                  "server_id": "app161",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:54.717691",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.17.160.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.17.160.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.17.160.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.17.223.153": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.17.208.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083655-7be5d9ef-324b-4807-bec7-a32d4b6b09e0",
+                  "process_time": 56,
+                  "server_id": "app184",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:55.881592",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.17.208.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.17.208.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.17.208.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.16.155.111": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083657-b41e40d9-cb4e-4c2a-8f3d-c8dbee1a5a8a",
+                  "process_time": 50,
+                  "server_id": "app195",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:57.123257",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.16.156.111": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083658-120f2ce2-6d8f-4a9c-854a-c39a1c2b933a",
+                  "process_time": 44,
+                  "server_id": "app188",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:58.226322",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2606:4700::6810:9b6f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2606:4700::/36"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083659-9851b1b1-c6a5-4da8-a806-e7b3f7282ad9",
+                  "process_time": 45,
+                  "server_id": "app189",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:36:59.461992",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2606:4700::/36"
+                    ],
+                    "resource": "2606:4700::/44",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "2606:4700::6810:9c6f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2606:4700::/36"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083700-ec206ab1-7156-43b7-ac48-f4fe17df2b0b",
+                  "process_time": 62,
+                  "server_id": "app183",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:00.504554",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2606:4700::/36"
+                    ],
+                    "resource": "2606:4700::/44",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "216.198.53.3": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083701-3031bbd1-7d7d-49ad-9181-e49a64ec419c",
+                  "process_time": 60,
+                  "server_id": "app173",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:01.549303",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.53.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.53.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.54.3": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083703-e3082753-deda-4175-9015-d64110116abe",
+                  "process_time": 57,
+                  "server_id": "app187",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:03.164392",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.54.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.54.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.53.11": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083704-2e5d5b1c-b61f-4f0f-bf53-e93c53b4e509",
+                  "process_time": 83,
+                  "server_id": "app165",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:04.703941",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.53.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.53.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.54.11": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083706-ddf596c4-a2dc-484d-a1fe-9659cdbcc65b",
+                  "process_time": 51,
+                  "server_id": "app194",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:06.117079",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.54.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.54.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=209242'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "142.251.214.40": {
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [15169]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 15169,
+              "holder": "GOOGLE - Google LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (142.250.0.0/15)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083707-4b22fcc4-0ed8-4969-ae09-58a19485c9b7",
+                  "process_time": 45,
+                  "server_id": "app160",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:07.346878",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 15169,
+                        "holder": "GOOGLE - Google LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "142.250.0.0/15",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "142.0.0.0/8",
+                      "desc": "Administered by ARIN",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 15169,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 15169,
+                "raw_line": "15169 | 142.250.0.0/15 | US | arin | 2012-05-24",
+                "parts": [
+                  "15169",
+                  "142.250.0.0/15",
+                  "US",
+                  "arin",
+                  "2012-05-24"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 433,
+                    "org_id": 574,
+                    "name": "Google LLC",
+                    "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                    "name_long": "",
+                    "website": "https://about.google/intl/en/",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://about.google/intl/en/"
+                      }
+                    ],
+                    "asn": 15169,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "RADB::AS-GOOGLE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 15000,
+                    "info_prefixes6": 10000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 179,
+                    "fac_count": 137,
+                    "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                    "netixlan_updated": "2026-04-03T02:55:16Z",
+                    "netfac_updated": "2026-03-03T05:58:05Z",
+                    "poc_updated": "2023-08-21T21:24:27Z",
+                    "policy_url": "https://peering.google.com/#/options/peering",
+                    "policy_general": "Selective",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2005-02-06T06:41:04Z",
+                    "updated": "2026-03-11T19:57:37Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2607:f8b0:4005:803::2008": {
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [15169]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 15169,
+              "holder": "GOOGLE - Google LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2607:f8b0:4005::/48)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2607:f8b0::/32"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501083708-df4a1503-ff52-4ffe-9d3d-232ea5a766ca",
+                  "process_time": 72,
+                  "server_id": "app197",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:37:08.777327",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 15169,
+                        "holder": "GOOGLE - Google LLC"
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2607:f8b0::/32"
+                    ],
+                    "resource": "2607:f8b0:4005::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 433,
+                    "org_id": 574,
+                    "name": "Google LLC",
+                    "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                    "name_long": "",
+                    "website": "https://about.google/intl/en/",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://about.google/intl/en/"
+                      }
+                    ],
+                    "asn": 15169,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "RADB::AS-GOOGLE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 15000,
+                    "info_prefixes6": 10000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 179,
+                    "fac_count": 137,
+                    "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                    "netixlan_updated": "2026-04-03T02:55:16Z",
+                    "netfac_updated": "2026-03-03T05:58:05Z",
+                    "poc_updated": "2023-08-21T21:24:27Z",
+                    "policy_url": "https://peering.google.com/#/options/peering",
+                    "policy_general": "Selective",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2005-02-06T06:41:04Z",
+                    "updated": "2026-03-11T19:57:37Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        }
+      }
+    },
+    "classifications": {
+      "rows": [
+        {
+          "host": "d.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "my.nordaccount.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "nordcheckout.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "s1.nordcdn.com",
+          "tags": [
+            "cdn_candidate"
+          ]
+        },
+        {
+          "host": "sb.nordcdn.com",
+          "tags": [
+            "cdn_candidate"
+          ]
+        },
+        {
+          "host": "static.zdassets.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "support.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "www.googletagmanager.com",
+          "tags": [
+            "tracker_candidate"
+          ]
+        },
+        {
+          "host": "www.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        }
+      ],
+      "notes": "Heuristic tags from HAR hints + host presence only."
+    },
+    "phase8_dns_infra": {
+      "per_domain": {
+        "nordvpn.com": {
+          "dmarc_txt": [
+            "v=DMARC1; p=reject; sp=reject; pct=100; fo=1; rua=mailto:dmarc@nordsec.com; ruf=mailto:dmarc@nordsec.com"
+          ],
+          "dkim_hit_selectors": {
+            "google": [
+              "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvkogBHxZTMioH4ulfJ8otuf2RLnmEhghaHgkOSkmziUoRNlRr45SSADCTOiEuGfGrX4u/gydunjsz8C0vUeZkP3pg4eehrN8RCez5ANwagSLv4Jle7aJKiy9dnEvyCriiBJxafmrP+plkp8gHpFsfdkmbt+5H0DzOc75PXQ10T2u3RzhLLgNg10wGXab3uYouuqvmvXcAbK6j1xfzNeDAbtAid7PmcPXhnbp8718InpLNKBAB+WxucV4Y0YnMdaxXIHw8eqTULnzynZqSfRPXfF8oGROB5++QP3Y8aGbeuqpQix8ETwyx2ZFQbFvhH8o9PdQmtwnRjfQIbXjFA"
+            ],
+            "zendesk1": [
+              "v=DKIM1;t=s;n=core;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9IqdLrO3Zr2/56MHt8oQVCQorP0Bl2Fz9sM2tFBnJCdB/HogQmuudEg2xAovCN2PYpw44UijIvPuBoT9vxiv6ZCBJTLJXa82r6ke5rE4tbe9NKFIrVIb9S306cJDrnKFMDb8p0dU/Su0+eUR5gVAOtCuz2L8HAzs5edvsEvD/Fb4ny1RLNSEPZkIQLfGhVxQeWANm3+1Jwb/OBVXV9k0nKpWrpgqcmO7NzroJirp014RQY7rGi60JLUubc6XhvoFQBQrtOAdVlZC5wvfS1bgpq5kQpdP7cajIqWCeqxPTeo0ZUpey2ZcaygEsZz0Z3Gs5wDzyuqd7"
+            ],
+            "zendesk2": [
+              "v=DKIM1; t=s; n=core; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmiSFNkgXrO3I8aOaPONDZWHv027rkiGIwb838OyXPgvFDEkCV/qGcdXSjZnaVAadrTm/oKnL8WOltP9zB1FLEuKt0fTi5zRyKPE4oIYCnEzXwrGqzjUcCABQBawQVqvXjDOaYh9Lhp8W5PYOLo905vRW7ipyIMDhuzBOJls91/WWXnNK0OwP3RghiisZjA3K2KqtRwf7w6GjNeNuAMNhvcmgAN15d/mhK+dev/hcRbal66RoYyTD8c0F0isahWH0envEX8aj+SBhheNk0/U37dGE+4nFaY5yP9CUlYjFKDSIKZgHzG4Hci3t/RubU58pi6BCr"
+            ],
+            "default": [
+              "v=spf1 -all"
+            ],
+            "s1": [
+              "k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuRMZIsLiy+xlrUj6lGV2W5bl+zH+xnenDAqszz6TwDZVxU2A5JVc9f9fynf8TWu2AGtmD2ySXNhJuV62VSgogjsxxljKsiTrG8QSAi8v0WVu0J1Blz0kx6GJSpYEcwKCLcWUhhQrrQU9nmHVbSmlAy+iDyEZv9v4O8TcnFs5j+K7mOwXh1VKisIiKZB/q7if4gqfc4Y7mZl23uUO1wAQgPG3EqQbQY7XPnz3oghaayA0sRzA4VFSzh3dFERDC8EJKm8QnUk3CLyp30RH6gsGkoIAaRO6Uc6bAr7mRiGWE1RHQ93TkYU1GXEnGP6bu9WxuSaBErmCquMVFtxV3SqBfQ"
+            ],
+            "s2": [
+              "k=rsa; t=s; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDNIkCp00Zx86ahbJRRQWPXCv65Q76TVqnoilPJ9uYatkVODYe6Xa709Qe83EvLapItG+VGNA18J0+xMmLoIDPBi+uairTVE4WvBl+yNovw3Bei/+HCMC+dKs3aFQAQ2X+S9jt8RrR2UMcqWY8Zm4coIchpAbhdSMkrCV3fZMmvkwIDAQAB"
+            ],
+            "k1": [
+              "v=spf1 -all"
+            ],
+            "selector1": [
+              "v=spf1 -all"
+            ],
+            "selector2": [
+              "v=spf1 -all"
+            ],
+            "smtp": [
+              "v=spf1 -all"
+            ],
+            "mail": [
+              "v=spf1 -all"
+            ]
+          },
+          "cname_aliases": [],
+          "subdomain_cname_scan": {
+            "mail": [
+              "sparkpostmail.com"
+            ],
+            "support": [
+              "nordvpn.zendesk.com"
+            ]
+          },
+          "spf_include_expansion": [
+            "_spf.google.com",
+            "icloud.com",
+            "mail.zendesk.com"
+          ],
+          "spf_errors": []
+        }
+      },
+      "spf_include_graph_flat": [],
+      "subdomain_cname_scans": {},
+      "errors": [],
+      "provider_dns_snapshot_ref": "competitor_surface.provider_dns",
+      "apex_copy": {
+        "nordvpn.com": {
+          "ns": [
+            "lily.ns.cloudflare.com",
+            "seth.ns.cloudflare.com"
+          ],
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null,
+          "txt": [
+            "MS=ms60989570",
+            "MS=ms69824556",
+            "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+            "oneuptime=2fYJpBXRQsmY3Py",
+            "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+            "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+            "MS=ms41624661"
+          ],
+          "mx": [
+            "1 aspmx.l.google.com",
+            "5 alt1.aspmx.l.google.com",
+            "5 alt2.aspmx.l.google.com",
+            "10 alt3.aspmx.l.google.com",
+            "10 alt4.aspmx.l.google.com"
+          ],
+          "caa": [],
+          "rr_errors": {
+            "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+          }
+        }
+      }
+    },
+    "phase9_third_party_inventory": [
+      {
+        "company_hypothesis": "www.googletagmanager.com",
+        "role": "website_script_or_beacon",
+        "how_discovered": "har_tracker_hint",
+        "evidence_summary": "host:www.googletagmanager.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "s1.nordcdn.com",
+        "role": "cdn_or_edge",
+        "how_discovered": "har_cdn_hint",
+        "evidence_summary": "host:s1.nordcdn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "sb.nordcdn.com",
+        "role": "cdn_or_edge",
+        "how_discovered": "har_cdn_hint",
+        "evidence_summary": "host:sb.nordcdn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "email_mx_inferred",
+        "how_discovered": "apex_mx",
+        "evidence_summary": "nordvpn.com:1 aspmx.l.google.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Cloudflare",
+        "role": "dns_authority_inferred",
+        "how_discovered": "ns",
+        "evidence_summary": "nordvpn.com:lily.ns.cloudflare.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "domain_verification_txt",
+        "how_discovered": "txt",
+        "evidence_summary": "nordvpn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:google",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector google",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:zendesk1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector zendesk1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:zendesk2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector zendesk2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:default",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector default",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:s1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector s1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:s2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector s2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:k1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector k1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:selector1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector selector1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:selector2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector selector2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:smtp",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector smtp",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:mail",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector mail",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "SparkPost/Bird",
+        "role": "transactional_email_inferred",
+        "how_discovered": "cname",
+        "evidence_summary": "mail.nordvpn.com->sparkpostmail.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Zendesk",
+        "role": "support_platform_inferred",
+        "how_discovered": "cname",
+        "evidence_summary": "support.nordvpn.com->nordvpn.zendesk.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "spf_email_sender_inferred",
+        "how_discovered": "spf_include",
+        "evidence_summary": "nordvpn.com->_spf.google.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Zendesk",
+        "role": "spf_email_sender_inferred",
+        "how_discovered": "spf_include",
+        "evidence_summary": "nordvpn.com->mail.zendesk.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "(provider first-party)",
+        "role": "marketing_and_app_surface",
+        "how_discovered": "config_urls",
+        "evidence_summary": "~10 web hosts observed",
+        "evidence_tier": "desk_automation"
+      }
+    ],
+    "raw_relpaths": {
+      "hosts_inventory": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure/hosts_inventory.json",
+      "resolver_sample": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure/resolver_sample.json",
+      "phase9_inventory": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure/phase9_inventory.json",
+      "phase8_dns_audit": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/website_exposure/phase8_dns_audit.json"
+    },
+    "limits": [
+      "Does_not_replace_human_narrative_for_executive_disclosure",
+      "Cloudflare_or_bot_WAF_may_distort_HAR_coverage"
+    ],
+    "errors": []
+  },
+  "pcap_derived": {
+    "schema_version": "1.0",
+    "source_pcap": "/Users/alauder/Source/doxx/vpn-leaks/.vpn-leaks/capture/session_b83934130e78.pcap",
+    "packet_counts": {
+      "total": 122250,
+      "l3_seen": 122250
+    },
+    "flows_unique_estimate": 1037,
+    "flows_sample": [
+      {
+        "key": [
+          "ip4",
+          "68109b6f",
+          "0a00002b",
+          "443",
+          "58866"
+        ],
+        "bytes": 72324299
+      },
+      {
+        "key": [
+          "ip4",
+          "adc21926",
+          "0a00002b",
+          "443",
+          "56212"
+        ],
+        "bytes": 13513447
+      },
+      {
+        "key": [
+          "ip4",
+          "b9d320de",
+          "0a00002b",
+          "51820",
+          "54405"
+        ],
+        "bytes": 8276752
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "b9d320de",
+          "54405",
+          "51820"
+        ],
+        "bytes": 4859067
+      },
+      {
+        "key": [
+          "ip4",
+          "adc21926",
+          "0a00002b",
+          "443",
+          "52493"
+        ],
+        "bytes": 2287938
+      },
+      {
+        "key": [
+          "ip4",
+          "68139fbe",
+          "0a00002b",
+          "443",
+          "63871"
+        ],
+        "bytes": 1768997
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57432"
+        ],
+        "bytes": 1492860
+      },
+      {
+        "key": [
+          "ip4",
+          "68122ae1",
+          "0a00002b",
+          "443",
+          "57396"
+        ],
+        "bytes": 524618
+      },
+      {
+        "key": [
+          "ip4",
+          "68125f29",
+          "0a00002b",
+          "443",
+          "51084"
+        ],
+        "bytes": 502305
+      },
+      {
+        "key": [
+          "ip4",
+          "68125e29",
+          "0a00002b",
+          "443",
+          "60216"
+        ],
+        "bytes": 441645
+      },
+      {
+        "key": [
+          "ip4",
+          "68125e29",
+          "0a00002b",
+          "443",
+          "63362"
+        ],
+        "bytes": 424224
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "adc21926",
+          "56212",
+          "443"
+        ],
+        "bytes": 355330
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "65181",
+          "443"
+        ],
+        "bytes": 313808
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9777",
+          "0a00002b",
+          "443",
+          "54963"
+        ],
+        "bytes": 290209
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9d77",
+          "55763",
+          "443"
+        ],
+        "bytes": 240344
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68139fbe",
+          "63871",
+          "443"
+        ],
+        "bytes": 225309
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109b6f",
+          "58866",
+          "443"
+        ],
+        "bytes": 201918
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a675315d",
+          "57410",
+          "443"
+        ],
+        "bytes": 184607
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68139fbe",
+          "60024",
+          "443"
+        ],
+        "bytes": 184522
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68139fbe",
+          "53365",
+          "443"
+        ],
+        "bytes": 154166
+      },
+      {
+        "key": [
+          "ip4",
+          "68109b6f",
+          "0a00002b",
+          "443",
+          "59107"
+        ],
+        "bytes": 141231
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9d77",
+          "0a00002b",
+          "443",
+          "55763"
+        ],
+        "bytes": 137338
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "50573"
+        ],
+        "bytes": 127193
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb0254",
+          "0a00002b",
+          "443",
+          "57402"
+        ],
+        "bytes": 117226
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68125f29",
+          "51084",
+          "443"
+        ],
+        "bytes": 116189
+      },
+      {
+        "key": [
+          "ip4",
+          "68122929",
+          "0a00002b",
+          "443",
+          "60003"
+        ],
+        "bytes": 107068
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122ae1",
+          "57396",
+          "443"
+        ],
+        "bytes": 96873
+      },
+      {
+        "key": [
+          "ip4",
+          "68139fbe",
+          "0a00002b",
+          "443",
+          "60024"
+        ],
+        "bytes": 90582
+      },
+      {
+        "key": [
+          "ip4",
+          "68120d1d",
+          "0a00002b",
+          "443",
+          "57385"
+        ],
+        "bytes": 89643
+      },
+      {
+        "key": [
+          "ip4",
+          "68109b6f",
+          "0a00002b",
+          "443",
+          "54558"
+        ],
+        "bytes": 87291
+      },
+      {
+        "key": [
+          "ip4",
+          "22954293",
+          "0a00002b",
+          "443",
+          "55883"
+        ],
+        "bytes": 84665
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "55234"
+        ],
+        "bytes": 78603
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68125e29",
+          "60216",
+          "443"
+        ],
+        "bytes": 74661
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68125e29",
+          "63362",
+          "443"
+        ],
+        "bytes": 72246
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaaa",
+          "58477",
+          "443"
+        ],
+        "bytes": 70848
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "55767",
+          "443"
+        ],
+        "bytes": 69573
+      },
+      {
+        "key": [
+          "ip4",
+          "2cf617ac",
+          "0a00002b",
+          "443",
+          "50694"
+        ],
+        "bytes": 69239
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "65181"
+        ],
+        "bytes": 64410
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122929",
+          "60003",
+          "443"
+        ],
+        "bytes": 61681
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaaa",
+          "0a00002b",
+          "443",
+          "58477"
+        ],
+        "bytes": 60784
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "56470"
+        ],
+        "bytes": 60352
+      },
+      {
+        "key": [
+          "ip4",
+          "a675315d",
+          "0a00002b",
+          "443",
+          "57410"
+        ],
+        "bytes": 60118
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "57405"
+        ],
+        "bytes": 49969
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57426"
+        ],
+        "bytes": 42341
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "56470",
+          "443"
+        ],
+        "bytes": 41874
+      },
+      {
+        "key": [
+          "ip4",
+          "68139fbe",
+          "0a00002b",
+          "443",
+          "53365"
+        ],
+        "bytes": 39216
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "57348",
+          "443"
+        ],
+        "bytes": 34521
+      },
+      {
+        "key": [
+          "ip4",
+          "68109b6f",
+          "0a00002b",
+          "443",
+          "50375"
+        ],
+        "bytes": 33635
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9777",
+          "54963",
+          "443"
+        ],
+        "bytes": 31590
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57382"
+        ],
+        "bytes": 31390
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57374"
+        ],
+        "bytes": 31346
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57375"
+        ],
+        "bytes": 31346
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "adc21926",
+          "52493",
+          "443"
+        ],
+        "bytes": 31102
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "55767"
+        ],
+        "bytes": 30119
+      },
+      {
+        "key": [
+          "ip4",
+          "d8ef20df",
+          "0a00002b",
+          "443",
+          "64966"
+        ],
+        "bytes": 30107
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaee",
+          "0a00002b",
+          "443",
+          "55311"
+        ],
+        "bytes": 30035
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56841",
+          "443"
+        ],
+        "bytes": 29299
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 29200
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "443",
+          "63058"
+        ],
+        "bytes": 28526
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812137d",
+          "62123",
+          "443"
+        ],
+        "bytes": 28457
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaae",
+          "0a00002b",
+          "443",
+          "50487"
+        ],
+        "bytes": 28287
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "d8ef20df",
+          "64966",
+          "443"
+        ],
+        "bytes": 27997
+      },
+      {
+        "key": [
+          "ip4",
+          "68125f29",
+          "0a00002b",
+          "443",
+          "57372"
+        ],
+        "bytes": 23988
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "63370"
+        ],
+        "bytes": 23790
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaae",
+          "50487",
+          "443"
+        ],
+        "bytes": 23208
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd0597",
+          "0a00002b",
+          "443",
+          "57387"
+        ],
+        "bytes": 22865
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56675",
+          "443"
+        ],
+        "bytes": 21202
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56676",
+          "443"
+        ],
+        "bytes": 19840
+      },
+      {
+        "key": [
+          "ip4",
+          "6810d0cb",
+          "0a00002b",
+          "443",
+          "57248"
+        ],
+        "bytes": 19575
+      },
+      {
+        "key": [
+          "ip4",
+          "23af3807",
+          "0a00002b",
+          "443",
+          "57106"
+        ],
+        "bytes": 18744
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "57796",
+          "443"
+        ],
+        "bytes": 18732
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57437",
+          "443"
+        ],
+        "bytes": 18687
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000007",
+          "ffffffff",
+          "49154",
+          "6666"
+        ],
+        "bytes": 18656
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "50427"
+        ],
+        "bytes": 18475
+      },
+      {
+        "key": [
+          "ip4",
+          "6810d0cb",
+          "0a00002b",
+          "443",
+          "58867"
+        ],
+        "bytes": 18113
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57432",
+          "443"
+        ],
+        "bytes": 16546
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9b77",
+          "0a00002b",
+          "443",
+          "60230"
+        ],
+        "bytes": 16502
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000010489695fc3fc856",
+          "fe8000000000000014c3d760cd6235e0",
+          "7000",
+          "57647"
+        ],
+        "bytes": 16271
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd623",
+          "0a00002b",
+          "443",
+          "52422"
+        ],
+        "bytes": 16146
+      },
+      {
+        "key": [
+          "ip6",
+          "fe80000000000000008fa897dc041e87",
+          "fe8000000000000014c3d760cd6235e0",
+          "7000",
+          "57648"
+        ],
+        "bytes": 15876
+      },
+      {
+        "key": [
+          "ip4",
+          "035f2cb6",
+          "0a00002b",
+          "8884",
+          "57436"
+        ],
+        "bytes": 15689
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "23af3807",
+          "57106",
+          "443"
+        ],
+        "bytes": 15336
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "63058",
+          "443"
+        ],
+        "bytes": 15104
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaca",
+          "0a00002b",
+          "443",
+          "57434"
+        ],
+        "bytes": 14956
+      },
+      {
+        "key": [
+          "ip4",
+          "d8ef20df",
+          "0a00002b",
+          "443",
+          "53277"
+        ],
+        "bytes": 14889
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9a77",
+          "56494",
+          "443"
+        ],
+        "bytes": 14647
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "55319"
+        ],
+        "bytes": 14292
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd623",
+          "52422",
+          "443"
+        ],
+        "bytes": 14227
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6810d0cb",
+          "58867",
+          "443"
+        ],
+        "bytes": 14216
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9a77",
+          "0a00002b",
+          "443",
+          "61040"
+        ],
+        "bytes": 14064
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb0254",
+          "57402",
+          "443"
+        ],
+        "bytes": 13929
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9a77",
+          "61040",
+          "443"
+        ],
+        "bytes": 13829
+      },
+      {
+        "key": [
+          "ip4",
+          "68120e83",
+          "0a00002b",
+          "443",
+          "61072"
+        ],
+        "bytes": 13650
+      },
+      {
+        "key": [
+          "ip4",
+          "68120f83",
+          "0a00002b",
+          "443",
+          "57733"
+        ],
+        "bytes": 13603
+      },
+      {
+        "key": [
+          "ip4",
+          "68122ae1",
+          "0a00002b",
+          "443",
+          "57400"
+        ],
+        "bytes": 13549
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaea",
+          "53164",
+          "443"
+        ],
+        "bytes": 13482
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57376"
+        ],
+        "bytes": 13340
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2e",
+          "0a00002b",
+          "443",
+          "61816"
+        ],
+        "bytes": 13172
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109b6f",
+          "59107",
+          "443"
+        ],
+        "bytes": 13165
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c6e",
+          "0a00002b",
+          "443",
+          "54545"
+        ],
+        "bytes": 13045
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2a",
+          "49823",
+          "443"
+        ],
+        "bytes": 12900
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57438"
+        ],
+        "bytes": 12897
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57428"
+        ],
+        "bytes": 12873
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c62",
+          "0a00002b",
+          "443",
+          "62243"
+        ],
+        "bytes": 12773
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "51360"
+        ],
+        "bytes": 12368
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57437"
+        ],
+        "bytes": 12216
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "57424"
+        ],
+        "bytes": 12210
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2a",
+          "0a00002b",
+          "443",
+          "50404"
+        ],
+        "bytes": 12109
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdace",
+          "64572",
+          "443"
+        ],
+        "bytes": 12055
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c63",
+          "0a00002b",
+          "443",
+          "53397"
+        ],
+        "bytes": 11882
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120f83",
+          "57733",
+          "443"
+        ],
+        "bytes": 11868
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120e83",
+          "61072",
+          "443"
+        ],
+        "bytes": 11790
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000000c1921ae398a3da0",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 11654
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "57407"
+        ],
+        "bytes": 11561
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda6e",
+          "0a00002b",
+          "443",
+          "51740"
+        ],
+        "bytes": 11516
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "57406"
+        ],
+        "bytes": 11495
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda41",
+          "0a00002b",
+          "443",
+          "57408"
+        ],
+        "bytes": 11493
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb0254",
+          "0a00002b",
+          "443",
+          "59982"
+        ],
+        "bytes": 11456
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2a",
+          "0a00002b",
+          "443",
+          "49823"
+        ],
+        "bytes": 11452
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaa2",
+          "0a00002b",
+          "443",
+          "57555"
+        ],
+        "bytes": 11434
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "53252"
+        ],
+        "bytes": 11431
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000013",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 11307
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaee",
+          "64126",
+          "443"
+        ],
+        "bytes": 11194
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdae6",
+          "0a00002b",
+          "443",
+          "62775"
+        ],
+        "bytes": 11158
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000013",
+          "0a00002b",
+          "49821",
+          "57813"
+        ],
+        "bytes": 11141
+      },
+      {
+        "key": [
+          "ip4",
+          "12e8c9a0",
+          "0a00002b",
+          "443",
+          "57240"
+        ],
+        "bytes": 11041
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda8a",
+          "0a00002b",
+          "443",
+          "57140"
+        ],
+        "bytes": 10814
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c62",
+          "62243",
+          "443"
+        ],
+        "bytes": 10484
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222c9",
+          "57401",
+          "443"
+        ],
+        "bytes": 10401
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2802",
+          "56635",
+          "443"
+        ],
+        "bytes": 10168
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaea",
+          "0a00002b",
+          "443",
+          "53164"
+        ],
+        "bytes": 10103
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8c527216",
+          "57075",
+          "443"
+        ],
+        "bytes": 9945
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdace",
+          "49482",
+          "443"
+        ],
+        "bytes": 9919
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb029c",
+          "0a00002b",
+          "443",
+          "64700"
+        ],
+        "bytes": 9901
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "57398"
+        ],
+        "bytes": 9850
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9a77",
+          "0a00002b",
+          "443",
+          "56494"
+        ],
+        "bytes": 9823
+      },
+      {
+        "key": [
+          "ip4",
+          "681222c9",
+          "0a00002b",
+          "443",
+          "57401"
+        ],
+        "bytes": 9806
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda8e",
+          "57391",
+          "443"
+        ],
+        "bytes": 9684
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd0596",
+          "0a00002b",
+          "443",
+          "57421"
+        ],
+        "bytes": 9619
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd0596",
+          "0a00002b",
+          "443",
+          "57416"
+        ],
+        "bytes": 9608
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6811f276",
+          "63708",
+          "443"
+        ],
+        "bytes": 9517
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "fe8000000000000010489695fc3fc856",
+          "57647",
+          "7000"
+        ],
+        "bytes": 9422
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "63370",
+          "443"
+        ],
+        "bytes": 9382
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62a",
+          "0a00002b",
+          "443",
+          "57403"
+        ],
+        "bytes": 9351
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "fe80000000000000008fa897dc041e87",
+          "57648",
+          "7000"
+        ],
+        "bytes": 9324
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62a",
+          "0a00002b",
+          "443",
+          "49445"
+        ],
+        "bytes": 9303
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "57414"
+        ],
+        "bytes": 9222
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda85",
+          "56893",
+          "443"
+        ],
+        "bytes": 9203
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "50573",
+          "443"
+        ],
+        "bytes": 9203
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2801",
+          "57353",
+          "443"
+        ],
+        "bytes": 9184
+      },
+      {
+        "key": [
+          "ip4",
+          "8efa8d54",
+          "0a00002b",
+          "443",
+          "57404"
+        ],
+        "bytes": 9096
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "50427",
+          "443"
+        ],
+        "bytes": 9081
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57376",
+          "443"
+        ],
+        "bytes": 9071
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000000c1921ae398a3da0",
+          "fe8000000000000014c3d760cd6235e0",
+          "64963",
+          "57813"
+        ],
+        "bytes": 9070
+      },
+      {
+        "key": [
+          "ip4",
+          "6811f276",
+          "0a00002b",
+          "443",
+          "63708"
+        ],
+        "bytes": 9064
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdace",
+          "0a00002b",
+          "443",
+          "64572"
+        ],
+        "bytes": 8983
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdace",
+          "0a00002b",
+          "443",
+          "49482"
+        ],
+        "bytes": 8958
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c62",
+          "54236",
+          "443"
+        ],
+        "bytes": 8933
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda4a",
+          "0a00002b",
+          "443",
+          "57390"
+        ],
+        "bytes": 8932
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "55234",
+          "443"
+        ],
+        "bytes": 8905
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda6a",
+          "0a00002b",
+          "443",
+          "64688"
+        ],
+        "bytes": 8756
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "14bdad01",
+          "57394",
+          "443"
+        ],
+        "bytes": 8756
+      },
+      {
+        "key": [
+          "ip4",
+          "1743218e",
+          "0a00002b",
+          "443",
+          "57433"
+        ],
+        "bytes": 8714
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "49153",
+          "57452"
+        ],
+        "bytes": 8704
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222c9",
+          "57395",
+          "443"
+        ],
+        "bytes": 8684
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0a",
+          "49259",
+          "443"
+        ],
+        "bytes": 8663
+      },
+      {
+        "key": [
+          "ip4",
+          "68122ae1",
+          "0a00002b",
+          "443",
+          "57397"
+        ],
+        "bytes": 8577
+      },
+      {
+        "key": [
+          "ip4_raw",
+          "08060001",
+          "08000604",
+          "0",
+          "0"
+        ],
+        "bytes": 8568
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "49153",
+          "57447"
+        ],
+        "bytes": 8566
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57378"
+        ],
+        "bytes": 8553
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57380"
+        ],
+        "bytes": 8552
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57381"
+        ],
+        "bytes": 8552
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c63",
+          "0a00002b",
+          "443",
+          "57420"
+        ],
+        "bytes": 8522
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57377"
+        ],
+        "bytes": 8486
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "57379"
+        ],
+        "bytes": 8485
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "53252",
+          "443"
+        ],
+        "bytes": 8466
+      },
+      {
+        "key": [
+          "ip4",
+          "2cee2b04",
+          "0a00002b",
+          "443",
+          "57812"
+        ],
+        "bytes": 8352
+      },
+      {
+        "key": [
+          "ip4",
+          "9df01623",
+          "0a00002b",
+          "443",
+          "57375"
+        ],
+        "bytes": 8181
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaee",
+          "55311",
+          "443"
+        ],
+        "bytes": 8134
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2e",
+          "0a00002b",
+          "443",
+          "57423"
+        ],
+        "bytes": 8103
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2a",
+          "0a00002b",
+          "443",
+          "57430"
+        ],
+        "bytes": 8103
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62a",
+          "56109",
+          "443"
+        ],
+        "bytes": 8088
+      },
+      {
+        "key": [
+          "ip4",
+          "14bdad01",
+          "0a00002b",
+          "443",
+          "57394"
+        ],
+        "bytes": 8073
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdace",
+          "0a00002b",
+          "443",
+          "55313"
+        ],
+        "bytes": 8071
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaae",
+          "55135",
+          "443"
+        ],
+        "bytes": 8048
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdac3",
+          "0a00002b",
+          "443",
+          "64118"
+        ],
+        "bytes": 8016
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaa2",
+          "0a00002b",
+          "443",
+          "56392"
+        ],
+        "bytes": 7956
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb0254",
+          "59982",
+          "443"
+        ],
+        "bytes": 7942
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaaa",
+          "0a00002b",
+          "443",
+          "54427"
+        ],
+        "bytes": 7904
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd7f8c",
+          "0a00002b",
+          "443",
+          "57427"
+        ],
+        "bytes": 7866
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd7f8c",
+          "0a00002b",
+          "443",
+          "57425"
+        ],
+        "bytes": 7856
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c62",
+          "0a00002b",
+          "443",
+          "54236"
+        ],
+        "bytes": 7649
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "49992"
+        ],
+        "bytes": 7632
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62a",
+          "0a00002b",
+          "443",
+          "56109"
+        ],
+        "bytes": 7631
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda4a",
+          "0a00002b",
+          "443",
+          "57389"
+        ],
+        "bytes": 7613
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56841"
+        ],
+        "bytes": 7594
+      },
+      {
+        "key": [
+          "ip4",
+          "1743218e",
+          "0a00002b",
+          "443",
+          "57429"
+        ],
+        "bytes": 7565
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2e",
+          "61816",
+          "443"
+        ],
+        "bytes": 7552
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "369d50c1",
+          "57391",
+          "443"
+        ],
+        "bytes": 7507
+      },
+      {
+        "key": [
+          "ip4",
+          "68120d1d",
+          "0a00002b",
+          "443",
+          "57386"
+        ],
+        "bytes": 7473
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6810d0cb",
+          "57248",
+          "443"
+        ],
+        "bytes": 7468
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c6a",
+          "65499",
+          "443"
+        ],
+        "bytes": 7273
+      },
+      {
+        "key": [
+          "ip4",
+          "68120d1d",
+          "0a00002b",
+          "443",
+          "57384"
+        ],
+        "bytes": 7263
+      },
+      {
+        "key": [
+          "ip4",
+          "68120d1d",
+          "0a00002b",
+          "443",
+          "57383"
+        ],
+        "bytes": 7263
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cee2b04",
+          "57812",
+          "443"
+        ],
+        "bytes": 7233
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120d1d",
+          "57385",
+          "443"
+        ],
+        "bytes": 7213
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd0597",
+          "0a00002b",
+          "443",
+          "57419"
+        ],
+        "bytes": 7213
+      },
+      {
+        "key": [
+          "ip4",
+          "369d50c1",
+          "0a00002b",
+          "443",
+          "57391"
+        ],
+        "bytes": 7132
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0a",
+          "0a00002b",
+          "443",
+          "49259"
+        ],
+        "bytes": 7064
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdac3",
+          "64118",
+          "443"
+        ],
+        "bytes": 7009
+      },
+      {
+        "key": [
+          "ip4",
+          "6812137d",
+          "0a00002b",
+          "443",
+          "62123"
+        ],
+        "bytes": 6980
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68115cbb",
+          "55884",
+          "443"
+        ],
+        "bytes": 6969
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "d8ef20df",
+          "53277",
+          "443"
+        ],
+        "bytes": 6941
+      },
+      {
+        "key": [
+          "ip4",
+          "68125f29",
+          "0a00002b",
+          "443",
+          "61749"
+        ],
+        "bytes": 6904
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0365e034",
+          "55904",
+          "443"
+        ],
+        "bytes": 6883
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000020",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 6883
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c6e",
+          "54545",
+          "443"
+        ],
+        "bytes": 6835
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0365e034",
+          "55970",
+          "443"
+        ],
+        "bytes": 6778
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "51675",
+          "443"
+        ],
+        "bytes": 6745
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c6a",
+          "0a00002b",
+          "443",
+          "57559"
+        ],
+        "bytes": 6717
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "36f13c8f",
+          "56738",
+          "443"
+        ],
+        "bytes": 6712
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd623",
+          "0a00002b",
+          "443",
+          "52901"
+        ],
+        "bytes": 6701
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdae6",
+          "62775",
+          "443"
+        ],
+        "bytes": 6679
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaa2",
+          "57555",
+          "443"
+        ],
+        "bytes": 6647
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "49992",
+          "443"
+        ],
+        "bytes": 6624
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3943d5",
+          "56379",
+          "443"
+        ],
+        "bytes": 6561
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaaa",
+          "54427",
+          "443"
+        ],
+        "bytes": 6526
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9b77",
+          "60230",
+          "443"
+        ],
+        "bytes": 6481
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "57405",
+          "443"
+        ],
+        "bytes": 6455
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000001c180eef8a345da8",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 6408
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109b6f",
+          "54558",
+          "443"
+        ],
+        "bytes": 6406
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "51675"
+        ],
+        "bytes": 6347
+      },
+      {
+        "key": [
+          "ip4",
+          "3647b1c9",
+          "0a00002b",
+          "443",
+          "57417"
+        ],
+        "bytes": 6323
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda4a",
+          "0a00002b",
+          "443",
+          "57388"
+        ],
+        "bytes": 6314
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3647b1c9",
+          "57417",
+          "443"
+        ],
+        "bytes": 6314
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c63",
+          "53397",
+          "443"
+        ],
+        "bytes": 6279
+      },
+      {
+        "key": [
+          "ip4",
+          "681222c9",
+          "0a00002b",
+          "443",
+          "57373"
+        ],
+        "bytes": 6277
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109b6f",
+          "50375",
+          "443"
+        ],
+        "bytes": 6271
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56675"
+        ],
+        "bytes": 6263
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaa2",
+          "56392",
+          "443"
+        ],
+        "bytes": 6243
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120d1d",
+          "57415",
+          "443"
+        ],
+        "bytes": 6239
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdace",
+          "55313",
+          "443"
+        ],
+        "bytes": 6218
+      },
+      {
+        "key": [
+          "ip4",
+          "68109c6f",
+          "0a00002b",
+          "443",
+          "56613"
+        ],
+        "bytes": 6212
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaae",
+          "0a00002b",
+          "443",
+          "62099"
+        ],
+        "bytes": 6202
+      },
+      {
+        "key": [
+          "ip4",
+          "681222c9",
+          "0a00002b",
+          "443",
+          "57395"
+        ],
+        "bytes": 6151
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "9df01623",
+          "57375",
+          "443"
+        ],
+        "bytes": 6050
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdae6",
+          "0a00002b",
+          "443",
+          "56206"
+        ],
+        "bytes": 6022
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda8a",
+          "57140",
+          "443"
+        ],
+        "bytes": 6007
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68155e3a",
+          "61163",
+          "443"
+        ],
+        "bytes": 5988
+      },
+      {
+        "key": [
+          "ip4",
+          "625aa238",
+          "0a00002b",
+          "443",
+          "57399"
+        ],
+        "bytes": 5918
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56676"
+        ],
+        "bytes": 5912
+      },
+      {
+        "key": [
+          "ip4",
+          "369e3b7f",
+          "0a00002b",
+          "443",
+          "57364"
+        ],
+        "bytes": 5902
+      },
+      {
+        "key": [
+          "ip4",
+          "625b91fa",
+          "0a00002b",
+          "443",
+          "57393"
+        ],
+        "bytes": 5890
+      },
+      {
+        "key": [
+          "ip4",
+          "22c53320",
+          "0a00002b",
+          "443",
+          "57413"
+        ],
+        "bytes": 5890
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57439"
+        ],
+        "bytes": 5890
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222c9",
+          "57373",
+          "443"
+        ],
+        "bytes": 5887
+      },
+      {
+        "key": [
+          "ip4",
+          "36c57514",
+          "0a00002b",
+          "443",
+          "57361"
+        ],
+        "bytes": 5884
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c6a",
+          "0a00002b",
+          "443",
+          "65499"
+        ],
+        "bytes": 5875
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd623",
+          "52901",
+          "443"
+        ],
+        "bytes": 5864
+      },
+      {
+        "key": [
+          "ip4",
+          "34033afb",
+          "0a00002b",
+          "443",
+          "57359"
+        ],
+        "bytes": 5830
+      },
+      {
+        "key": [
+          "ip4",
+          "36c57514",
+          "0a00002b",
+          "443",
+          "57362"
+        ],
+        "bytes": 5824
+      },
+      {
+        "key": [
+          "ip4",
+          "20c3714e",
+          "0a00002b",
+          "443",
+          "57409"
+        ],
+        "bytes": 5824
+      },
+      {
+        "key": [
+          "ip4",
+          "6431f63f",
+          "0a00002b",
+          "443",
+          "57422"
+        ],
+        "bytes": 5824
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "57348"
+        ],
+        "bytes": 5811
+      },
+      {
+        "key": [
+          "ip4",
+          "2295429a",
+          "0a00002b",
+          "443",
+          "57412"
+        ],
+        "bytes": 5789
+      },
+      {
+        "key": [
+          "ip4",
+          "369e3b7f",
+          "0a00002b",
+          "443",
+          "57365"
+        ],
+        "bytes": 5770
+      },
+      {
+        "key": [
+          "ip4",
+          "03e0aa3f",
+          "0a00002b",
+          "443",
+          "57392"
+        ],
+        "bytes": 5770
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb029c",
+          "64700",
+          "443"
+        ],
+        "bytes": 5756
+      },
+      {
+        "key": [
+          "ip4",
+          "369e3b7f",
+          "0a00002b",
+          "443",
+          "57363"
+        ],
+        "bytes": 5680
+      },
+      {
+        "key": [
+          "ip4",
+          "36f13c8f",
+          "0a00002b",
+          "443",
+          "56738"
+        ],
+        "bytes": 5631
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c6e",
+          "0a00002b",
+          "443",
+          "59433"
+        ],
+        "bytes": 5628
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "03e99e21",
+          "57411",
+          "443"
+        ],
+        "bytes": 5628
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "342864c3",
+          "62735",
+          "443"
+        ],
+        "bytes": 5627
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2295429a",
+          "57412",
+          "443"
+        ],
+        "bytes": 5604
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9d77",
+          "0a00002b",
+          "443",
+          "61946"
+        ],
+        "bytes": 5576
+      },
+      {
+        "key": [
+          "ip4",
+          "03e99e21",
+          "0a00002b",
+          "443",
+          "57411"
+        ],
+        "bytes": 5544
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "035f2cb6",
+          "57436",
+          "8884"
+        ],
+        "bytes": 5513
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaae",
+          "0a00002b",
+          "443",
+          "55135"
+        ],
+        "bytes": 5489
+      },
+      {
+        "key": [
+          "ip4",
+          "8c527406",
+          "0a00002b",
+          "443",
+          "57360"
+        ],
+        "bytes": 5361
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2a",
+          "50404",
+          "443"
+        ],
+        "bytes": 5318
+      },
+      {
+        "key": [
+          "ip4",
+          "68155e3a",
+          "0a00002b",
+          "443",
+          "61163"
+        ],
+        "bytes": 5271
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda8e",
+          "0a00002b",
+          "443",
+          "57391"
+        ],
+        "bytes": 5269
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda6e",
+          "51740",
+          "443"
+        ],
+        "bytes": 5246
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1743219b",
+          "57418",
+          "443"
+        ],
+        "bytes": 5239
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdace",
+          "0a00002b",
+          "443",
+          "50069"
+        ],
+        "bytes": 5231
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122ae1",
+          "57400",
+          "443"
+        ],
+        "bytes": 5181
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "55319",
+          "443"
+        ],
+        "bytes": 5139
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c6a",
+          "57559",
+          "443"
+        ],
+        "bytes": 5132
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc91",
+          "57724",
+          "443"
+        ],
+        "bytes": 5129
+      },
+      {
+        "key": [
+          "ip4",
+          "acd90c68",
+          "0a00002b",
+          "443",
+          "64030"
+        ],
+        "bytes": 5085
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e0cd23",
+          "57286",
+          "443"
+        ],
+        "bytes": 5047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "51360",
+          "443"
+        ],
+        "bytes": 5023
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc91",
+          "0a00002b",
+          "443",
+          "57724"
+        ],
+        "bytes": 5015
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdae6",
+          "56206",
+          "443"
+        ],
+        "bytes": 5005
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000013",
+          "0a00002b",
+          "49152",
+          "57554"
+        ],
+        "bytes": 4902
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda6a",
+          "64688",
+          "443"
+        ],
+        "bytes": 4886
+      },
+      {
+        "key": [
+          "ip4",
+          "0365e034",
+          "0a00002b",
+          "443",
+          "55904"
+        ],
+        "bytes": 4878
+      },
+      {
+        "key": [
+          "ip4",
+          "0365e034",
+          "0a00002b",
+          "443",
+          "55970"
+        ],
+        "bytes": 4839
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "49152",
+          "57446"
+        ],
+        "bytes": 4816
+      },
+      {
+        "key": [
+          "ip4",
+          "68120d1d",
+          "0a00002b",
+          "443",
+          "57415"
+        ],
+        "bytes": 4801
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1743218e",
+          "57433",
+          "443"
+        ],
+        "bytes": 4787
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000020",
+          "0a00002b",
+          "49152",
+          "57449"
+        ],
+        "bytes": 4771
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3943d5",
+          "0a00002b",
+          "443",
+          "56379"
+        ],
+        "bytes": 4707
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "56613",
+          "443"
+        ],
+        "bytes": 4658
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1743218e",
+          "57429",
+          "443"
+        ],
+        "bytes": 4625
+      },
+      {
+        "key": [
+          "ip4",
+          "342864c3",
+          "0a00002b",
+          "443",
+          "62735"
+        ],
+        "bytes": 4614
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cf617ac",
+          "50694",
+          "443"
+        ],
+        "bytes": 4603
+      },
+      {
+        "key": [
+          "ip4",
+          "222449f6",
+          "0a00002b",
+          "443",
+          "57368"
+        ],
+        "bytes": 4599
+      },
+      {
+        "key": [
+          "ip4",
+          "222449f6",
+          "0a00002b",
+          "443",
+          "57369"
+        ],
+        "bytes": 4533
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdac3",
+          "57370",
+          "443"
+        ],
+        "bytes": 4522
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57438",
+          "443"
+        ],
+        "bytes": 4502
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57428",
+          "443"
+        ],
+        "bytes": 4490
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 4480
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68125f29",
+          "61749",
+          "443"
+        ],
+        "bytes": 4441
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68125f29",
+          "57372",
+          "443"
+        ],
+        "bytes": 4430
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaca",
+          "57434",
+          "443"
+        ],
+        "bytes": 4370
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62a",
+          "49445",
+          "443"
+        ],
+        "bytes": 4321
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdace",
+          "50069",
+          "443"
+        ],
+        "bytes": 4224
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62a",
+          "57403",
+          "443"
+        ],
+        "bytes": 4167
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8c527406",
+          "57360",
+          "443"
+        ],
+        "bytes": 4166
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12612403",
+          "55977",
+          "443"
+        ],
+        "bytes": 3967
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda4a",
+          "57390",
+          "443"
+        ],
+        "bytes": 3967
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12612406",
+          "57066",
+          "443"
+        ],
+        "bytes": 3907
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12e8c9a0",
+          "57240",
+          "443"
+        ],
+        "bytes": 3895
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1261242e",
+          "56538",
+          "443"
+        ],
+        "bytes": 3823
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1261243c",
+          "56884",
+          "443"
+        ],
+        "bytes": 3806
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57426",
+          "443"
+        ],
+        "bytes": 3761
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c63",
+          "57420",
+          "443"
+        ],
+        "bytes": 3738
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "49856",
+          "443"
+        ],
+        "bytes": 3660
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2a",
+          "57430",
+          "443"
+        ],
+        "bytes": 3641
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "222449f6",
+          "57368",
+          "443"
+        ],
+        "bytes": 3614
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaae",
+          "62099",
+          "443"
+        ],
+        "bytes": 3569
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c68",
+          "64030",
+          "443"
+        ],
+        "bytes": 3529
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "acd90c6e",
+          "59433",
+          "443"
+        ],
+        "bytes": 3508
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9d77",
+          "61946",
+          "443"
+        ],
+        "bytes": 3470
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "57452",
+          "49153"
+        ],
+        "bytes": 3446
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd0597",
+          "57387",
+          "443"
+        ],
+        "bytes": 3443
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "57737",
+          "443"
+        ],
+        "bytes": 3442
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "222449f6",
+          "57369",
+          "443"
+        ],
+        "bytes": 3420
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efa8d54",
+          "57404",
+          "443"
+        ],
+        "bytes": 3359
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "4b024c08",
+          "57228",
+          "443"
+        ],
+        "bytes": 3333
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "57424",
+          "443"
+        ],
+        "bytes": 3308
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "369e3b7f",
+          "57365",
+          "443"
+        ],
+        "bytes": 3286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "57735",
+          "443"
+        ],
+        "bytes": 3278
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "5353",
+          "5353"
+        ],
+        "bytes": 3270
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "369e3b7f",
+          "57363",
+          "443"
+        ],
+        "bytes": 3263
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "03e0aa3f",
+          "57392",
+          "443"
+        ],
+        "bytes": 3263
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000027",
+          "57448",
+          "49152"
+        ],
+        "bytes": 3263
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "57398",
+          "443"
+        ],
+        "bytes": 3262
+      },
+      {
+        "key": [
+          "ip4",
+          "11399078",
+          "0a00002b",
+          "5223",
+          "55903"
+        ],
+        "bytes": 3259
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2e",
+          "57423",
+          "443"
+        ],
+        "bytes": 3250
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57382",
+          "443"
+        ],
+        "bytes": 3241
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdac3",
+          "0a00002b",
+          "443",
+          "57370"
+        ],
+        "bytes": 3234
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "369e3b7f",
+          "57364",
+          "443"
+        ],
+        "bytes": 3220
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000013",
+          "57813",
+          "49821"
+        ],
+        "bytes": 3193
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57375",
+          "443"
+        ],
+        "bytes": 3175
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000e",
+          "57447",
+          "49153"
+        ],
+        "bytes": 3160
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "625aa238",
+          "57399",
+          "443"
+        ],
+        "bytes": 3125
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57374",
+          "443"
+        ],
+        "bytes": 3109
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22954293",
+          "55883",
+          "443"
+        ],
+        "bytes": 3101
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "36c57514",
+          "57361",
+          "443"
+        ],
+        "bytes": 3047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "36c57514",
+          "57362",
+          "443"
+        ],
+        "bytes": 3047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22c53320",
+          "57413",
+          "443"
+        ],
+        "bytes": 3047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6431f63f",
+          "57422",
+          "443"
+        ],
+        "bytes": 3047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57439",
+          "443"
+        ],
+        "bytes": 3047
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd0596",
+          "57416",
+          "443"
+        ],
+        "bytes": 3042
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaea",
+          "56680",
+          "443"
+        ],
+        "bytes": 3029
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "55924"
+        ],
+        "bytes": 3024
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd623",
+          "57371",
+          "443"
+        ],
+        "bytes": 3010
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57440",
+          "443"
+        ],
+        "bytes": 2981
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57442",
+          "443"
+        ],
+        "bytes": 2981
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34033afb",
+          "57359",
+          "443"
+        ],
+        "bytes": 2969
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "625b91fa",
+          "57393",
+          "443"
+        ],
+        "bytes": 2969
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "20c3714e",
+          "57409",
+          "443"
+        ],
+        "bytes": 2969
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd623",
+          "0a00002b",
+          "443",
+          "57371"
+        ],
+        "bytes": 2960
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000003a22e2fffe4e4566",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2935
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd0596",
+          "57421",
+          "443"
+        ],
+        "bytes": 2907
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "34c9a9e6",
+          "57435",
+          "443"
+        ],
+        "bytes": 2903
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000f",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2895
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56309"
+        ],
+        "bytes": 2892
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaaa",
+          "0a00002b",
+          "443",
+          "63695"
+        ],
+        "bytes": 2879
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaee",
+          "0a00002b",
+          "443",
+          "64126"
+        ],
+        "bytes": 2879
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd7f8c",
+          "57425",
+          "443"
+        ],
+        "bytes": 2852
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "49152",
+          "57448"
+        ],
+        "bytes": 2850
+      },
+      {
+        "key": [
+          "ip4",
+          "ac4094eb",
+          "0a00002b",
+          "443",
+          "56118"
+        ],
+        "bytes": 2826
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd7f8c",
+          "57427",
+          "443"
+        ],
+        "bytes": 2815
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "57796"
+        ],
+        "bytes": 2809
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2802",
+          "57190",
+          "443"
+        ],
+        "bytes": 2794
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "57340"
+        ],
+        "bytes": 2760
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6811f276",
+          "57367",
+          "443"
+        ],
+        "bytes": 2754
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "57441"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "57445"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "57648"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "57821"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "7000",
+          "57443"
+        ],
+        "bytes": 2726
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dd86",
+          "0a00002b",
+          "443",
+          "49857"
+        ],
+        "bytes": 2718
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaea",
+          "0a00002b",
+          "443",
+          "56680"
+        ],
+        "bytes": 2715
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68155e3a",
+          "57366",
+          "443"
+        ],
+        "bytes": 2708
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56417"
+        ],
+        "bytes": 2694
+      },
+      {
+        "key": [
+          "ip4",
+          "ac4094eb",
+          "0a00002b",
+          "443",
+          "56091"
+        ],
+        "bytes": 2682
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68109c6f",
+          "57414",
+          "443"
+        ],
+        "bytes": 2644
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56432"
+        ],
+        "bytes": 2604
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "55930"
+        ],
+        "bytes": 2604
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dd86",
+          "49857",
+          "443"
+        ],
+        "bytes": 2598
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac4094eb",
+          "56118",
+          "443"
+        ],
+        "bytes": 2560
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56417",
+          "443"
+        ],
+        "bytes": 2560
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56309",
+          "443"
+        ],
+        "bytes": 2560
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "55924",
+          "443"
+        ],
+        "bytes": 2560
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "57340",
+          "443"
+        ],
+        "bytes": 2560
+      },
+      {
+        "key": [
+          "ip4",
+          "12612403",
+          "0a00002b",
+          "443",
+          "55977"
+        ],
+        "bytes": 2548
+      },
+      {
+        "key": [
+          "ip4",
+          "12612406",
+          "0a00002b",
+          "443",
+          "57066"
+        ],
+        "bytes": 2548
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2506
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda85",
+          "0a00002b",
+          "443",
+          "56893"
+        ],
+        "bytes": 2495
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac4094eb",
+          "56091",
+          "443"
+        ],
+        "bytes": 2494
+      },
+      {
+        "key": [
+          "ip4",
+          "a29f87ea",
+          "0a00002b",
+          "443",
+          "49668"
+        ],
+        "bytes": 2490
+      },
+      {
+        "key": [
+          "ip4",
+          "1261243c",
+          "0a00002b",
+          "443",
+          "56884"
+        ],
+        "bytes": 2482
+      },
+      {
+        "key": [
+          "ip4",
+          "ac4094eb",
+          "0a00002b",
+          "443",
+          "56010"
+        ],
+        "bytes": 2465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122ae1",
+          "57397",
+          "443"
+        ],
+        "bytes": 2464
+      },
+      {
+        "key": [
+          "ip4",
+          "a29f85ea",
+          "0a00002b",
+          "443",
+          "49241"
+        ],
+        "bytes": 2462
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a29f87ea",
+          "49668",
+          "443"
+        ],
+        "bytes": 2461
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda4a",
+          "57389",
+          "443"
+        ],
+        "bytes": 2457
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120d1d",
+          "57386",
+          "443"
+        ],
+        "bytes": 2440
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "7000",
+          "57444"
+        ],
+        "bytes": 2417
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56432",
+          "443"
+        ],
+        "bytes": 2400
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "55930",
+          "443"
+        ],
+        "bytes": 2400
+      },
+      {
+        "key": [
+          "ip4",
+          "6811f276",
+          "0a00002b",
+          "443",
+          "57367"
+        ],
+        "bytes": 2357
+      },
+      {
+        "key": [
+          "ip4",
+          "22e0cd23",
+          "0a00002b",
+          "443",
+          "57286"
+        ],
+        "bytes": 2351
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "57737"
+        ],
+        "bytes": 2342
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120d1d",
+          "57383",
+          "443"
+        ],
+        "bytes": 2330
+      },
+      {
+        "key": [
+          "ip4",
+          "1261242e",
+          "0a00002b",
+          "443",
+          "56538"
+        ],
+        "bytes": 2326
+      },
+      {
+        "key": [
+          "ip4",
+          "4b024c08",
+          "0a00002b",
+          "443",
+          "57228"
+        ],
+        "bytes": 2325
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "49856"
+        ],
+        "bytes": 2304
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a29f85ea",
+          "49241",
+          "443"
+        ],
+        "bytes": 2288
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57725",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57739",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57732",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57738",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57728",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57747",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57745",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57741",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57748",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57758",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57752",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57755",
+          "443"
+        ],
+        "bytes": 2286
+      },
+      {
+        "key": [
+          "ip4",
+          "68155e3a",
+          "0a00002b",
+          "443",
+          "57366"
+        ],
+        "bytes": 2282
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57381",
+          "443"
+        ],
+        "bytes": 2276
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57730",
+          "443"
+        ],
+        "bytes": 2275
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda4a",
+          "57388",
+          "443"
+        ],
+        "bytes": 2267
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3b1889",
+          "55749",
+          "443"
+        ],
+        "bytes": 2264
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2801",
+          "57339",
+          "443"
+        ],
+        "bytes": 2253
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120d1d",
+          "57384",
+          "443"
+        ],
+        "bytes": 2230
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac4094eb",
+          "56010",
+          "443"
+        ],
+        "bytes": 2229
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "57408",
+          "443"
+        ],
+        "bytes": 2227
+      },
+      {
+        "key": [
+          "ip4",
+          "68115cbb",
+          "0a00002b",
+          "443",
+          "55884"
+        ],
+        "bytes": 2225
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57378",
+          "443"
+        ],
+        "bytes": 2212
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57377",
+          "443"
+        ],
+        "bytes": 2190
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57379",
+          "443"
+        ],
+        "bytes": 2190
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "57380",
+          "443"
+        ],
+        "bytes": 2180
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "57407",
+          "443"
+        ],
+        "bytes": 2163
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda41",
+          "57406",
+          "443"
+        ],
+        "bytes": 2131
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57766",
+          "443"
+        ],
+        "bytes": 2088
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57768",
+          "443"
+        ],
+        "bytes": 2088
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57770",
+          "443"
+        ],
+        "bytes": 2088
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0386fa3f",
+          "60492",
+          "443"
+        ],
+        "bytes": 2078
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12df828c",
+          "50233",
+          "443"
+        ],
+        "bytes": 2078
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3b1889",
+          "55746",
+          "443"
+        ],
+        "bytes": 2014
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2013
+      },
+      {
+        "key": [
+          "ip4",
+          "1743219b",
+          "0a00002b",
+          "443",
+          "57418"
+        ],
+        "bytes": 2001
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd0597",
+          "57419",
+          "443"
+        ],
+        "bytes": 1988
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "57735"
+        ],
+        "bytes": 1984
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cc7797f",
+          "57091",
+          "443"
+        ],
+        "bytes": 1967
+      },
+      {
+        "key": [
+          "ip4",
+          "a27d2802",
+          "0a00002b",
+          "443",
+          "56635"
+        ],
+        "bytes": 1948
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68121f54",
+          "55148",
+          "443"
+        ],
+        "bytes": 1912
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaaa",
+          "63695",
+          "443"
+        ],
+        "bytes": 1906
+      },
+      {
+        "key": [
+          "ip4",
+          "68121f54",
+          "0a00002b",
+          "443",
+          "55148"
+        ],
+        "bytes": 1892
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57725"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57739"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57732"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57738"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57728"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57747"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57745"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57741"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57748"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57758"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57752"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57755"
+        ],
+        "bytes": 1837
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57730"
+        ],
+        "bytes": 1826
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3b1889",
+          "0a00002b",
+          "443",
+          "55749"
+        ],
+        "bytes": 1815
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000e",
+          "57446",
+          "49152"
+        ],
+        "bytes": 1791
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000020",
+          "57449",
+          "49152"
+        ],
+        "bytes": 1789
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000013",
+          "57554",
+          "49152"
+        ],
+        "bytes": 1788
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22ce29ef",
+          "57152",
+          "443"
+        ],
+        "bytes": 1774
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000010489695fc3fc856",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 1753
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57766"
+        ],
+        "bytes": 1682
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57768"
+        ],
+        "bytes": 1682
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57770"
+        ],
+        "bytes": 1682
+      },
+      {
+        "key": [
+          "ip4",
+          "0386fa3f",
+          "0a00002b",
+          "443",
+          "60492"
+        ],
+        "bytes": 1672
+      },
+      {
+        "key": [
+          "ip4",
+          "12df828c",
+          "0a00002b",
+          "443",
+          "50233"
+        ],
+        "bytes": 1672
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd28a",
+          "0a00002b",
+          "443",
+          "57573"
+        ],
+        "bytes": 1636
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3b1889",
+          "0a00002b",
+          "443",
+          "55746"
+        ],
+        "bytes": 1596
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 1593
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cc7797f",
+          "57090",
+          "443"
+        ],
+        "bytes": 1582
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57440"
+        ],
+        "bytes": 1545
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57442"
+        ],
+        "bytes": 1539
+      },
+      {
+        "key": [
+          "ip4",
+          "6431ddf9",
+          "0a00002b",
+          "443",
+          "56789"
+        ],
+        "bytes": 1482
+      },
+      {
+        "key": [
+          "ip4",
+          "34c9a9e6",
+          "0a00002b",
+          "443",
+          "57435"
+        ],
+        "bytes": 1479
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000f",
+          "0a00002b",
+          "5353",
+          "5353"
+        ],
+        "bytes": 1470
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6431ddf9",
+          "56789",
+          "443"
+        ],
+        "bytes": 1431
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0a",
+          "57135",
+          "443"
+        ],
+        "bytes": 1356
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0a",
+          "57137",
+          "443"
+        ],
+        "bytes": 1356
+      }
+    ],
+    "tls_clienthello_snis_unique": [
+      "api2.cursor.sh",
+      "mobile.events.data.microsoft.com"
+    ],
+    "opaque_tls_hints": 152,
+    "dns_hostnames_unique": [
+      "7fc280bc.datadoghq.com",
+      "accounts.google.com",
+      "ad.doubleclick.net",
+      "analytics.google.com",
+      "api.github.com",
+      "api2.cursor.sh",
+      "api3.cursor.sh",
+      "app-na2.hubspot.com",
+      "applepay.cdn-apple.com",
+      "auth.nordaccount.com",
+      "b._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "browser-intake-us5-datadoghq.com",
+      "challenges.cloudflare.com",
+      "chat.google.com",
+      "clients4.google.com",
+      "clientservices.googleapis.com",
+      "cm.nordvpn.com",
+      "collector.github.com",
+      "content-autofill.googleapis.com",
+      "d.nordaccount.com",
+      "d.nordvpn.com",
+      "db._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "debug.nordsec.com",
+      "debug.nordvpn.com",
+      "docs.google.com",
+      "easylist-downloads.adblockplus.org",
+      "encrypted-tbn0.gstatic.com",
+      "google.com",
+      "googleads.g.doubleclick.net",
+      "ic.nordcdn.com",
+      "iframe-card.nordpayments.com",
+      "lb._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "lh3.googleusercontent.com",
+      "mail.google.com",
+      "nordaccount.com",
+      "nordvpn.com",
+      "oauthaccountmanager.googleapis.com",
+      "ogads-pa.clients6.google.com",
+      "ogs.google.com",
+      "optimizationguide-pa.googleapis.com",
+      "order.nordvpn.com",
+      "passwordsleakcheck-pa.googleapis.com",
+      "play.google.com",
+      "s1.nordaccount.com",
+      "s1.nordcdn.com",
+      "signaler-pa.youtube.com",
+      "ssl.gstatic.com",
+      "stats.g.doubleclick.net",
+      "stun.cloudflare.com",
+      "stun.l.google.com",
+      "tzm.protechts.net",
+      "us-east-1.console.aws.amazon.com",
+      "web-api.nordvpn.com",
+      "www.facebook.com",
+      "www.google.com",
+      "www.googleadservices.com",
+      "www.googletagmanager.com",
+      "www.gstatic.com",
+      "www.youtube.com"
+    ],
+    "quic_udp_443_packets": 86620,
+    "quic_heuristic_notes": 917,
+    "top_inet_pairs_sample": [
+      {
+        "src": "104.16.155.111",
+        "dst": "10.0.0.43",
+        "bytes": 72586530
+      },
+      {
+        "src": "173.194.25.38",
+        "dst": "10.0.0.43",
+        "bytes": 15801385
+      },
+      {
+        "src": "185.211.32.222",
+        "dst": "10.0.0.43",
+        "bytes": 8276752
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "185.211.32.222",
+        "bytes": 4859067
+      },
+      {
+        "src": "104.19.159.190",
+        "dst": "10.0.0.43",
+        "bytes": 1898795
+      },
+      {
+        "src": "104.18.34.244",
+        "dst": "10.0.0.43",
+        "bytes": 1585397
+      },
+      {
+        "src": "104.18.94.41",
+        "dst": "10.0.0.43",
+        "bytes": 865869
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.19.159.190",
+        "bytes": 563997
+      },
+      {
+        "src": "104.18.42.225",
+        "dst": "10.0.0.43",
+        "bytes": 546744
+      },
+      {
+        "src": "104.18.95.41",
+        "dst": "10.0.0.43",
+        "bytes": 533197
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.219.14",
+        "bytes": 407020
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "173.194.25.38",
+        "bytes": 386432
+      },
+      {
+        "src": "142.251.151.119",
+        "dst": "10.0.0.43",
+        "bytes": 290209
+      },
+      {
+        "src": "104.16.156.111",
+        "dst": "10.0.0.43",
+        "bytes": 253997
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.157.119",
+        "bytes": 243814
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.16.155.111",
+        "bytes": 228032
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "166.117.49.93",
+        "bytes": 184607
+      },
+      {
+        "src": "142.251.219.14",
+        "dst": "10.0.0.43",
+        "bytes": 154534
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.94.41",
+        "bytes": 146907
+      },
+      {
+        "src": "142.251.157.119",
+        "dst": "10.0.0.43",
+        "bytes": 142914
+      },
+      {
+        "src": "142.251.2.84",
+        "dst": "10.0.0.43",
+        "bytes": 128682
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.95.41",
+        "bytes": 125060
+      },
+      {
+        "src": "142.251.218.65",
+        "dst": "10.0.0.43",
+        "bytes": 120676
+      },
+      {
+        "src": "104.18.13.29",
+        "dst": "10.0.0.43",
+        "bytes": 116443
+      },
+      {
+        "src": "104.18.41.41",
+        "dst": "10.0.0.43",
+        "bytes": 107068
+      },
+      {
+        "src": "52.201.169.230",
+        "dst": "10.0.0.43",
+        "bytes": 104535
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.42.225",
+        "bytes": 104518
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.214.46",
+        "bytes": 98158
+      },
+      {
+        "src": "142.251.214.46",
+        "dst": "10.0.0.43",
+        "bytes": 97518
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.18.125",
+        "bytes": 89073
+      },
+      {
+        "src": "34.149.66.147",
+        "dst": "10.0.0.43",
+        "bytes": 84665
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.218.170",
+        "bytes": 80226
+      }
+    ],
+    "limits": [
+      "ECH_ESNI_not_visible",
+      "DoH_not_inferred_from_udp_53",
+      "tcp_segmentation_may_fragment_clienthello",
+      "inner_vpn_payload_may_be_opaque",
+      "flows_sample_kept_top_512"
+    ],
+    "errors": [],
+    "ja3_ja4": []
+  },
+  "capture_finalize": {
+    "session_id": "b83934130e78",
+    "finalized_at_utc": "2026-05-01T08:37:12.977941+00:00",
+    "source_pcap_cache_path": "/Users/alauder/Source/doxx/vpn-leaks/.vpn-leaks/capture/session_b83934130e78.pcap",
+    "finalize_errors": []
+  },
+  "extra": {
+    "exit_geo": {
+      "source": "ipwho.is",
+      "ip": "185.211.32.224",
+      "country_code": "US",
+      "region": "California",
+      "city": "San Jose",
+      "connection": {
+        "asn": 212238,
+        "org": "Packethub S.A.",
+        "isp": "Datacamp Limited",
+        "domain": "packethub.net"
+      },
+      "location_id": "us-california-san-jose-224",
+      "location_label": "San Jose, California, United States"
+    },
+    "surface_probe": {
+      "probes": [
+        {
+          "url": "https://www.nordvpn.com/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/",
+          "cdn_headers": {
+            "cf-ray": "9f4d75cd3b72405d-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75cd3b72405d"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5e0529734c192de1.har",
+          "page_type": "home"
+        },
+        {
+          "url": "https://nordvpn.com/pricing/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/pricing/",
+          "cdn_headers": {
+            "cf-ray": "9f4d75ce6f124c7c-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75ce6f124c7c"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/3cec43152ba057c5.har",
+          "page_type": "pricing"
+        },
+        {
+          "url": "https://my.nordaccount.com/",
+          "error": null,
+          "status": 200,
+          "final_url": "https://my.nordaccount.com/",
+          "cdn_headers": {
+            "cf-ray": "9f4d75cfd98c4b96-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://my.nordaccount.com/assets/runtime.c392954944a8670a35e1.js",
+            "https://my.nordaccount.com/assets/_formatjs.defaultvendors.3392aa991e49cee93825.js",
+            "https://my.nordaccount.com/assets/regenerator-runtime.defaultvendors.51d6a9d25a2ced4bdb8d.js",
+            "https://my.nordaccount.com/assets/promise-polyfill.defaultvendors.0c84317ed01865b3a6b7.js",
+            "https://my.nordaccount.com/assets/index.0a207e294320c8f97477.js",
+            "https://my.nordaccount.com/assets/_nordsec.defaultvendors.572e2f3be6ffe304f907.chunk.js",
+            "https://my.nordaccount.com/assets/date-fns.defaultvendors.592977043c7d4561d202.chunk.js",
+            "https://my.nordaccount.com/assets/_nord.defaultvendors.d152b9e1023813f041a0.chunk.js",
+            "https://my.nordaccount.com/assets/_sentry.defaultvendors.cb843f853a70d0457cf7.chunk.js",
+            "https://my.nordaccount.com/assets/_sentry-internal.defaultvendors.034bb8b1a0fa856b19d5.chunk.js",
+            "https://my.nordaccount.com/assets/graphql.defaultvendors.2db91e2e25496ff503bb.chunk.js",
+            "https://my.nordaccount.com/assets/react-intl.defaultvendors.7dee90d1f00605a61702.chunk.js",
+            "https://my.nordaccount.com/assets/graphql-request.defaultvendors.443f485a7486fe535145.chunk.js",
+            "https://my.nordaccount.com/assets/_reduxjs.defaultvendors.cf22344d94cd257e0ad1.chunk.js",
+            "https://my.nordaccount.com/assets/react-transition-group.defaultvendors.dd1544ee5d0353a1c51c.chunk.js",
+            "https://my.nordaccount.com/assets/uuid.defaultvendors.eead893baec50d1e9c23.chunk.js",
+            "https://my.nordaccount.com/assets/_babel.defaultvendors.a1d59fe84220e0220774.chunk.js",
+            "https://my.nordaccount.com/assets/react.defaultvendors.78aad35d08a5b3d4089d.chunk.js",
+            "https://my.nordaccount.com/assets/react-dom.defaultvendors.995c811c86640d85b25b.chunk.js",
+            "https://my.nordaccount.com/assets/intl-messageformat.defaultvendors.7b440f2a12314e045ce0.chunk.js",
+            "https://my.nordaccount.com/assets/prop-types.defaultvendors.35bd4599905121b4452f.chunk.js",
+            "https://my.nordaccount.com/assets/react-toastify.defaultvendors.5cabe679c5d3067cb6ec.chunk.js",
+            "https://my.nordaccount.com/assets/dom-helpers.defaultvendors.6e73bc321922b4f6a074.chunk.js",
+            "https://my.nordaccount.com/assets/use-sync-external-store.defaultvendors.ed9ee8ffe42909d13b1a.chunk.js",
+            "https://my.nordaccount.com/assets/scheduler.defaultvendors.38f1999b87de9d343cd9.chunk.js",
+            "https://my.nordaccount.com/assets/react-inlinesvg.defaultvendors.9660e72138e0765193b0.chunk.js",
+            "https://my.nordaccount.com/assets/react-from-dom.defaultvendors.ce5a33ecaecdd67f6892.chunk.js",
+            "https://my.nordaccount.com/assets/react-redux.defaultvendors.d25fa91400ca42cc077f.chunk.js",
+            "https://my.nordaccount.com/assets/js-cookie.defaultvendors.002fb3f4fa5e9d95333e.chunk.js",
+            "https://my.nordaccount.com/assets/immer.defaultvendors.f09e5118b557d6cdcdb0.chunk.js",
+            "https://my.nordaccount.com/assets/clsx.defaultvendors.1faa6083987170b4864e.chunk.js",
+            "https://my.nordaccount.com/assets/_standard-schema.defaultvendors.7e58377df74678c66197.chunk.js",
+            "https://my.nordaccount.com/assets/classnames.defaultvendors.8bc90ba6e8b07a8e8fdd.chunk.js",
+            "https://my.nordaccount.com/assets/react-side-effect.defaultvendors.9c3f593d125d4faecd0c.chunk.js",
+            "https://my.nordaccount.com/assets/react-router.defaultvendors.2d8e01f4a19789f330cc.chunk.js",
+            "https://my.nordaccount.com/assets/react-router-dom.defaultvendors.c5cd25bb13582d235275.chunk.js",
+            "https://my.nordaccount.com/assets/react-intersection-observer.defaultvendors.e59fbfabd9c2e27a0b4f.chunk.js",
+            "https://my.nordaccount.com/assets/react-helmet.defaultvendors.e672b2f66b3b7791a6ca.chunk.js",
+            "https://my.nordaccount.com/assets/react-fast-compare.defaultvendors.f8ff413dc4d3d3df402f.chunk.js",
+            "https://my.nordaccount.com/assets/react-content-loader.defaultvendors.81dc6c8ab0aa44f988b4.chunk.js",
+            "https://my.nordaccount.com/assets/object-assign.defaultvendors.de37ca6a3967ba95f8af.chunk.js",
+            "https://my.nordaccount.com/assets/lodash.isequal.defaultvendors.d7e8a9adee14363904ac.chunk.js",
+            "https://my.nordaccount.com/assets/humps.defaultvendors.167737137fffcf45e86d.chunk.js",
+            "https://my.nordaccount.com/assets/filter-obj.defaultvendors.b61346464b8b6744fe2d.chunk.js",
+            "https://my.nordaccount.com/assets/file-saver.defaultvendors.625061e1f589bdd1fe21.chunk.js",
+            "https://my.nordaccount.com/assets/exenv.defaultvendors.1b7ed5150cf28a7b2477.chunk.js",
+            "https://my.nordaccount.com/assets/decode-uri-component.defaultvendors.e5a971eb831f6f752650.chunk.js",
+            "https://my.nordaccount.com/assets/cross-fetch.defaultvendors.68e7cd14aa67eafb4cb6.chunk.js",
+            "https://my.nordaccount.com/assets/strict-uri-encode.defaultvendors.a5dacf95bccb8a807452.chunk.js",
+            "https://my.nordaccount.com/assets/split-on-first.defaultvendors.8d1e4c5402299b8ba208.chunk.js",
+            "https://my.nordaccount.com/assets/query-string.defaultvendors.87128a48e251ff40f71f.chunk.js",
+            "https://my.nordaccount.com/assets/_remix-run.defaultvendors.a8dbbdf30892d10b61af.chunk.js",
+            "https://my.nordaccount.com/assets/4666.3d565fb961595aa6fb72.chunk.js"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/0096221d6f12d382.har",
+          "page_type": "signup"
+        },
+        {
+          "url": "https://nordcheckout.com/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/pricing?redirected_from=nordcheckout.com%2F",
+          "cdn_headers": {
+            "cf-ray": "9f4d75d6fe973117-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75d6fe973117"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5c4416295d131e0b.har",
+          "page_type": "checkout"
+        },
+        {
+          "url": "https://support.nordvpn.com/",
+          "error": null,
+          "status": 200,
+          "final_url": "https://support.nordvpn.com/hc/en-us",
+          "cdn_headers": {
+            "cf-ray": "9f4d75db0d35ad44-SJC",
+            "via": "zorg",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://www.googletagmanager.com/gtm.js?id=GTM-WX5CH8",
+            "https://s1.nordcdn.com/d/consent/prod/init.js?isGdpr=true",
+            "https://s1.nordcdn.com/d/nordvpn/prod/index.js?cu=https://d.nordvpn.com/1/cc&p=nordvpn&sni=1",
+            "https://www.googletagmanager.com/gtag/js?id=G-LEXMJ1N516",
+            "https://support.nordvpn.com/hc/en-us",
+            "https://support.nordvpn.com/hc/theming_assets/01KM5FCEA8DSAWC4R1R69CE38Q",
+            "https://s1.nordcdn.com/d/consent/prod/main.js",
+            "https://s1.nordcdn.com/nordvpn/3.816.0/js/unsupported-fallback.min.js",
+            "https://support.nordvpn.com/hc/theming_assets/01K8QJJ1GZQYMV2VYPKWCY7KC7",
+            "https://support.nordvpn.com/hc/theming_assets/01KHNYSGHVJ2VS6PMDB39EB2SB",
+            "https://static.zdassets.com/hc/assets/en-us.a8c200c80dbfa8b39d39.js",
+            "https://static.zdassets.com/hc/assets/hc_enduser-d9740dff469f88fb0ddbf825653eb95c.js",
+            "https://support.nordvpn.com/hc/theming_assets/757086/445532/script.js?digest=45872676122001"
+          ],
+          "images": [
+            "https://sb.nordcdn.com/m/83d4a4bd1d9eb5e5/original/woman-box-nord-vpn-md-svg.svg",
+            "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/app-store.svg",
+            "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/google-play.svg",
+            "https://sb.nordcdn.com/m/2a99ab6c9cf051ac/original/credit-cards.svg"
+          ],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/23c88e21719d1a9b.har",
+          "page_type": "support"
+        }
+      ],
+      "surface_probe_dir": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe",
+      "har_summary": {
+        "har_files": [
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5e0529734c192de1.har",
+            "entry_count": 5,
+            "unique_hosts": [
+              "nordvpn.com",
+              "www.nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/3cec43152ba057c5.har",
+            "entry_count": 3,
+            "unique_hosts": [
+              "nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/0096221d6f12d382.har",
+            "entry_count": 57,
+            "unique_hosts": [
+              "my.nordaccount.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/5c4416295d131e0b.har",
+            "entry_count": 5,
+            "unique_hosts": [
+              "nordcheckout.com",
+              "nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/surface_probe/har/23c88e21719d1a9b.har",
+            "entry_count": 30,
+            "unique_hosts": [
+              "d.nordvpn.com",
+              "s1.nordcdn.com",
+              "sb.nordcdn.com",
+              "static.zdassets.com",
+              "support.nordvpn.com",
+              "www.googletagmanager.com"
+            ],
+            "unique_schemes": [
+              "blob",
+              "https"
+            ],
+            "tracker_candidates": [
+              "www.googletagmanager.com"
+            ],
+            "cdn_candidates": [
+              "s1.nordcdn.com",
+              "sb.nordcdn.com"
+            ],
+            "error": null
+          }
+        ],
+        "merged_unique_hosts": [
+          "d.nordvpn.com",
+          "my.nordaccount.com",
+          "nordcheckout.com",
+          "nordvpn.com",
+          "s1.nordcdn.com",
+          "sb.nordcdn.com",
+          "static.zdassets.com",
+          "support.nordvpn.com",
+          "www.googletagmanager.com",
+          "www.nordvpn.com"
+        ],
+        "merged_tracker_candidates": [
+          "www.googletagmanager.com"
+        ],
+        "merged_cdn_candidates": [
+          "s1.nordcdn.com",
+          "sb.nordcdn.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+---
+
+
+
+### nordvpn-20260501T084027Z-7f1f4459 / us-california-san-francisco-200
+
+
+
+- **vpn_provider:** nordvpn
+- **Label:** San Francisco, California, United States
+- **Path:** `runs/nordvpn-20260501T084027Z-7f1f4459/locations/us-california-san-francisco-200/normalized.json`
+- **schema_version:** 1.4
+- **timestamp_utc:** 2026-05-01T08:46:20.027516+00:00
+- **connection_mode:** manual_gui
+
+#### Runner environment
+
+```json
+{
+  "os": "Darwin 25.4.0",
+  "kernel": "25.4.0",
+  "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+  "browser": null,
+  "vpn_protocol": "manual_gui",
+  "vpn_client": null
+}
+```
+
+#### Exit IP
+
+| Field | Value |
+|-------|-------|
+| exit_ip_v4 | 185.187.168.200 |
+| exit_ip_v6 | None |
+
+**exit_ip_sources**
+
+```json
+[
+  {
+    "url": "https://api.ipify.org",
+    "ipv4": "185.187.168.200",
+    "ipv6": null,
+    "raw_excerpt": "185.187.168.200",
+    "error": null
+  },
+  {
+    "url": "https://api64.ipify.org",
+    "ipv4": "185.187.168.200",
+    "ipv6": null,
+    "raw_excerpt": "185.187.168.200",
+    "error": null
+  },
+  {
+    "url": "https://api.ipify.org?format=json",
+    "ipv4": "185.187.168.200",
+    "ipv6": null,
+    "raw_excerpt": "{\"ip\":\"185.187.168.200\"}",
+    "error": null
+  }
+]
+```
+
+#### DNS
+
+| Field | Value |
+|-------|-------|
+| dns_leak_flag | False |
+| dns_leak_notes | Heuristic: no obvious public resolver IPs parsed from external page |
+
+**dns_servers_observed**
+
+```json
+[
+  {
+    "tier": "local",
+    "detail": "resolv.conf nameserver lines (Unix)",
+    "servers": [
+      "100.64.0.2"
+    ]
+  },
+  {
+    "tier": "local",
+    "detail": "getaddrinfo('whoami.akamai.net')",
+    "servers": [
+      "185.187.168.198"
+    ]
+  },
+  {
+    "tier": "external",
+    "detail": "ipleak_dns",
+    "servers": [
+      "185.187.168.200"
+    ]
+  }
+]
+```
+
+#### WebRTC
+
+| Field | Value |
+|-------|-------|
+| webrtc_leak_flag | False |
+| webrtc_notes | Exit IP appears in candidate set (expected for tunneled public) |
+
+
+
+| type | protocol | address | port | raw (may be shortened in table) |
+|------|----------|---------|------|--------------------------------|
+| host | udp | 7f4f39b4-3651-4b75-8e40-acbfe8e81e09.local | 51278 | `candidate:2563907187 1 udp 2113937151 7f4f39b4-3651-4b75-8e40-acbfe8e81e09.local 51278 typ host generation 0 ufrag oGXt network-cost 999` |
+| srflx | udp | 185.187.168.200 | 41524 | `candidate:2563219285 1 udp 1677729535 185.187.168.200 41524 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag oGXt network-cost 999` |
+
+
+#### IPv6
+
+| Field | Value |
+|-------|-------|
+| ipv6_status | unsupported_or_no_ipv6 |
+| ipv6_leak_flag | False |
+| ipv6_notes | No IPv6 observed via curl or IP endpoints |
+
+#### Fingerprint
+
+
+```json
+{
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+  "language": "en-US",
+  "hardwareConcurrency": 16,
+  "platform": "MacIntel"
+}
+```
+
+
+#### Attribution
+
+```json
+{
+  "asn": 212238,
+  "holder": "CDNEXT Datacamp Limited",
+  "country": null,
+  "confidence": 0.7,
+  "confidence_notes": "ASNs seen: [212238]",
+  "supporting_sources": [
+    {
+      "name": "ripestat",
+      "asn": 212238,
+      "holder": "CDNEXT Datacamp Limited",
+      "country": null,
+      "raw": {
+        "prefix_overview": {
+          "messages": [
+            [
+              "warning",
+              "Given resource is not announced but result has been aligned to first-level less-specific (185.187.168.0/24)."
+            ]
+          ],
+          "see_also": [],
+          "version": "1.3",
+          "data_call_name": "prefix-overview",
+          "data_call_status": "supported",
+          "cached": false,
+          "query_id": "20260501084045-86ea6038-bb24-46d1-9338-4a40e4925586",
+          "process_time": 45,
+          "server_id": "app160",
+          "build_version": "v0.9.15-2026.04.30",
+          "pipeline": "1248748",
+          "status": "ok",
+          "status_code": 200,
+          "time": "2026-05-01T08:40:45.966816",
+          "data": {
+            "is_less_specific": true,
+            "announced": true,
+            "asns": [
+              {
+                "asn": 212238,
+                "holder": "CDNEXT Datacamp Limited"
+              }
+            ],
+            "related_prefixes": [],
+            "resource": "185.187.168.0/24",
+            "type": "prefix",
+            "block": {
+              "resource": "185.0.0.0/8",
+              "desc": "RIPE NCC (Status: ALLOCATED)",
+              "name": "IANA IPv4 Address Space Registry"
+            },
+            "actual_num_related": 0,
+            "query_time": "2026-05-01T00:00:00",
+            "num_filtered_out": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "team_cymru",
+      "asn": 212238,
+      "holder": null,
+      "country": null,
+      "raw": {
+        "asn": 212238,
+        "raw_line": "212238 | 185.187.168.0/24 | DE | ripencc | 2017-01-27",
+        "parts": [
+          "212238",
+          "185.187.168.0/24",
+          "DE",
+          "ripencc",
+          "2017-01-27"
+        ],
+        "disclaimer": [
+          "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+        ]
+      }
+    },
+    {
+      "name": "peeringdb",
+      "asn": null,
+      "holder": null,
+      "country": null,
+      "raw": {
+        "error": "Client error '404 Not Found' for url 'https://www.peeringdb.com/api/net?asn=212238'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+      }
+    }
+  ],
+  "disclaimers": [
+    "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+  ]
+}
+```
+
+#### Policies
+
+```json
+[
+  {
+    "role": "vpn",
+    "url": "https://nordvpn.com/privacy-policy/",
+    "fetched_at_utc": "2026-05-01T08:41:36.632957+00:00",
+    "sha256": "dc8f59f82483d7c644a087d7cca883de4836bb48ec6d03e111f0e9fee9baeebb",
+    "summary_bullets": [
+      "Mentions logging (keyword hit; review source)"
+    ]
+  },
+  {
+    "role": "vpn",
+    "url": "https://my.nordaccount.com/legal/privacy-policy/",
+    "fetched_at_utc": "2026-05-01T08:43:08.511448+00:00",
+    "sha256": null,
+    "summary_bullets": [
+      "fetch error: Timeout 90000ms exceeded.\n=========================== logs ===========================\n\"load\" event fired\n============================================================"
+    ]
+  }
+]
+```
+
+#### Services contacted
+
+
+
+
+- `attribution:methodology:104.16.155.111`
+
+- `attribution:methodology:104.16.156.111`
+
+- `attribution:methodology:104.16.208.203`
+
+- `attribution:methodology:104.17.160.135`
+
+- `attribution:methodology:104.17.223.153`
+
+- `attribution:methodology:104.18.42.225`
+
+- `attribution:methodology:104.19.159.190`
+
+- `attribution:methodology:142.251.219.40`
+
+- `attribution:methodology:172.64.145.31`
+
+- `attribution:methodology:216.198.53.11`
+
+- `attribution:methodology:216.198.53.3`
+
+- `attribution:methodology:216.198.54.11`
+
+- `attribution:methodology:216.198.54.3`
+
+- `attribution:methodology:2606:4700::6810:9b6f`
+
+- `attribution:methodology:2606:4700::6810:9c6f`
+
+- `attribution:methodology:2607:f8b0:4005:803::2008`
+
+- `attribution:methodology:2a06:98c1:3101::6812:2ae1`
+
+- `attribution:methodology:2a06:98c1:3107::ac40:911f`
+
+- `attribution:ns_glue:108.162.192.130`
+
+- `attribution:ns_glue:108.162.193.142`
+
+- `attribution:ns_glue:172.64.32.130`
+
+- `attribution:ns_glue:172.64.33.142`
+
+- `attribution:ns_glue:173.245.58.130`
+
+- `attribution:ns_glue:173.245.59.142`
+
+- `attribution:ns_glue:2606:4700:50::adf5:3a82`
+
+- `attribution:ns_glue:2606:4700:58::adf5:3b8e`
+
+- `attribution:ns_glue:2803:f800:50::6ca2:c082`
+
+- `attribution:ns_glue:2803:f800:50::6ca2:c18e`
+
+- `attribution:ns_glue:2a06:98c1:50::ac40:2082`
+
+- `attribution:ns_glue:2a06:98c1:50::ac40:218e`
+
+- `browserleaks.com:playwright_chromium`
+
+- `competitor_probe:enabled`
+
+- `competitor_probe:har_summary`
+
+- `dns:cname_scan:api.nordvpn.com`
+
+- `dns:cname_scan:autodiscover.nordvpn.com`
+
+- `dns:cname_scan:blog.nordvpn.com`
+
+- `dns:cname_scan:docs.nordvpn.com`
+
+- `dns:cname_scan:help.nordvpn.com`
+
+- `dns:cname_scan:mail.nordvpn.com`
+
+- `dns:cname_scan:status.nordvpn.com`
+
+- `dns:cname_scan:support.nordvpn.com`
+
+- `dns:dkim:default._domainkey.nordvpn.com`
+
+- `dns:dkim:google._domainkey.nordvpn.com`
+
+- `dns:dkim:k1._domainkey.nordvpn.com`
+
+- `dns:dkim:mail._domainkey.nordvpn.com`
+
+- `dns:dkim:s1._domainkey.nordvpn.com`
+
+- `dns:dkim:s2._domainkey.nordvpn.com`
+
+- `dns:dkim:selector1._domainkey.nordvpn.com`
+
+- `dns:dkim:selector2._domainkey.nordvpn.com`
+
+- `dns:dkim:smtp._domainkey.nordvpn.com`
+
+- `dns:dkim:zendesk1._domainkey.nordvpn.com`
+
+- `dns:dkim:zendesk2._domainkey.nordvpn.com`
+
+- `dns:dmarc:_dmarc.nordvpn.com`
+
+- `dns:lookup:nordvpn.com`
+
+- `dns:ns_glue:lily.ns.cloudflare.com`
+
+- `dns:ns_glue:seth.ns.cloudflare.com`
+
+- `dns:resolve:d.nordvpn.com`
+
+- `dns:resolve:my.nordaccount.com`
+
+- `dns:resolve:nordcheckout.com`
+
+- `dns:resolve:nordvpn.com`
+
+- `dns:resolve:s1.nordcdn.com`
+
+- `dns:resolve:sb.nordcdn.com`
+
+- `dns:resolve:static.zdassets.com`
+
+- `dns:resolve:support.nordvpn.com`
+
+- `dns:resolve:www.googletagmanager.com`
+
+- `dns:resolve:www.nordvpn.com`
+
+- `fingerprint:playwright_navigator`
+
+- `https://api.ipify.org`
+
+- `https://api.ipify.org?format=json`
+
+- `https://api64.ipify.org`
+
+- `https://browserleaks.com/dns`
+
+- `https://browserleaks.com/ip`
+
+- `https://browserleaks.com/tls`
+
+- `https://browserleaks.com/webrtc`
+
+- `https://ipleak.net/`
+
+- `https://ipwho.is/185.187.168.200`
+
+- `https://my.nordaccount.com/`
+
+- `https://my.nordaccount.com/legal/privacy-policy/`
+
+- `https://nordcheckout.com/`
+
+- `https://nordvpn.com/`
+
+- `https://nordvpn.com/pricing/`
+
+- `https://nordvpn.com/privacy-policy/`
+
+- `https://support.nordvpn.com/`
+
+- `https://test-ipv6.com/`
+
+- `https://www.nordvpn.com/`
+
+- `policy:playwright_chromium`
+
+- `spf:txt:_spf.google.com`
+
+- `spf:txt:icloud.com`
+
+- `spf:txt:mail.zendesk.com`
+
+- `spf:txt:nordvpn.com`
+
+- `surface_probe:har_summary`
+
+- `transit:local_traceroute`
+
+- `webrtc:local_playwright_chromium`
+
+- `yourinfo.ai:playwright_chromium`
+
+
+#### Artifacts (paths)
+
+```json
+{
+  "connect_log": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/connect.log",
+  "ip_check_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/ip-check.json",
+  "dnsleak_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/dnsleak",
+  "webrtc_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/webrtc",
+  "ipv6_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/ipv6",
+  "fingerprint_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/fingerprint",
+  "attribution_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/attribution.json",
+  "asn_prefixes_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/asn_prefixes.json",
+  "exit_dns_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/exit_dns.json",
+  "policy_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/policy",
+  "competitor_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe",
+  "browserleaks_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/browserleaks_probe",
+  "yourinfo_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/yourinfo_probe",
+  "baseline_json": null,
+  "surface_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe",
+  "transitions_json": null,
+  "website_exposure_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure",
+  "capture_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/capture"
+}
+```
+
+#### YourInfo (yourinfo.ai benchmark)
+
+
+```json
+{
+  "url": "https://yourinfo.ai/",
+  "final_url": "https://yourinfo.ai/",
+  "status": 200,
+  "title": "YourInfo.ai",
+  "text_excerpt": "RESEARCHING YOUR INFORMATION...\n20\nQuerying intelligence databases...\n\nConcerned about your digital privacy?\n\ndoxx.net - Secure networking for humans\n ",
+  "text_excerpt_truncated": false,
+  "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/yourinfo_probe/yourinfo.har",
+  "cdn_headers": {},
+  "error": null
+}
+```
+
+**Visible text excerpt** (length may be capped in this report):
+
+~~~
+RESEARCHING YOUR INFORMATION...
+20
+Querying intelligence databases...
+
+Concerned about your digital privacy?
+
+doxx.net - Secure networking for humans
+ 
+~~~
+
+
+
+
+#### SPEC framework (findings, coverage, risk)
+
+
+Overall **LOW** · leak **INFO** · third-party **MEDIUM** · correlation **MEDIUM**
+
+```json
+{
+  "question_bank_version": "1",
+  "test_matrix_version": "1",
+  "findings": [
+    {
+      "id": "finding-yourinfo-d80b76e4",
+      "category": "third_party_web",
+      "title": "Third-party benchmark page loaded (yourinfo.ai)",
+      "description": "HAR and page excerpt captured for competitive benchmark; third parties may observe exit IP and browser metadata.",
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "kind": "inferred",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "yourinfo_snapshot",
+          "note": null
+        }
+      ],
+      "affected_data_types": [
+        "public_ip",
+        "user_agent",
+        "browser_fingerprint"
+      ],
+      "recipients": [
+        "yourinfo.ai",
+        "asset_hosts"
+      ],
+      "test_conditions": "connected_state_benchmark",
+      "reproducibility_notes": null
+    }
+  ],
+  "question_coverage": [
+    {
+      "question_id": "IDENTITY-001",
+      "question_text": "What identifiers are assigned to the user, app install, browser session, and device?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Browser/session signals captured via fingerprint and optional YourInfo probe.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "yourinfo_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "browserleaks_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IDENTITY-006",
+      "question_text": "Are there long-lived client identifiers transmitted during auth or app startup?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IDENTITY-009",
+      "question_text": "Is the browser fingerprinting surface strong enough to re-identify the same user across sessions?",
+      "category": "identity_correlation",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Fingerprint and BrowserLeaks captures present for re-identification risk assessment.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "browserleaks_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-001",
+      "question_text": "What third parties are involved during signup?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-004",
+      "question_text": "Are analytics or marketing scripts loaded during signup or checkout?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "SIGNUP-010",
+      "question_text": "Are these surfaces behind a CDN/WAF?",
+      "category": "signup_payment",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-001",
+      "question_text": "Where is the marketing site hosted (DNS/routing level)?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Apex DNS/NS data recorded for configured provider domains.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.provider_dns",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-004",
+      "question_text": "What CDN/WAF is used?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Response headers / CDN signatures captured in web probes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.web_probes",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "WEB-008",
+      "question_text": "Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs?",
+      "category": "website_portal",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Review web probe headers, redirects, and HAR for origin leaks.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-001",
+      "question_text": "Which DNS resolvers are used while connected?",
+      "category": "dns",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Resolver tiers observed (local + external).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-002",
+      "question_text": "Are DNS requests tunneled (consistent with VPN exit)?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "DNS-003",
+      "question_text": "Is there DNS fallback to ISP/router/public resolvers?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "DNS-004",
+      "question_text": "Does DNS leak during connect/disconnect/reconnect?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Connect/disconnect DNS not sampled; use --transition-tests when supported.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-009",
+      "question_text": "Are DoH or DoT endpoints used?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "DoH/DoT not isolated from resolver snapshot; inspect raw captures.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "DNS-011",
+      "question_text": "Are resolvers first-party or third-party?",
+      "category": "dns",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Leak flag=False; see notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_servers_observed",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "dns_leak_notes",
+          "note": null
+        }
+      ],
+      "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+    },
+    {
+      "question_id": "IP-001",
+      "question_text": "Is the real public IPv4 exposed while connected?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Exit IPv4 185.187.168.200; leak flags dns=False webrtc=False ipv6=False.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_v4",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IP-002",
+      "question_text": "Is the real public IPv6 exposed while connected?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "partially_answered",
+      "answer_summary": "No IPv6 exit or IPv6 not returned by endpoints.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "IP-006",
+      "question_text": "Is the real IP exposed through WebRTC?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "WebRTC candidates captured; leak flag=False.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_leak_flag",
+          "note": null
+        }
+      ],
+      "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+    },
+    {
+      "question_id": "IP-007",
+      "question_text": "Is the local LAN IP exposed through WebRTC or browser APIs?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Inspect host candidates vs LAN; see webrtc_notes.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        }
+      ],
+      "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+    },
+    {
+      "question_id": "IP-014",
+      "question_text": "Do leak-check sites disagree about observed IP identity?",
+      "category": "real_ip_leak",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "All 3 echo endpoints agree on IPv4 185.187.168.200.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_sources",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-002",
+      "question_text": "Which domains and IPs are contacted after the tunnel is up?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Post-harness service list captured.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-003",
+      "question_text": "Which control-plane endpoints are used for auth/config/session management?",
+      "category": "control_plane",
+      "testability": "DOCUMENT_RESEARCH",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "Auth/control-plane inventory requires internal docs or app instrumentation.",
+      "evidence_refs": [],
+      "notes": "DOCUMENT_RESEARCH"
+    },
+    {
+      "question_id": "CTRL-004",
+      "question_text": "Which telemetry endpoints are contacted during connection?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Infer from services_contacted and classified endpoints.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "CTRL-009",
+      "question_text": "Is the control plane behind a CDN/WAF?",
+      "category": "control_plane",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "CDN/WAF hints from web headers.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface.web_probes",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-001",
+      "question_text": "What exit IP is assigned for each region?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "Exit IPv4 185.187.168.200 for location us-california-san-francisco-200.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "exit_ip_v4",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-002",
+      "question_text": "What ASN announces the exit IP?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "attribution",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-003",
+      "question_text": "What organization owns the IP range?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "attribution",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-004",
+      "question_text": "What reverse DNS exists for the exit node?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "PTR lookup errors: ptr_v4: The DNS query name does not exist: 200.168.187.185.in-addr.arpa.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "artifacts.exit_dns_json",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "EXIT-005",
+      "question_text": "Does the observed geolocation match the advertised location?",
+      "category": "exit_infrastructure",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States').",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "extra.exit_geo",
+          "note": null
+        },
+        {
+          "artifact_path": null,
+          "normalized_pointer": "vpn_location_label",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-001",
+      "question_text": "What external JS files are loaded on the site?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-003",
+      "question_text": "What analytics providers are present?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "THIRDWEB-012",
+      "question_text": "What cookies are set by first-party and third-party scripts?",
+      "category": "third_party_web",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "competitor_surface",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FP-001",
+      "question_text": "Does the site attempt browser fingerprinting?",
+      "category": "browser_tracking",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "answered",
+      "answer_summary": "Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence).",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "fingerprint_snapshot",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FP-011",
+      "question_text": "Does WebRTC run on provider pages?",
+      "category": "browser_tracking",
+      "testability": "DYNAMIC_FULL",
+      "answer_status": "answered",
+      "answer_summary": "WebRTC exercised by harness on leak-test pages.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "webrtc_candidates",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "TELEM-001",
+      "question_text": "Does the app talk to telemetry vendors?",
+      "category": "telemetry_app",
+      "testability": "INTERNAL_UNVERIFIABLE",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+      "evidence_refs": [],
+      "notes": "INTERNAL_UNVERIFIABLE"
+    },
+    {
+      "question_id": "TELEM-004",
+      "question_text": "Does the app send connection events to telemetry systems?",
+      "category": "telemetry_app",
+      "testability": "INTERNAL_UNVERIFIABLE",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+      "evidence_refs": [],
+      "notes": "INTERNAL_UNVERIFIABLE"
+    },
+    {
+      "question_id": "OS-001",
+      "question_text": "On macOS/Windows/Linux, do helper processes bypass the tunnel?",
+      "category": "os_specific",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "runner_env",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-001",
+      "question_text": "What leaks during initial connection?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-003",
+      "question_text": "What leaks during reconnect?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+      "evidence_refs": [],
+      "notes": null
+    },
+    {
+      "question_id": "FAIL-004",
+      "question_text": "What leaks if the VPN app crashes?",
+      "category": "failure_state",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "not_testable_dynamically",
+      "answer_summary": "Crash/kill leak tests not run in this harness by default.",
+      "evidence_refs": [],
+      "notes": "DYNAMIC_PARTIAL"
+    },
+    {
+      "question_id": "LOG-001",
+      "question_text": "What is the provider likely able to log based on observed traffic?",
+      "category": "logging_retention",
+      "testability": "DYNAMIC_PARTIAL",
+      "answer_status": "partially_answered",
+      "answer_summary": "Infer logging surface from observable endpoints and services_contacted.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ],
+      "notes": null
+    },
+    {
+      "question_id": "LOG-005",
+      "question_text": "Are there contradictions between observed traffic and no-logs marketing claims?",
+      "category": "logging_retention",
+      "testability": "DOCUMENT_RESEARCH",
+      "answer_status": "partially_answered",
+      "answer_summary": "Policy text captured; compare claims to observed traffic manually.",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "policies",
+          "note": null
+        }
+      ],
+      "notes": null
+    }
+  ],
+  "risk_scores": {
+    "overall_severity": "LOW",
+    "leak_severity": "INFO",
+    "correlation_risk": "MEDIUM",
+    "third_party_exposure": "MEDIUM",
+    "notes": [
+      "Competitor web/portal probes executed.",
+      "Large services_contacted list."
+    ]
+  },
+  "observed_endpoints": [
+    {
+      "host": "api.ipify.org",
+      "classification": "third_party_analytics",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "api64.ipify.org",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "attribution",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "browserleaks.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "competitor_probe",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "dns",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "fingerprint",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "ipleak.net",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "ipwho.is",
+      "classification": "unknown",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "my.nordaccount.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "nordcheckout.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "policy",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "spf",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "support.nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "surface_probe",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "test-ipv6.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "transit",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "webrtc",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "www.nordvpn.com",
+      "classification": "unknown",
+      "confidence": 0.4,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    },
+    {
+      "host": "yourinfo.ai",
+      "classification": "unknown",
+      "confidence": 0.95,
+      "source": "services_contacted",
+      "evidence_refs": [
+        {
+          "artifact_path": null,
+          "normalized_pointer": "services_contacted",
+          "note": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+
+#### Website & DNS surface (summary)
+
+
+| Metric | This location |
+|--------|---------------|
+| Unique request hosts | 10 |
+| Tracker candidates | 1 |
+| CDN candidates | 2 |
+
+
+**Provider DNS (apex)**
+
+| Domain | NS (sample) | MX (sample) | IPv6 apex |
+|--------|-------------|-------------|-----------|
+| `nordvpn.com` | lily.ns.cloudflare.com, seth.ns.cloudflare.com | 1 aspmx.l.google.com, 5 alt1.aspmx.l.google.com, 5 alt2.aspmx.l.google.com (+2 more) | no AAAA (IPv4-only apex) |
+
+
+
+
+**Surface URLs**
+
+| page_type | URL | status |
+|-----------|-----|--------|
+| home | https://www.nordvpn.com/ | 403 |
+| pricing | https://nordvpn.com/pricing/ | 403 |
+| signup | https://my.nordaccount.com/ | 200 |
+| checkout | https://nordcheckout.com/ | 403 |
+| support | https://support.nordvpn.com/ | 200 |
+
+
+
+
+
+#### Automated website-exposure methodology & PCAP
+
+
+**Desk automation note:** Desk automation of website-exposure methodology (Phases 1–9). Do not conflate with client resolver / DNS-leak observations (O); see docs/research-questions-and-evidence.md.
+
+| Third-party inventory rows | Phase-8 domains with deep audit |
+|---------------------------|--------------------------------|
+| 22 | 1 |
+
+**Inventory (sample)**
+
+| Company (hypothesis) | Role | How discovered |
+|---------------------|------|----------------|
+| www.googletagmanager.com | website_script_or_beacon | har_tracker_hint |
+| s1.nordcdn.com | cdn_or_edge | har_cdn_hint |
+| sb.nordcdn.com | cdn_or_edge | har_cdn_hint |
+| Google | email_mx_inferred | apex_mx |
+| Cloudflare | dns_authority_inferred | ns |
+| Google | domain_verification_txt | txt |
+| DKIM:google | email_signing_inferred | dkim_txt |
+| DKIM:zendesk1 | email_signing_inferred | dkim_txt |
+| DKIM:zendesk2 | email_signing_inferred | dkim_txt |
+| DKIM:default | email_signing_inferred | dkim_txt |
+| DKIM:s1 | email_signing_inferred | dkim_txt |
+| DKIM:s2 | email_signing_inferred | dkim_txt |
+| DKIM:k1 | email_signing_inferred | dkim_txt |
+| DKIM:selector1 | email_signing_inferred | dkim_txt |
+| DKIM:selector2 | email_signing_inferred | dkim_txt |
+| DKIM:smtp | email_signing_inferred | dkim_txt |
+| DKIM:mail | email_signing_inferred | dkim_txt |
+| SparkPost/Bird | transactional_email_inferred | cname |
+| Zendesk | support_platform_inferred | cname |
+| Google | spf_email_sender_inferred | spf_include |
+| Zendesk | spf_email_sender_inferred | spf_include |
+| (provider first-party) | marketing_and_app_surface | config_urls |
+
+
+
+**Methodology limits:** *Does_not_replace_human_narrative_for_executive_disclosure*; *Cloudflare_or_bot_WAF_may_distort_HAR_coverage*
+
+
+
+
+
+**PCAP-derived metadata** (no Wireshark; see `pcap_derived` in JSON)
+
+| Unique flows (estimate) | Packets (total) |
+|-------------------------|-----------------|
+| 406 | 51170 |
+
+
+**TLS SNI (sample):** `api2.cursor.sh`, `mcp.context7.com`
+
+
+**Cleartext DNS names (UDP/53 sample):** `api2.cursor.sh`, `appsgenaiserver-pa.clients6.google.com`, `as.atlassian.com`, `b._dns-sd._udp.0.0.0.10.in-addr.arpa`, `b._dns-sd._udp.0.0.5.10.in-addr.arpa`, `b._dns-sd._udp.0.64.168.192.in-addr.arpa`, `cobalt.meowing.de`, `db._dns-sd._udp.0.0.0.10.in-addr.arpa`, `db._dns-sd._udp.0.0.5.10.in-addr.arpa`, `db._dns-sd._udp.0.64.168.192.in-addr.arpa`, `de5282c3ca0c.edge.sdk.awswaf.com`, `features.monarch.com`, `lb._dns-sd._udp.0.0.0.10.in-addr.arpa`, `lb._dns-sd._udp.0.0.5.10.in-addr.arpa`, `lb._dns-sd._udp.0.64.168.192.in-addr.arpa`, `nexus-websocket-a.intercom.io`, `notifier-configs.airbrake.io`, `play.google.com`, `ssl.gstatic.com`, `us5.datadoghq.com`, `waa-pa.clients6.google.com`, `www.facebook.com`
+
+
+**PCAP interpretation limits:** *ECH_ESNI_not_visible*; *DoH_not_inferred_from_udp_53*; *tcp_segmentation_may_fragment_clienthello*; *inner_vpn_payload_may_be_opaque*
+
+
+
+
+**Capture finalize:** session_id=45f258bcf5f9
+
+
+#### Competitor surface (provider YAML probes)
+
+
+```json
+{
+  "provider_dns": {
+    "domains": {
+      "nordvpn.com": {
+        "ns": [
+          "lily.ns.cloudflare.com",
+          "seth.ns.cloudflare.com"
+        ],
+        "a": [
+          "104.16.208.203",
+          "104.19.159.190"
+        ],
+        "aaaa": [],
+        "error": null,
+        "txt": [
+          "MS=ms69824556",
+          "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+          "oneuptime=2fYJpBXRQsmY3Py",
+          "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+          "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+          "MS=ms41624661",
+          "MS=ms60989570"
+        ],
+        "mx": [
+          "1 aspmx.l.google.com",
+          "5 alt1.aspmx.l.google.com",
+          "5 alt2.aspmx.l.google.com",
+          "10 alt3.aspmx.l.google.com",
+          "10 alt4.aspmx.l.google.com"
+        ],
+        "caa": [],
+        "rr_errors": {
+          "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+        }
+      }
+    },
+    "ns_hosts": {
+      "lily.ns.cloudflare.com": {
+        "a": [
+          "108.162.192.130",
+          "172.64.32.130",
+          "173.245.58.130"
+        ],
+        "aaaa": [
+          "2606:4700:50::adf5:3a82",
+          "2803:f800:50::6ca2:c082",
+          "2a06:98c1:50::ac40:2082"
+        ],
+        "ip_attribution": {
+          "108.162.192.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (108.162.192.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "108.162.192.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084341-3d169cf1-ca3a-4faa-8629-f960c788f0c6",
+                    "process_time": 60,
+                    "server_id": "app177",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:41.429428",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "108.162.192.0/20"
+                      ],
+                      "resource": "108.162.192.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "108.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                  "parts": [
+                    "13335",
+                    "108.162.192.0/20",
+                    "US",
+                    "arin",
+                    "2011-10-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "data": [
+                    {
+                      "id": 4224,
+                      "org_id": 4715,
+                      "name": "Cloudflare",
+                      "aka": "",
+                      "name_long": "",
+                      "website": "https://www.cloudflare.com",
+                      "social_media": [
+                        {
+                          "service": "website",
+                          "identifier": "https://www.cloudflare.com"
+                        }
+                      ],
+                      "asn": 13335,
+                      "looking_glass": "",
+                      "route_server": "",
+                      "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                      "info_type": "Content",
+                      "info_types": [
+                        "Content"
+                      ],
+                      "info_prefixes4": 80000,
+                      "info_prefixes6": 30000,
+                      "info_traffic": "",
+                      "info_ratio": "Mostly Outbound",
+                      "info_scope": "Global",
+                      "info_unicast": true,
+                      "info_multicast": false,
+                      "info_ipv6": true,
+                      "info_never_via_route_servers": false,
+                      "ix_count": 352,
+                      "fac_count": 222,
+                      "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                      "netixlan_updated": "2026-04-29T17:03:32Z",
+                      "netfac_updated": "2026-04-01T18:35:35Z",
+                      "poc_updated": "2025-12-04T21:15:09Z",
+                      "policy_url": "https://www.cloudflare.com/peering-policy/",
+                      "policy_general": "Open",
+                      "policy_locations": "Preferred",
+                      "policy_ratio": false,
+                      "policy_contracts": "Not Required",
+                      "allow_ixp_update": false,
+                      "status_dashboard": "https://www.cloudflarestatus.com/",
+                      "rir_status": "ok",
+                      "rir_status_updated": "2024-06-26T04:47:55Z",
+                      "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                      "created": "2011-09-06T19:40:05Z",
+                      "updated": "2026-04-29T17:00:30Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {}
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "172.64.32.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (172.64.32.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "172.64.32.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084343-9bb8ca8f-1d67-4400-8411-7782b832e2f0",
+                    "process_time": 60,
+                    "server_id": "app170",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:43.671647",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "172.64.32.0/20"
+                      ],
+                      "resource": "172.64.32.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "172.0.0.0/8",
+                        "desc": "Administered by ARIN",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 172.64.32.0/24 | US | arin | 2015-02-25",
+                  "parts": [
+                    "13335",
+                    "172.64.32.0/24",
+                    "US",
+                    "arin",
+                    "2015-02-25"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "data": [
+                    {
+                      "id": 4224,
+                      "org_id": 4715,
+                      "name": "Cloudflare",
+                      "aka": "",
+                      "name_long": "",
+                      "website": "https://www.cloudflare.com",
+                      "social_media": [
+                        {
+                          "service": "website",
+                          "identifier": "https://www.cloudflare.com"
+                        }
+                      ],
+                      "asn": 13335,
+                      "looking_glass": "",
+                      "route_server": "",
+                      "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                      "info_type": "Content",
+                      "info_types": [
+                        "Content"
+                      ],
+                      "info_prefixes4": 80000,
+                      "info_prefixes6": 30000,
+                      "info_traffic": "",
+                      "info_ratio": "Mostly Outbound",
+                      "info_scope": "Global",
+                      "info_unicast": true,
+                      "info_multicast": false,
+                      "info_ipv6": true,
+                      "info_never_via_route_servers": false,
+                      "ix_count": 352,
+                      "fac_count": 222,
+                      "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                      "netixlan_updated": "2026-04-29T17:03:32Z",
+                      "netfac_updated": "2026-04-01T18:35:35Z",
+                      "poc_updated": "2025-12-04T21:15:09Z",
+                      "policy_url": "https://www.cloudflare.com/peering-policy/",
+                      "policy_general": "Open",
+                      "policy_locations": "Preferred",
+                      "policy_ratio": false,
+                      "policy_contracts": "Not Required",
+                      "allow_ixp_update": false,
+                      "status_dashboard": "https://www.cloudflarestatus.com/",
+                      "rir_status": "ok",
+                      "rir_status_updated": "2024-06-26T04:47:55Z",
+                      "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                      "created": "2011-09-06T19:40:05Z",
+                      "updated": "2026-04-29T17:00:30Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {}
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "173.245.58.130": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (173.245.58.0/24)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084345-d4453a80-ac0c-4d12-8f97-712f51ab5f8b",
+                    "process_time": 47,
+                    "server_id": "app192",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:45.872482",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "173.245.58.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "173.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 173.245.58.0/24 | US | arin | 2010-12-28",
+                  "parts": [
+                    "13335",
+                    "173.245.58.0/24",
+                    "US",
+                    "arin",
+                    "2010-12-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "data": [
+                    {
+                      "id": 4224,
+                      "org_id": 4715,
+                      "name": "Cloudflare",
+                      "aka": "",
+                      "name_long": "",
+                      "website": "https://www.cloudflare.com",
+                      "social_media": [
+                        {
+                          "service": "website",
+                          "identifier": "https://www.cloudflare.com"
+                        }
+                      ],
+                      "asn": 13335,
+                      "looking_glass": "",
+                      "route_server": "",
+                      "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                      "info_type": "Content",
+                      "info_types": [
+                        "Content"
+                      ],
+                      "info_prefixes4": 80000,
+                      "info_prefixes6": 30000,
+                      "info_traffic": "",
+                      "info_ratio": "Mostly Outbound",
+                      "info_scope": "Global",
+                      "info_unicast": true,
+                      "info_multicast": false,
+                      "info_ipv6": true,
+                      "info_never_via_route_servers": false,
+                      "ix_count": 352,
+                      "fac_count": 222,
+                      "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                      "netixlan_updated": "2026-04-29T17:03:32Z",
+                      "netfac_updated": "2026-04-01T18:35:35Z",
+                      "poc_updated": "2025-12-04T21:15:09Z",
+                      "policy_url": "https://www.cloudflare.com/peering-policy/",
+                      "policy_general": "Open",
+                      "policy_locations": "Preferred",
+                      "policy_ratio": false,
+                      "policy_contracts": "Not Required",
+                      "allow_ixp_update": false,
+                      "status_dashboard": "https://www.cloudflarestatus.com/",
+                      "rir_status": "ok",
+                      "rir_status_updated": "2024-06-26T04:47:55Z",
+                      "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                      "created": "2011-09-06T19:40:05Z",
+                      "updated": "2026-04-29T17:00:30Z",
+                      "status": "ok"
+                    }
+                  ],
+                  "meta": {}
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "2606:4700:50::adf5:3a82": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "2606:4700::/36"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084348-ee7ea2dd-430c-44c6-b8ac-72a3380a97e9",
+                    "process_time": 54,
+                    "server_id": "app176",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:48.383440",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "2606:4700::/36"
+                      ],
+                      "resource": "2606:4700:50::/44",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2600::/12",
+                        "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2803:f800:50::6ca2:c082": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084349-8c1c6773-8118-4937-9604-44387b6b72a3",
+                    "process_time": 42,
+                    "server_id": "app172",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:49.943744",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2803:f800:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2800::/12",
+                        "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2a06:98c1:50::ac40:2082": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084351-e5f542c9-f76c-4f9f-8fa8-ac9363a0d8df",
+                    "process_time": 58,
+                    "server_id": "app170",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:51.533481",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2a06:98c1:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2a00::/12",
+                        "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          }
+        },
+        "error": null
+      },
+      "seth.ns.cloudflare.com": {
+        "a": [
+          "108.162.193.142",
+          "172.64.33.142",
+          "173.245.59.142"
+        ],
+        "aaaa": [
+          "2606:4700:58::adf5:3b8e",
+          "2803:f800:50::6ca2:c18e",
+          "2a06:98c1:50::ac40:218e"
+        ],
+        "ip_attribution": {
+          "108.162.193.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (108.162.193.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "108.162.192.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084353-67de1ddb-34f6-4a46-9629-c9a0882b989c",
+                    "process_time": 59,
+                    "server_id": "app171",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:53.191272",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "108.162.192.0/20"
+                      ],
+                      "resource": "108.162.193.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "108.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 108.162.193.0/24 | US | arin | 2011-10-28",
+                  "parts": [
+                    "13335",
+                    "108.162.193.0/24",
+                    "US",
+                    "arin",
+                    "2011-10-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "172.64.33.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (172.64.33.0/24)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "172.64.32.0/20"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084355-be52e5b9-c950-46d4-8a3a-6200687c8575",
+                    "process_time": 60,
+                    "server_id": "app174",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:55.226163",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "172.64.32.0/20"
+                      ],
+                      "resource": "172.64.33.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "172.0.0.0/8",
+                        "desc": "Administered by ARIN",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 172.64.32.0/20 | US | arin | 2015-02-25",
+                  "parts": [
+                    "13335",
+                    "172.64.32.0/20",
+                    "US",
+                    "arin",
+                    "2015-02-25"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "173.245.59.142": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (173.245.59.0/24)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084357-9e12ed96-5251-4067-9225-1f8ef99042fb",
+                    "process_time": 49,
+                    "server_id": "app191",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:57.146325",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "173.245.59.0/24",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "173.0.0.0/8",
+                        "desc": "ARIN (Status: ALLOCATED)",
+                        "name": "IANA IPv4 Address Space Registry"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": 13335,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "asn": 13335,
+                  "raw_line": "13335 | 173.245.59.0/24 | US | arin | 2010-12-28",
+                  "parts": [
+                    "13335",
+                    "173.245.59.0/24",
+                    "US",
+                    "arin",
+                    "2010-12-28"
+                  ],
+                  "disclaimer": [
+                    "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                  ]
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          },
+          "2606:4700:58::adf5:3b8e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                      ]
+                    ],
+                    "see_also": [
+                      {
+                        "relation": "less-specific",
+                        "resource": "2606:4700::/36"
+                      }
+                    ],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084359-31163c01-1fde-4cb3-8764-f512462d982c",
+                    "process_time": 44,
+                    "server_id": "app190",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:43:59.052522",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [
+                        "2606:4700::/36"
+                      ],
+                      "resource": "2606:4700:50::/44",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2600::/12",
+                        "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 1,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2803:f800:50::6ca2:c18e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": false,
+                    "query_id": "20260501084400-f2ac8a5a-4043-4e02-abe5-9efb0494f273",
+                    "process_time": 48,
+                    "server_id": "app192",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:44:00.646360",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2803:f800:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2800::/12",
+                        "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          },
+          "2a06:98c1:50::ac40:218e": {
+            "asn": 13335,
+            "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+            "country": null,
+            "confidence": 0.7,
+            "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+            "supporting_sources": [
+              {
+                "name": "ripestat",
+                "asn": 13335,
+                "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                "country": null,
+                "raw": {
+                  "prefix_overview": {
+                    "messages": [
+                      [
+                        "warning",
+                        "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                      ]
+                    ],
+                    "see_also": [],
+                    "version": "1.3",
+                    "data_call_name": "prefix-overview",
+                    "data_call_status": "supported",
+                    "cached": true,
+                    "query_id": "20260501084402-cba47a93-aa35-4176-bd17-7cc4ee8f1d87",
+                    "process_time": 1,
+                    "server_id": "app162",
+                    "build_version": "v0.9.15-2026.04.30",
+                    "pipeline": "1248748",
+                    "status": "ok",
+                    "status_code": 200,
+                    "time": "2026-05-01T08:44:02.182091",
+                    "data": {
+                      "is_less_specific": true,
+                      "announced": true,
+                      "asns": [
+                        {
+                          "asn": 13335,
+                          "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                        }
+                      ],
+                      "related_prefixes": [],
+                      "resource": "2a06:98c1:50::/45",
+                      "type": "prefix",
+                      "block": {
+                        "resource": "2a00::/12",
+                        "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                        "name": "IANA IPv6 Global Unicast Address Assignments"
+                      },
+                      "actual_num_related": 0,
+                      "query_time": "2026-05-01T00:00:00",
+                      "num_filtered_out": 0
+                    }
+                  }
+                }
+              },
+              {
+                "name": "team_cymru",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                }
+              },
+              {
+                "name": "peeringdb",
+                "asn": null,
+                "holder": null,
+                "country": null,
+                "raw": {
+                  "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                }
+              }
+            ],
+            "disclaimers": [
+              "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+            ]
+          }
+        },
+        "error": null
+      }
+    }
+  },
+  "web_probes": [
+    {
+      "url": "https://nordvpn.com/",
+      "error": null,
+      "status": 403,
+      "final_url": "https://nordvpn.com/",
+      "cdn_headers": {
+        "cf-ray": "9f4d82be8bd47a33-SJC",
+        "server": "cloudflare"
+      },
+      "scripts": [
+        "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82be8bd47a33"
+      ],
+      "images": [],
+      "captcha_third_party": false,
+      "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe/har/d945f098fbd5bb50.har"
+    }
+  ],
+  "har_summary": {
+    "har_files": [
+      {
+        "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe/har/d945f098fbd5bb50.har",
+        "entry_count": 3,
+        "unique_hosts": [
+          "nordvpn.com"
+        ],
+        "unique_schemes": [
+          "https"
+        ],
+        "tracker_candidates": [],
+        "cdn_candidates": [],
+        "error": null
+      }
+    ],
+    "merged_unique_hosts": [
+      "nordvpn.com"
+    ],
+    "merged_tracker_candidates": [],
+    "merged_cdn_candidates": []
+  },
+  "portal_probes": [
+    {
+      "host": "my.nordaccount.com",
+      "a": [
+        "104.18.42.225",
+        "172.64.145.31"
+      ],
+      "aaaa": [
+        "2a06:98c1:3101::6812:2ae1",
+        "2a06:98c1:3107::ac40:911f"
+      ],
+      "https_status": 200,
+      "https_cdn_headers": {
+        "cf-ray": "9f4d82c23f63ebe3-SJC",
+        "server": "cloudflare"
+      },
+      "error": null
+    }
+  ],
+  "transit": {
+    "target": "185.187.168.200",
+    "command": [
+      "traceroute",
+      "-n",
+      "-m",
+      "15",
+      "-w",
+      "2",
+      "185.187.168.200"
+    ],
+    "stdout": " 1  * * *\n 2  * * *\n 3  * * *\n 4  * * *\n 5  * * *\n 6  * * *\n 7  * * *\n 8  * * *\n 9  * * *\n10  * * *\n11  * * *\n12  * * *\n13  * * *\n14  * * *\n15  * * *\n",
+    "stderr": "traceroute to 185.187.168.200 (185.187.168.200), 15 hops max, 40 byte packets\n",
+    "hops": [],
+    "returncode": 0
+  },
+  "stray_json": [],
+  "errors": []
+}
+```
+
+
+
+#### Extra
+
+```json
+{
+  "exit_geo": {
+    "source": "ipwho.is",
+    "ip": "185.187.168.200",
+    "country_code": "US",
+    "region": "California",
+    "city": "San Francisco",
+    "connection": {
+      "asn": 212238,
+      "org": "Packethub S.A.",
+      "isp": "Datacamp Limited",
+      "domain": "packethub.net"
+    },
+    "location_id": "us-california-san-francisco-200",
+    "location_label": "San Francisco, California, United States"
+  },
+  "surface_probe": {
+    "probes": [
+      {
+        "url": "https://www.nordvpn.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d82c8df448462-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82c8df448462"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5e0529734c192de1.har",
+        "page_type": "home"
+      },
+      {
+        "url": "https://nordvpn.com/pricing/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/pricing/",
+        "cdn_headers": {
+          "cf-ray": "9f4d82cbfae8ae99-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82cbfae8ae99"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/3cec43152ba057c5.har",
+        "page_type": "pricing"
+      },
+      {
+        "url": "https://my.nordaccount.com/",
+        "error": null,
+        "status": 200,
+        "final_url": "https://my.nordaccount.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d82ce3ae6cea4-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://my.nordaccount.com/assets/runtime.c392954944a8670a35e1.js",
+          "https://my.nordaccount.com/assets/_formatjs.defaultvendors.3392aa991e49cee93825.js",
+          "https://my.nordaccount.com/assets/regenerator-runtime.defaultvendors.51d6a9d25a2ced4bdb8d.js",
+          "https://my.nordaccount.com/assets/promise-polyfill.defaultvendors.0c84317ed01865b3a6b7.js",
+          "https://my.nordaccount.com/assets/index.0a207e294320c8f97477.js",
+          "https://my.nordaccount.com/assets/_nordsec.defaultvendors.572e2f3be6ffe304f907.chunk.js",
+          "https://my.nordaccount.com/assets/date-fns.defaultvendors.592977043c7d4561d202.chunk.js",
+          "https://my.nordaccount.com/assets/_nord.defaultvendors.d152b9e1023813f041a0.chunk.js",
+          "https://my.nordaccount.com/assets/_sentry.defaultvendors.cb843f853a70d0457cf7.chunk.js",
+          "https://my.nordaccount.com/assets/_sentry-internal.defaultvendors.034bb8b1a0fa856b19d5.chunk.js",
+          "https://my.nordaccount.com/assets/graphql.defaultvendors.2db91e2e25496ff503bb.chunk.js",
+          "https://my.nordaccount.com/assets/react-intl.defaultvendors.7dee90d1f00605a61702.chunk.js",
+          "https://my.nordaccount.com/assets/graphql-request.defaultvendors.443f485a7486fe535145.chunk.js",
+          "https://my.nordaccount.com/assets/_reduxjs.defaultvendors.cf22344d94cd257e0ad1.chunk.js",
+          "https://my.nordaccount.com/assets/react-transition-group.defaultvendors.dd1544ee5d0353a1c51c.chunk.js",
+          "https://my.nordaccount.com/assets/uuid.defaultvendors.eead893baec50d1e9c23.chunk.js",
+          "https://my.nordaccount.com/assets/_babel.defaultvendors.a1d59fe84220e0220774.chunk.js",
+          "https://my.nordaccount.com/assets/react.defaultvendors.78aad35d08a5b3d4089d.chunk.js",
+          "https://my.nordaccount.com/assets/react-dom.defaultvendors.995c811c86640d85b25b.chunk.js",
+          "https://my.nordaccount.com/assets/intl-messageformat.defaultvendors.7b440f2a12314e045ce0.chunk.js",
+          "https://my.nordaccount.com/assets/prop-types.defaultvendors.35bd4599905121b4452f.chunk.js",
+          "https://my.nordaccount.com/assets/react-toastify.defaultvendors.5cabe679c5d3067cb6ec.chunk.js",
+          "https://my.nordaccount.com/assets/dom-helpers.defaultvendors.6e73bc321922b4f6a074.chunk.js",
+          "https://my.nordaccount.com/assets/use-sync-external-store.defaultvendors.ed9ee8ffe42909d13b1a.chunk.js",
+          "https://my.nordaccount.com/assets/scheduler.defaultvendors.38f1999b87de9d343cd9.chunk.js",
+          "https://my.nordaccount.com/assets/react-inlinesvg.defaultvendors.9660e72138e0765193b0.chunk.js",
+          "https://my.nordaccount.com/assets/react-from-dom.defaultvendors.ce5a33ecaecdd67f6892.chunk.js",
+          "https://my.nordaccount.com/assets/react-redux.defaultvendors.d25fa91400ca42cc077f.chunk.js",
+          "https://my.nordaccount.com/assets/js-cookie.defaultvendors.002fb3f4fa5e9d95333e.chunk.js",
+          "https://my.nordaccount.com/assets/immer.defaultvendors.f09e5118b557d6cdcdb0.chunk.js",
+          "https://my.nordaccount.com/assets/clsx.defaultvendors.1faa6083987170b4864e.chunk.js",
+          "https://my.nordaccount.com/assets/_standard-schema.defaultvendors.7e58377df74678c66197.chunk.js",
+          "https://my.nordaccount.com/assets/classnames.defaultvendors.8bc90ba6e8b07a8e8fdd.chunk.js",
+          "https://my.nordaccount.com/assets/react-side-effect.defaultvendors.9c3f593d125d4faecd0c.chunk.js",
+          "https://my.nordaccount.com/assets/react-router.defaultvendors.2d8e01f4a19789f330cc.chunk.js",
+          "https://my.nordaccount.com/assets/react-router-dom.defaultvendors.c5cd25bb13582d235275.chunk.js",
+          "https://my.nordaccount.com/assets/react-intersection-observer.defaultvendors.e59fbfabd9c2e27a0b4f.chunk.js",
+          "https://my.nordaccount.com/assets/react-helmet.defaultvendors.e672b2f66b3b7791a6ca.chunk.js",
+          "https://my.nordaccount.com/assets/react-fast-compare.defaultvendors.f8ff413dc4d3d3df402f.chunk.js",
+          "https://my.nordaccount.com/assets/react-content-loader.defaultvendors.81dc6c8ab0aa44f988b4.chunk.js",
+          "https://my.nordaccount.com/assets/object-assign.defaultvendors.de37ca6a3967ba95f8af.chunk.js",
+          "https://my.nordaccount.com/assets/lodash.isequal.defaultvendors.d7e8a9adee14363904ac.chunk.js",
+          "https://my.nordaccount.com/assets/humps.defaultvendors.167737137fffcf45e86d.chunk.js",
+          "https://my.nordaccount.com/assets/filter-obj.defaultvendors.b61346464b8b6744fe2d.chunk.js",
+          "https://my.nordaccount.com/assets/file-saver.defaultvendors.625061e1f589bdd1fe21.chunk.js",
+          "https://my.nordaccount.com/assets/exenv.defaultvendors.1b7ed5150cf28a7b2477.chunk.js",
+          "https://my.nordaccount.com/assets/decode-uri-component.defaultvendors.e5a971eb831f6f752650.chunk.js",
+          "https://my.nordaccount.com/assets/cross-fetch.defaultvendors.68e7cd14aa67eafb4cb6.chunk.js",
+          "https://my.nordaccount.com/assets/strict-uri-encode.defaultvendors.a5dacf95bccb8a807452.chunk.js",
+          "https://my.nordaccount.com/assets/split-on-first.defaultvendors.8d1e4c5402299b8ba208.chunk.js",
+          "https://my.nordaccount.com/assets/query-string.defaultvendors.87128a48e251ff40f71f.chunk.js",
+          "https://my.nordaccount.com/assets/_remix-run.defaultvendors.a8dbbdf30892d10b61af.chunk.js",
+          "https://my.nordaccount.com/assets/4666.3d565fb961595aa6fb72.chunk.js"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/0096221d6f12d382.har",
+        "page_type": "signup"
+      },
+      {
+        "url": "https://nordcheckout.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/pricing?redirected_from=nordcheckout.com%2F",
+        "cdn_headers": {
+          "cf-ray": "9f4d82dabaa01fdb-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82dabaa01fdb"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5c4416295d131e0b.har",
+        "page_type": "checkout"
+      },
+      {
+        "url": "https://support.nordvpn.com/",
+        "error": null,
+        "status": 200,
+        "final_url": "https://support.nordvpn.com/hc/en-us",
+        "cdn_headers": {
+          "via": "zorg",
+          "cf-ray": "9f4d82e1effcae99-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://www.googletagmanager.com/gtm.js?id=GTM-WX5CH8",
+          "https://s1.nordcdn.com/d/consent/prod/init.js?isGdpr=true",
+          "https://s1.nordcdn.com/d/nordvpn/prod/index.js?cu=https://d.nordvpn.com/1/cc&p=nordvpn&sni=1",
+          "https://www.googletagmanager.com/gtag/js?id=G-LEXMJ1N516",
+          "https://support.nordvpn.com/hc/en-us",
+          "https://support.nordvpn.com/hc/theming_assets/01KM5FCEA8DSAWC4R1R69CE38Q",
+          "https://s1.nordcdn.com/d/consent/prod/main.js",
+          "https://s1.nordcdn.com/nordvpn/3.816.0/js/unsupported-fallback.min.js",
+          "https://support.nordvpn.com/hc/theming_assets/01K8QJJ1GZQYMV2VYPKWCY7KC7",
+          "https://support.nordvpn.com/hc/theming_assets/01KHNYSGHVJ2VS6PMDB39EB2SB",
+          "https://static.zdassets.com/hc/assets/en-us.a8c200c80dbfa8b39d39.js",
+          "https://static.zdassets.com/hc/assets/hc_enduser-d9740dff469f88fb0ddbf825653eb95c.js",
+          "https://support.nordvpn.com/hc/theming_assets/757086/445532/script.js?digest=45872676122001"
+        ],
+        "images": [
+          "https://sb.nordcdn.com/m/83d4a4bd1d9eb5e5/original/woman-box-nord-vpn-md-svg.svg",
+          "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/app-store.svg",
+          "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/google-play.svg",
+          "https://sb.nordcdn.com/m/2a99ab6c9cf051ac/original/credit-cards.svg"
+        ],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/23c88e21719d1a9b.har",
+        "page_type": "support"
+      }
+    ],
+    "surface_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe",
+    "har_summary": {
+      "har_files": [
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5e0529734c192de1.har",
+          "entry_count": 5,
+          "unique_hosts": [
+            "nordvpn.com",
+            "www.nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/3cec43152ba057c5.har",
+          "entry_count": 3,
+          "unique_hosts": [
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/0096221d6f12d382.har",
+          "entry_count": 57,
+          "unique_hosts": [
+            "my.nordaccount.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5c4416295d131e0b.har",
+          "entry_count": 5,
+          "unique_hosts": [
+            "nordcheckout.com",
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        },
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/23c88e21719d1a9b.har",
+          "entry_count": 30,
+          "unique_hosts": [
+            "d.nordvpn.com",
+            "s1.nordcdn.com",
+            "sb.nordcdn.com",
+            "static.zdassets.com",
+            "support.nordvpn.com",
+            "www.googletagmanager.com"
+          ],
+          "unique_schemes": [
+            "blob",
+            "https"
+          ],
+          "tracker_candidates": [
+            "www.googletagmanager.com"
+          ],
+          "cdn_candidates": [
+            "s1.nordcdn.com",
+            "sb.nordcdn.com"
+          ],
+          "error": null
+        }
+      ],
+      "merged_unique_hosts": [
+        "d.nordvpn.com",
+        "my.nordaccount.com",
+        "nordcheckout.com",
+        "nordvpn.com",
+        "s1.nordcdn.com",
+        "sb.nordcdn.com",
+        "static.zdassets.com",
+        "support.nordvpn.com",
+        "www.googletagmanager.com",
+        "www.nordvpn.com"
+      ],
+      "merged_tracker_candidates": [
+        "www.googletagmanager.com"
+      ],
+      "merged_cdn_candidates": [
+        "s1.nordcdn.com",
+        "sb.nordcdn.com"
+      ]
+    }
+  }
+}
+```
+
+#### Complete normalized record (verbatim)
+
+Same content as `normalized.json` for this location; only a ~2 MiB safety cap can shorten this fenced block.
+
+```json
+{
+  "schema_version": "1.4",
+  "run_id": "nordvpn-20260501T084027Z-7f1f4459",
+  "timestamp_utc": "2026-05-01T08:46:20.027516+00:00",
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": "manual_gui",
+    "vpn_client": null
+  },
+  "vpn_provider": "nordvpn",
+  "vpn_location_id": "us-california-san-francisco-200",
+  "vpn_location_label": "San Francisco, California, United States",
+  "connection_mode": "manual_gui",
+  "exit_ip_v4": "185.187.168.200",
+  "exit_ip_v6": null,
+  "exit_ip_sources": [
+    {
+      "url": "https://api.ipify.org",
+      "ipv4": "185.187.168.200",
+      "ipv6": null,
+      "raw_excerpt": "185.187.168.200",
+      "error": null
+    },
+    {
+      "url": "https://api64.ipify.org",
+      "ipv4": "185.187.168.200",
+      "ipv6": null,
+      "raw_excerpt": "185.187.168.200",
+      "error": null
+    },
+    {
+      "url": "https://api.ipify.org?format=json",
+      "ipv4": "185.187.168.200",
+      "ipv6": null,
+      "raw_excerpt": "{\"ip\":\"185.187.168.200\"}",
+      "error": null
+    }
+  ],
+  "dns_servers_observed": [
+    {
+      "tier": "local",
+      "detail": "resolv.conf nameserver lines (Unix)",
+      "servers": [
+        "100.64.0.2"
+      ]
+    },
+    {
+      "tier": "local",
+      "detail": "getaddrinfo('whoami.akamai.net')",
+      "servers": [
+        "185.187.168.198"
+      ]
+    },
+    {
+      "tier": "external",
+      "detail": "ipleak_dns",
+      "servers": [
+        "185.187.168.200"
+      ]
+    }
+  ],
+  "dns_leak_flag": false,
+  "dns_leak_notes": "Heuristic: no obvious public resolver IPs parsed from external page",
+  "webrtc_candidates": [
+    {
+      "candidate_type": "host",
+      "protocol": "udp",
+      "address": "7f4f39b4-3651-4b75-8e40-acbfe8e81e09.local",
+      "port": 51278,
+      "raw": "candidate:2563907187 1 udp 2113937151 7f4f39b4-3651-4b75-8e40-acbfe8e81e09.local 51278 typ host generation 0 ufrag oGXt network-cost 999"
+    },
+    {
+      "candidate_type": "srflx",
+      "protocol": "udp",
+      "address": "185.187.168.200",
+      "port": 41524,
+      "raw": "candidate:2563219285 1 udp 1677729535 185.187.168.200 41524 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag oGXt network-cost 999"
+    }
+  ],
+  "webrtc_leak_flag": false,
+  "webrtc_notes": "Exit IP appears in candidate set (expected for tunneled public)",
+  "ipv6_status": "unsupported_or_no_ipv6",
+  "ipv6_leak_flag": false,
+  "ipv6_notes": "No IPv6 observed via curl or IP endpoints",
+  "fingerprint_snapshot": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+    "language": "en-US",
+    "hardwareConcurrency": 16,
+    "platform": "MacIntel"
+  },
+  "attribution": {
+    "asn": 212238,
+    "holder": "CDNEXT Datacamp Limited",
+    "country": null,
+    "confidence": 0.7,
+    "confidence_notes": "ASNs seen: [212238]",
+    "supporting_sources": [
+      {
+        "name": "ripestat",
+        "asn": 212238,
+        "holder": "CDNEXT Datacamp Limited",
+        "country": null,
+        "raw": {
+          "prefix_overview": {
+            "messages": [
+              [
+                "warning",
+                "Given resource is not announced but result has been aligned to first-level less-specific (185.187.168.0/24)."
+              ]
+            ],
+            "see_also": [],
+            "version": "1.3",
+            "data_call_name": "prefix-overview",
+            "data_call_status": "supported",
+            "cached": false,
+            "query_id": "20260501084045-86ea6038-bb24-46d1-9338-4a40e4925586",
+            "process_time": 45,
+            "server_id": "app160",
+            "build_version": "v0.9.15-2026.04.30",
+            "pipeline": "1248748",
+            "status": "ok",
+            "status_code": 200,
+            "time": "2026-05-01T08:40:45.966816",
+            "data": {
+              "is_less_specific": true,
+              "announced": true,
+              "asns": [
+                {
+                  "asn": 212238,
+                  "holder": "CDNEXT Datacamp Limited"
+                }
+              ],
+              "related_prefixes": [],
+              "resource": "185.187.168.0/24",
+              "type": "prefix",
+              "block": {
+                "resource": "185.0.0.0/8",
+                "desc": "RIPE NCC (Status: ALLOCATED)",
+                "name": "IANA IPv4 Address Space Registry"
+              },
+              "actual_num_related": 0,
+              "query_time": "2026-05-01T00:00:00",
+              "num_filtered_out": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "team_cymru",
+        "asn": 212238,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "asn": 212238,
+          "raw_line": "212238 | 185.187.168.0/24 | DE | ripencc | 2017-01-27",
+          "parts": [
+            "212238",
+            "185.187.168.0/24",
+            "DE",
+            "ripencc",
+            "2017-01-27"
+          ],
+          "disclaimer": [
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        }
+      },
+      {
+        "name": "peeringdb",
+        "asn": null,
+        "holder": null,
+        "country": null,
+        "raw": {
+          "error": "Client error '404 Not Found' for url 'https://www.peeringdb.com/api/net?asn=212238'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"
+        }
+      }
+    ],
+    "disclaimers": [
+      "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+    ]
+  },
+  "policies": [
+    {
+      "role": "vpn",
+      "url": "https://nordvpn.com/privacy-policy/",
+      "fetched_at_utc": "2026-05-01T08:41:36.632957+00:00",
+      "sha256": "dc8f59f82483d7c644a087d7cca883de4836bb48ec6d03e111f0e9fee9baeebb",
+      "summary_bullets": [
+        "Mentions logging (keyword hit; review source)"
+      ]
+    },
+    {
+      "role": "vpn",
+      "url": "https://my.nordaccount.com/legal/privacy-policy/",
+      "fetched_at_utc": "2026-05-01T08:43:08.511448+00:00",
+      "sha256": null,
+      "summary_bullets": [
+        "fetch error: Timeout 90000ms exceeded.\n=========================== logs ===========================\n\"load\" event fired\n============================================================"
+      ]
+    }
+  ],
+  "services_contacted": [
+    "attribution:methodology:104.16.155.111",
+    "attribution:methodology:104.16.156.111",
+    "attribution:methodology:104.16.208.203",
+    "attribution:methodology:104.17.160.135",
+    "attribution:methodology:104.17.223.153",
+    "attribution:methodology:104.18.42.225",
+    "attribution:methodology:104.19.159.190",
+    "attribution:methodology:142.251.219.40",
+    "attribution:methodology:172.64.145.31",
+    "attribution:methodology:216.198.53.11",
+    "attribution:methodology:216.198.53.3",
+    "attribution:methodology:216.198.54.11",
+    "attribution:methodology:216.198.54.3",
+    "attribution:methodology:2606:4700::6810:9b6f",
+    "attribution:methodology:2606:4700::6810:9c6f",
+    "attribution:methodology:2607:f8b0:4005:803::2008",
+    "attribution:methodology:2a06:98c1:3101::6812:2ae1",
+    "attribution:methodology:2a06:98c1:3107::ac40:911f",
+    "attribution:ns_glue:108.162.192.130",
+    "attribution:ns_glue:108.162.193.142",
+    "attribution:ns_glue:172.64.32.130",
+    "attribution:ns_glue:172.64.33.142",
+    "attribution:ns_glue:173.245.58.130",
+    "attribution:ns_glue:173.245.59.142",
+    "attribution:ns_glue:2606:4700:50::adf5:3a82",
+    "attribution:ns_glue:2606:4700:58::adf5:3b8e",
+    "attribution:ns_glue:2803:f800:50::6ca2:c082",
+    "attribution:ns_glue:2803:f800:50::6ca2:c18e",
+    "attribution:ns_glue:2a06:98c1:50::ac40:2082",
+    "attribution:ns_glue:2a06:98c1:50::ac40:218e",
+    "browserleaks.com:playwright_chromium",
+    "competitor_probe:enabled",
+    "competitor_probe:har_summary",
+    "dns:cname_scan:api.nordvpn.com",
+    "dns:cname_scan:autodiscover.nordvpn.com",
+    "dns:cname_scan:blog.nordvpn.com",
+    "dns:cname_scan:docs.nordvpn.com",
+    "dns:cname_scan:help.nordvpn.com",
+    "dns:cname_scan:mail.nordvpn.com",
+    "dns:cname_scan:status.nordvpn.com",
+    "dns:cname_scan:support.nordvpn.com",
+    "dns:dkim:default._domainkey.nordvpn.com",
+    "dns:dkim:google._domainkey.nordvpn.com",
+    "dns:dkim:k1._domainkey.nordvpn.com",
+    "dns:dkim:mail._domainkey.nordvpn.com",
+    "dns:dkim:s1._domainkey.nordvpn.com",
+    "dns:dkim:s2._domainkey.nordvpn.com",
+    "dns:dkim:selector1._domainkey.nordvpn.com",
+    "dns:dkim:selector2._domainkey.nordvpn.com",
+    "dns:dkim:smtp._domainkey.nordvpn.com",
+    "dns:dkim:zendesk1._domainkey.nordvpn.com",
+    "dns:dkim:zendesk2._domainkey.nordvpn.com",
+    "dns:dmarc:_dmarc.nordvpn.com",
+    "dns:lookup:nordvpn.com",
+    "dns:ns_glue:lily.ns.cloudflare.com",
+    "dns:ns_glue:seth.ns.cloudflare.com",
+    "dns:resolve:d.nordvpn.com",
+    "dns:resolve:my.nordaccount.com",
+    "dns:resolve:nordcheckout.com",
+    "dns:resolve:nordvpn.com",
+    "dns:resolve:s1.nordcdn.com",
+    "dns:resolve:sb.nordcdn.com",
+    "dns:resolve:static.zdassets.com",
+    "dns:resolve:support.nordvpn.com",
+    "dns:resolve:www.googletagmanager.com",
+    "dns:resolve:www.nordvpn.com",
+    "fingerprint:playwright_navigator",
+    "https://api.ipify.org",
+    "https://api.ipify.org?format=json",
+    "https://api64.ipify.org",
+    "https://browserleaks.com/dns",
+    "https://browserleaks.com/ip",
+    "https://browserleaks.com/tls",
+    "https://browserleaks.com/webrtc",
+    "https://ipleak.net/",
+    "https://ipwho.is/185.187.168.200",
+    "https://my.nordaccount.com/",
+    "https://my.nordaccount.com/legal/privacy-policy/",
+    "https://nordcheckout.com/",
+    "https://nordvpn.com/",
+    "https://nordvpn.com/pricing/",
+    "https://nordvpn.com/privacy-policy/",
+    "https://support.nordvpn.com/",
+    "https://test-ipv6.com/",
+    "https://www.nordvpn.com/",
+    "policy:playwright_chromium",
+    "spf:txt:_spf.google.com",
+    "spf:txt:icloud.com",
+    "spf:txt:mail.zendesk.com",
+    "spf:txt:nordvpn.com",
+    "surface_probe:har_summary",
+    "transit:local_traceroute",
+    "webrtc:local_playwright_chromium",
+    "yourinfo.ai:playwright_chromium"
+  ],
+  "artifacts": {
+    "connect_log": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/connect.log",
+    "ip_check_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/ip-check.json",
+    "dnsleak_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/dnsleak",
+    "webrtc_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/webrtc",
+    "ipv6_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/ipv6",
+    "fingerprint_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/fingerprint",
+    "attribution_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/attribution.json",
+    "asn_prefixes_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/asn_prefixes.json",
+    "exit_dns_json": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/exit_dns.json",
+    "policy_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/policy",
+    "competitor_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe",
+    "browserleaks_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/browserleaks_probe",
+    "yourinfo_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/yourinfo_probe",
+    "baseline_json": null,
+    "surface_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe",
+    "transitions_json": null,
+    "website_exposure_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure",
+    "capture_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/capture"
+  },
+  "competitor_surface": {
+    "provider_dns": {
+      "domains": {
+        "nordvpn.com": {
+          "ns": [
+            "lily.ns.cloudflare.com",
+            "seth.ns.cloudflare.com"
+          ],
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null,
+          "txt": [
+            "MS=ms69824556",
+            "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+            "oneuptime=2fYJpBXRQsmY3Py",
+            "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+            "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+            "MS=ms41624661",
+            "MS=ms60989570"
+          ],
+          "mx": [
+            "1 aspmx.l.google.com",
+            "5 alt1.aspmx.l.google.com",
+            "5 alt2.aspmx.l.google.com",
+            "10 alt3.aspmx.l.google.com",
+            "10 alt4.aspmx.l.google.com"
+          ],
+          "caa": [],
+          "rr_errors": {
+            "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+          }
+        }
+      },
+      "ns_hosts": {
+        "lily.ns.cloudflare.com": {
+          "a": [
+            "108.162.192.130",
+            "172.64.32.130",
+            "173.245.58.130"
+          ],
+          "aaaa": [
+            "2606:4700:50::adf5:3a82",
+            "2803:f800:50::6ca2:c082",
+            "2a06:98c1:50::ac40:2082"
+          ],
+          "ip_attribution": {
+            "108.162.192.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (108.162.192.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "108.162.192.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084341-3d169cf1-ca3a-4faa-8629-f960c788f0c6",
+                      "process_time": 60,
+                      "server_id": "app177",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:41.429428",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "108.162.192.0/20"
+                        ],
+                        "resource": "108.162.192.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "108.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 108.162.192.0/20 | US | arin | 2011-10-28",
+                    "parts": [
+                      "13335",
+                      "108.162.192.0/20",
+                      "US",
+                      "arin",
+                      "2011-10-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "data": [
+                      {
+                        "id": 4224,
+                        "org_id": 4715,
+                        "name": "Cloudflare",
+                        "aka": "",
+                        "name_long": "",
+                        "website": "https://www.cloudflare.com",
+                        "social_media": [
+                          {
+                            "service": "website",
+                            "identifier": "https://www.cloudflare.com"
+                          }
+                        ],
+                        "asn": 13335,
+                        "looking_glass": "",
+                        "route_server": "",
+                        "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                        "info_type": "Content",
+                        "info_types": [
+                          "Content"
+                        ],
+                        "info_prefixes4": 80000,
+                        "info_prefixes6": 30000,
+                        "info_traffic": "",
+                        "info_ratio": "Mostly Outbound",
+                        "info_scope": "Global",
+                        "info_unicast": true,
+                        "info_multicast": false,
+                        "info_ipv6": true,
+                        "info_never_via_route_servers": false,
+                        "ix_count": 352,
+                        "fac_count": 222,
+                        "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                        "netixlan_updated": "2026-04-29T17:03:32Z",
+                        "netfac_updated": "2026-04-01T18:35:35Z",
+                        "poc_updated": "2025-12-04T21:15:09Z",
+                        "policy_url": "https://www.cloudflare.com/peering-policy/",
+                        "policy_general": "Open",
+                        "policy_locations": "Preferred",
+                        "policy_ratio": false,
+                        "policy_contracts": "Not Required",
+                        "allow_ixp_update": false,
+                        "status_dashboard": "https://www.cloudflarestatus.com/",
+                        "rir_status": "ok",
+                        "rir_status_updated": "2024-06-26T04:47:55Z",
+                        "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                        "created": "2011-09-06T19:40:05Z",
+                        "updated": "2026-04-29T17:00:30Z",
+                        "status": "ok"
+                      }
+                    ],
+                    "meta": {}
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "172.64.32.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (172.64.32.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "172.64.32.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084343-9bb8ca8f-1d67-4400-8411-7782b832e2f0",
+                      "process_time": 60,
+                      "server_id": "app170",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:43.671647",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "172.64.32.0/20"
+                        ],
+                        "resource": "172.64.32.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "172.0.0.0/8",
+                          "desc": "Administered by ARIN",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 172.64.32.0/24 | US | arin | 2015-02-25",
+                    "parts": [
+                      "13335",
+                      "172.64.32.0/24",
+                      "US",
+                      "arin",
+                      "2015-02-25"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "data": [
+                      {
+                        "id": 4224,
+                        "org_id": 4715,
+                        "name": "Cloudflare",
+                        "aka": "",
+                        "name_long": "",
+                        "website": "https://www.cloudflare.com",
+                        "social_media": [
+                          {
+                            "service": "website",
+                            "identifier": "https://www.cloudflare.com"
+                          }
+                        ],
+                        "asn": 13335,
+                        "looking_glass": "",
+                        "route_server": "",
+                        "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                        "info_type": "Content",
+                        "info_types": [
+                          "Content"
+                        ],
+                        "info_prefixes4": 80000,
+                        "info_prefixes6": 30000,
+                        "info_traffic": "",
+                        "info_ratio": "Mostly Outbound",
+                        "info_scope": "Global",
+                        "info_unicast": true,
+                        "info_multicast": false,
+                        "info_ipv6": true,
+                        "info_never_via_route_servers": false,
+                        "ix_count": 352,
+                        "fac_count": 222,
+                        "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                        "netixlan_updated": "2026-04-29T17:03:32Z",
+                        "netfac_updated": "2026-04-01T18:35:35Z",
+                        "poc_updated": "2025-12-04T21:15:09Z",
+                        "policy_url": "https://www.cloudflare.com/peering-policy/",
+                        "policy_general": "Open",
+                        "policy_locations": "Preferred",
+                        "policy_ratio": false,
+                        "policy_contracts": "Not Required",
+                        "allow_ixp_update": false,
+                        "status_dashboard": "https://www.cloudflarestatus.com/",
+                        "rir_status": "ok",
+                        "rir_status_updated": "2024-06-26T04:47:55Z",
+                        "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                        "created": "2011-09-06T19:40:05Z",
+                        "updated": "2026-04-29T17:00:30Z",
+                        "status": "ok"
+                      }
+                    ],
+                    "meta": {}
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "173.245.58.130": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (173.245.58.0/24)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084345-d4453a80-ac0c-4d12-8f97-712f51ab5f8b",
+                      "process_time": 47,
+                      "server_id": "app192",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:45.872482",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "173.245.58.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "173.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 173.245.58.0/24 | US | arin | 2010-12-28",
+                    "parts": [
+                      "13335",
+                      "173.245.58.0/24",
+                      "US",
+                      "arin",
+                      "2010-12-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "data": [
+                      {
+                        "id": 4224,
+                        "org_id": 4715,
+                        "name": "Cloudflare",
+                        "aka": "",
+                        "name_long": "",
+                        "website": "https://www.cloudflare.com",
+                        "social_media": [
+                          {
+                            "service": "website",
+                            "identifier": "https://www.cloudflare.com"
+                          }
+                        ],
+                        "asn": 13335,
+                        "looking_glass": "",
+                        "route_server": "",
+                        "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                        "info_type": "Content",
+                        "info_types": [
+                          "Content"
+                        ],
+                        "info_prefixes4": 80000,
+                        "info_prefixes6": 30000,
+                        "info_traffic": "",
+                        "info_ratio": "Mostly Outbound",
+                        "info_scope": "Global",
+                        "info_unicast": true,
+                        "info_multicast": false,
+                        "info_ipv6": true,
+                        "info_never_via_route_servers": false,
+                        "ix_count": 352,
+                        "fac_count": 222,
+                        "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                        "netixlan_updated": "2026-04-29T17:03:32Z",
+                        "netfac_updated": "2026-04-01T18:35:35Z",
+                        "poc_updated": "2025-12-04T21:15:09Z",
+                        "policy_url": "https://www.cloudflare.com/peering-policy/",
+                        "policy_general": "Open",
+                        "policy_locations": "Preferred",
+                        "policy_ratio": false,
+                        "policy_contracts": "Not Required",
+                        "allow_ixp_update": false,
+                        "status_dashboard": "https://www.cloudflarestatus.com/",
+                        "rir_status": "ok",
+                        "rir_status_updated": "2024-06-26T04:47:55Z",
+                        "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                        "created": "2011-09-06T19:40:05Z",
+                        "updated": "2026-04-29T17:00:30Z",
+                        "status": "ok"
+                      }
+                    ],
+                    "meta": {}
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "2606:4700:50::adf5:3a82": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "2606:4700::/36"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084348-ee7ea2dd-430c-44c6-b8ac-72a3380a97e9",
+                      "process_time": 54,
+                      "server_id": "app176",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:48.383440",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "2606:4700::/36"
+                        ],
+                        "resource": "2606:4700:50::/44",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2600::/12",
+                          "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2803:f800:50::6ca2:c082": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084349-8c1c6773-8118-4937-9604-44387b6b72a3",
+                      "process_time": 42,
+                      "server_id": "app172",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:49.943744",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2803:f800:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2800::/12",
+                          "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2a06:98c1:50::ac40:2082": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084351-e5f542c9-f76c-4f9f-8fa8-ac9363a0d8df",
+                      "process_time": 58,
+                      "server_id": "app170",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:51.533481",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2a06:98c1:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2a00::/12",
+                          "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            }
+          },
+          "error": null
+        },
+        "seth.ns.cloudflare.com": {
+          "a": [
+            "108.162.193.142",
+            "172.64.33.142",
+            "173.245.59.142"
+          ],
+          "aaaa": [
+            "2606:4700:58::adf5:3b8e",
+            "2803:f800:50::6ca2:c18e",
+            "2a06:98c1:50::ac40:218e"
+          ],
+          "ip_attribution": {
+            "108.162.193.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (108.162.193.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "108.162.192.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084353-67de1ddb-34f6-4a46-9629-c9a0882b989c",
+                      "process_time": 59,
+                      "server_id": "app171",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:53.191272",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "108.162.192.0/20"
+                        ],
+                        "resource": "108.162.193.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "108.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 108.162.193.0/24 | US | arin | 2011-10-28",
+                    "parts": [
+                      "13335",
+                      "108.162.193.0/24",
+                      "US",
+                      "arin",
+                      "2011-10-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "172.64.33.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (172.64.33.0/24)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "172.64.32.0/20"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084355-be52e5b9-c950-46d4-8a3a-6200687c8575",
+                      "process_time": 60,
+                      "server_id": "app174",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:55.226163",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "172.64.32.0/20"
+                        ],
+                        "resource": "172.64.33.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "172.0.0.0/8",
+                          "desc": "Administered by ARIN",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 172.64.32.0/20 | US | arin | 2015-02-25",
+                    "parts": [
+                      "13335",
+                      "172.64.32.0/20",
+                      "US",
+                      "arin",
+                      "2015-02-25"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "173.245.59.142": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (173.245.59.0/24)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084357-9e12ed96-5251-4067-9225-1f8ef99042fb",
+                      "process_time": 49,
+                      "server_id": "app191",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:57.146325",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "173.245.59.0/24",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "173.0.0.0/8",
+                          "desc": "ARIN (Status: ALLOCATED)",
+                          "name": "IANA IPv4 Address Space Registry"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": 13335,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "asn": 13335,
+                    "raw_line": "13335 | 173.245.59.0/24 | US | arin | 2010-12-28",
+                    "parts": [
+                      "13335",
+                      "173.245.59.0/24",
+                      "US",
+                      "arin",
+                      "2010-12-28"
+                    ],
+                    "disclaimer": [
+                      "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                    ]
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+                "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+              ]
+            },
+            "2606:4700:58::adf5:3b8e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700:50::/44)."
+                        ]
+                      ],
+                      "see_also": [
+                        {
+                          "relation": "less-specific",
+                          "resource": "2606:4700::/36"
+                        }
+                      ],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084359-31163c01-1fde-4cb3-8764-f512462d982c",
+                      "process_time": 44,
+                      "server_id": "app190",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:43:59.052522",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [
+                          "2606:4700::/36"
+                        ],
+                        "resource": "2606:4700:50::/44",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2600::/12",
+                          "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 1,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2803:f800:50::6ca2:c18e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2803:f800:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": false,
+                      "query_id": "20260501084400-f2ac8a5a-4043-4e02-abe5-9efb0494f273",
+                      "process_time": 48,
+                      "server_id": "app192",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:44:00.646360",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2803:f800:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2800::/12",
+                          "desc": "Designated to LACNIC on 03 October 2006 (Status: allocated; Note: 2800::/23 was allocated on 2005-11-17. The more recent allocation (2006-10-03) incorporates the previous allocation.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            },
+            "2a06:98c1:50::ac40:218e": {
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "confidence": 0.7,
+              "confidence_notes": "[provider_ns_glue] ASNs seen: [13335]",
+              "supporting_sources": [
+                {
+                  "name": "ripestat",
+                  "asn": 13335,
+                  "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+                  "country": null,
+                  "raw": {
+                    "prefix_overview": {
+                      "messages": [
+                        [
+                          "warning",
+                          "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:50::/45)."
+                        ]
+                      ],
+                      "see_also": [],
+                      "version": "1.3",
+                      "data_call_name": "prefix-overview",
+                      "data_call_status": "supported",
+                      "cached": true,
+                      "query_id": "20260501084402-cba47a93-aa35-4176-bd17-7cc4ee8f1d87",
+                      "process_time": 1,
+                      "server_id": "app162",
+                      "build_version": "v0.9.15-2026.04.30",
+                      "pipeline": "1248748",
+                      "status": "ok",
+                      "status_code": 200,
+                      "time": "2026-05-01T08:44:02.182091",
+                      "data": {
+                        "is_less_specific": true,
+                        "announced": true,
+                        "asns": [
+                          {
+                            "asn": 13335,
+                            "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                          }
+                        ],
+                        "related_prefixes": [],
+                        "resource": "2a06:98c1:50::/45",
+                        "type": "prefix",
+                        "block": {
+                          "resource": "2a00::/12",
+                          "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                          "name": "IANA IPv6 Global Unicast Address Assignments"
+                        },
+                        "actual_num_related": 0,
+                        "query_time": "2026-05-01T00:00:00",
+                        "num_filtered_out": 0
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "team_cymru",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+                  }
+                },
+                {
+                  "name": "peeringdb",
+                  "asn": null,
+                  "holder": null,
+                  "country": null,
+                  "raw": {
+                    "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+                  }
+                }
+              ],
+              "disclaimers": [
+                "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+              ]
+            }
+          },
+          "error": null
+        }
+      }
+    },
+    "web_probes": [
+      {
+        "url": "https://nordvpn.com/",
+        "error": null,
+        "status": 403,
+        "final_url": "https://nordvpn.com/",
+        "cdn_headers": {
+          "cf-ray": "9f4d82be8bd47a33-SJC",
+          "server": "cloudflare"
+        },
+        "scripts": [
+          "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82be8bd47a33"
+        ],
+        "images": [],
+        "captcha_third_party": false,
+        "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe/har/d945f098fbd5bb50.har"
+      }
+    ],
+    "har_summary": {
+      "har_files": [
+        {
+          "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/competitor_probe/har/d945f098fbd5bb50.har",
+          "entry_count": 3,
+          "unique_hosts": [
+            "nordvpn.com"
+          ],
+          "unique_schemes": [
+            "https"
+          ],
+          "tracker_candidates": [],
+          "cdn_candidates": [],
+          "error": null
+        }
+      ],
+      "merged_unique_hosts": [
+        "nordvpn.com"
+      ],
+      "merged_tracker_candidates": [],
+      "merged_cdn_candidates": []
+    },
+    "portal_probes": [
+      {
+        "host": "my.nordaccount.com",
+        "a": [
+          "104.18.42.225",
+          "172.64.145.31"
+        ],
+        "aaaa": [
+          "2a06:98c1:3101::6812:2ae1",
+          "2a06:98c1:3107::ac40:911f"
+        ],
+        "https_status": 200,
+        "https_cdn_headers": {
+          "cf-ray": "9f4d82c23f63ebe3-SJC",
+          "server": "cloudflare"
+        },
+        "error": null
+      }
+    ],
+    "transit": {
+      "target": "185.187.168.200",
+      "command": [
+        "traceroute",
+        "-n",
+        "-m",
+        "15",
+        "-w",
+        "2",
+        "185.187.168.200"
+      ],
+      "stdout": " 1  * * *\n 2  * * *\n 3  * * *\n 4  * * *\n 5  * * *\n 6  * * *\n 7  * * *\n 8  * * *\n 9  * * *\n10  * * *\n11  * * *\n12  * * *\n13  * * *\n14  * * *\n15  * * *\n",
+      "stderr": "traceroute to 185.187.168.200 (185.187.168.200), 15 hops max, 40 byte packets\n",
+      "hops": [],
+      "returncode": 0
+    },
+    "stray_json": [],
+    "errors": []
+  },
+  "yourinfo_snapshot": {
+    "url": "https://yourinfo.ai/",
+    "final_url": "https://yourinfo.ai/",
+    "status": 200,
+    "title": "YourInfo.ai",
+    "text_excerpt": "RESEARCHING YOUR INFORMATION...\n20\nQuerying intelligence databases...\n\nConcerned about your digital privacy?\n\ndoxx.net - Secure networking for humans\n ",
+    "text_excerpt_truncated": false,
+    "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/yourinfo_probe/yourinfo.har",
+    "cdn_headers": {},
+    "error": null
+  },
+  "browserleaks_snapshot": {
+    "pages": [
+      {
+        "url": "https://browserleaks.com/ip",
+        "final_url": "https://browserleaks.com/ip",
+        "status": 200,
+        "title": "My IP Address - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nWhat Is My IP Address\nMy IP Address\nIP Address\t185.187.168.200\nHostname\tn/a\nIP Address Location\nCountry\tUnited States (US)\nState/Region\tCalifornia\nCity\tSan Francisco\nISP\tDatacamp Limited\nOrganization\tPackethub S.A\nNetwork\tAS212238 Datacamp Limited (VPN, VPSH, TOR, CONTENT)\nUsage Type\tCorporate / Hosting\nTimezone\tAmerica/Los_Angeles (PDT)\nLocal Time\tFri, 01 May 2026 01:43:16 -0700\nCoordinates\t37.7749,-122.4190\nIPv6 Leak Test\nIPv6 Address\tn/a\nWebRTC Leak Test\nLocal IP Address\tn/a\nPublic IP Address\t185.187.168.200\nDNS Leak Test\nTest Results\t\nRun DNS Leak Test\n\nTCP/IP Fingerprint\nOS\tAndroid\nMTU\t1500\nLink Type\tEthernet or modem\nDistance\t16 Hops\nJA4T\t65535_2-4-8-1-3_1460_9\nTLS Fingerprint\nJA4\tt13d1516h2_8daaf6152771_d8a2da3f94cd\nJA3 Hash\td65bdd834bc982a29565da949a944c66\nHTTP/2 Fingerprint\nAkamai Hash\t52d84b11737d980aef856699f885ca86\nHTTP Headers\nraw headers\n\nRequest\tGET /ip HTTP/2.0\nSec-CH-UA\t\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"\nSec-CH-UA-Mobile\t?0\nSec-CH-UA-Platform\t\"macOS\"\nUpgrade-Insecure-Requests\t1\nUser-Agent\tMozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36\nAccept\ttext/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nSec-Fetch-Site\tnone\nSec-Fetch-Mode\tnavigate\nSec-Fetch-User\t?1\nSec-Fetch-Dest\tdocument\nAccept-Encoding\tgzip, deflate, br, zstd\nPriority\tu=0, i\nHost\tbrowserleaks.com\nTor Relay Details\nRelays\tThis IP is not identified to be a Tor Relay\nWhere is My IP\n\nIP Address Whois\nSource Registry\tRIPE NCC\nNet Range\t185.187.168.0 - 185.187.168.255\nCIDR\t185.187.168.0/24\nName\tPACKETHUB-20221011\nHandle\t185.187.168.0 - 185.187.168.255\nParent Handle\t185.187.168.0 - 185.187.171.255\nNet Type\tASSIGNED PA\nCountry\tUnited States\nRegistration\tTue, 11 Oct 2022 14:07:42 GMT\nLast Changed\tTue, 11 Oct 2022 14:07:42 GMT\nDescription\tPackethub S.A.\nFull Name\tAlina Gatsaniuk\nHandle\tAG25300-RIPE\nEntity Roles\tAdministrative, Technical\nTelephone\t+5078336503\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tPackethub S.A.\nHandle\tORG-PS409-RIPE\nEntity Roles\tRegistrant\nTelephone\t+5078336503\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tTERRATRANSIT-MNT\nHandle\tTERRATRANSIT-MNT\nEntity Roles\tRegistrant\nFull Name\tPackethub S.A. IT Department\nHandle\tPSID1-RIPE\nEntity Roles\tAbuse\nEmail\tabuse@packethub.tech\nAddress\tOffice 76, Plaza 2000, 50 Street and Marbella, Bella Vista\nPanama City\nPanama\nFull Name\tTERRATRANSIT-MNT\nHandle\tTERRATRANSIT-MNT\nEntity Roles\tRegistrant\nIP Geolocation by DB-IP\nFurther Reading\nLeave a Comment (456)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/dns",
+        "final_url": "https://browserleaks.com/dns",
+        "status": 200,
+        "title": "DNS Leak Test - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nDNS Leak Test\n\nIncorrect network configurations or faulty VPN/proxy software can lead to your device sending DNS requests directly to your ISP's server, potentially enabling ISPs or other third parties to monitor your online activity.\n\nThe DNS Leak Test is a tool used to determine which DNS servers your browser is using to resolve domain names. This test attempts to resolve 50 randomly generated domain names, of which 25 are IPv4-only and 25 are IPv6-only.\n\nYour IP Address\nIP Address\t185.187.168.200\nISP\tDatacamp Limited\nLocation\tUnited States, San Francisco\nDNS Leak Test\nTest Results\tFound 13 Servers, 1 ISP, 1 Location\nYour DNS Servers\t\nIP Address :\tISP :\tLocation :\n185.187.168.193\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.194\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.195\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.196\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.197\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.198\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.200\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.201\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.202\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.203\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.204\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.205\tDatacamp Limited\tUnited States, San Francisco\n185.187.168.206\tDatacamp Limited\tUnited States, San Francisco\nLeave a Comment (245)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/webrtc",
+        "final_url": "https://browserleaks.com/webrtc",
+        "status": 200,
+        "title": "WebRTC Leak Test - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nWebRTC Leak Test\nYour Remote IP\nIPv4 Address\t185.187.168.200\nIPv6 Address\t-\nWebRTC Support Detection\nRTCPeerConnection\t\n✔\nTrue\nRTCDataChannel\t\n✔\nTrue\nYour WebRTC IP\nWebRTC Leak Test\t\n✔\nNo Leak\nLocal IP Address\t-\nPublic IP Address\t185.187.168.200\nSession Description\nSDP Log\t\n\nMedia Devices\nAPI Support\t\n✔\nTrue\nAudio Permissions\t\n?\nPrompt\nVideo Permissions\t\n?\nPrompt\nMedia Devices\t    kind: audioinput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\n    kind: videoinput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\n    kind: audiooutput\n   label: n/a\ndeviceId: n/a\n groupId: n/a\n\nHow to Disable WebRTC\nFurther Reading\nLeave a Comment (221)\nBrowserLeaks © 2011-2026 All Rights Reserved\nmoc.skaelresworb@tcatnoc:otliam",
+        "text_excerpt_truncated": false,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      },
+      {
+        "url": "https://browserleaks.com/tls",
+        "final_url": "https://browserleaks.com/tls",
+        "status": 200,
+        "title": "TLS Client Test - TLS Fingerprinting - BrowserLeaks",
+        "text_excerpt": "Home Page\nIP Address\nJavaScript\nWebRTC Leak Test\nCanvas Fingerprint\nWebGL Report\nFont Fingerprinting\nGeolocation API\nFeatures Detection\nTLS Client Test\nContent Filters\nMore Tools\nSettings\nTLS Client Test\n\nThis page displays your web browser's SSL/TLS capabilities, including supported TLS protocols, cipher suites, extensions, and key exchange groups. It highlights any weak or insecure options and generates a TLS fingerprint in JA3/JA4 formats. Additionally, it tests how your browser handles insecure mixed content requests.\n\nYour Web Browser\nHTTP User-Agent\tMozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36\nProtocol Support\nTLS 1.3\t\n✔\nEnabled\nTLS 1.2\t\n✔\nEnabled\nTLS 1.1\t\n✖\nDisabled (Good)\nTLS 1.0\t\n✖\nDisabled (Good)\nMixed Content Test\nActive Content\t\n✔\nBlocked\nPassive Content\t\n✔\nUpgraded to HTTPS\nTLS Fingerprint\nJA4\t\nt13d1516h2_8daaf6152771_d8a2da3f94cd\n\nJA4_o\tt13d1516h2_acb858a92679_26ced42e32f4\nJA3\t26aedb7ebd433fe2ebf6133d3ab25b94\nJA3_n\t8e19337e7524d2573be54efb2b0784c9\nTLS Handshake\ndec values\n\nTLS Protocol\t\n0x0304\nTLS 1.3\n\nCipher Suite\t\n0x1301\nTLS_AES_128_GCM_SHA256\nRecommended\nTLS 1.3\n\nKey Exchange\t\n0x11EC\nX25519MLKEM768\n\nSignature Scheme\t\n0x0403\necdsa_secp256r1_sha256\n\nEncrypted Client Hello\nECH Success\t\n✖\nFalse\nOuter SNI\ttls.browserleaks.com\nInner SNI\tn/a\nSupported Cipher Suites (in order as received)\nCipher Suites\t\n0x5A5A\nGREASE\n\n\n0x1301\nTLS_AES_128_GCM_SHA256\nRecommended\nTLS 1.3\n\n\n0x1302\nTLS_AES_256_GCM_SHA384\nRecommended\nTLS 1.3\n\n\n0x1303\nTLS_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.3\n\n\n0xC02B\nTLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\nRecommended\nTLS 1.2\n\n\n0xC02F\nTLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256\nRecommended\nTLS 1.2\n\n\n0xC02C\nTLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384\nRecommended\nTLS 1.2\n\n\n0xC030\nTLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384\nRecommended\nTLS 1.2\n\n\n0xCCA9\nTLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.2\n\n\n0xCCA8\nTLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256\nRecommended\nTLS 1.2\n\n\n0xC013\nTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA\nCBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0xC014\nTLS_ECDHE_RSA_WITH_AES_256_CBC_SHA\nCBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0x009C\nTLS_RSA_WITH_AES_128_GCM_SHA256\nNO PFS\nTLS 1.2\n\n\n0x009D\nTLS_RSA_WITH_AES_256_GCM_SHA384\nNO PFS\nTLS 1.2\n\n\n0x002F\nTLS_RSA_WITH_AES_128_CBC_SHA\nNO PFS, CBC, SHA-1\nTLS 1.0,1.1,1.2\n\n\n0x0035\nTLS_RSA_WITH_AES_256_CBC_SHA\nNO PFS, CBC, SHA-1\nTLS 1.0,1.1,1.2\nSupported TLS Extensions (in order as received)\n\nTLS Extensions\t\n0x8A8A\nGREASE\n\n\n0x0023\nsession_ticket\n\n\n0x001B\ncompress_certificate\n\n\n0x44CD\napplication_settings\n\n\n0x0000\nserver_name\n\n\n0x0017\nextended_main_secret\n\n\n0x002D\npsk_key_exchange_modes\n\n\n0x000A\nsupported_groups\n\n\n0x000B\nec_point_formats\n\n\n0xFE0D\nencrypted_client_hello\n\n\n0x002B\nsupported_versions\n\n\n0x0005\nstatus_request\n\n\n0x0033\nkey_share\n\n\n0x0012\nsigned_certificate_timestamp\n\n\n0x000D\nsignature_algorithms\n\n\n0x0010\napplication_layer_protocol_negotiation\n\n\n0xFF01\nrenegotiation_info\n\n\n0x1A1A\nGREASE\n\napplication_layer_protocol_negotiation\nprotocol_name_list\th2\nhttp/1.1\napplication_settings\nsupported_protocols\th2\ncompress_certificate\nalgorithms\t\n0x0002\nbrotli\n\nec_point_formats\nec_point_format_list\t\n0x0000\nuncompressed\n\nencrypted_client_hello\ntype\touter\nkdf_id\t\n0x0001\nHKDF-SHA256\n\naead_id\t\n0x0001\nAES-128-GCM\n\nconfig_id\t104\nenc_length\t32\npayload_length\t144\nkey_share\nclient_shares\t\n0x6A6A\nGREASE\n\n\n0x11EC\nX25519MLKEM768\n\n\n0x001D\nx25519\n\npsk_key_exchange_modes\nke_modes\t\n0x0001\npsk_dhe_ke\n\nserver_name\nserver_name\ttls.brow",
+        "text_excerpt_truncated": true,
+        "cdn_headers": {
+          "server": "nginx"
+        },
+        "error": null
+      }
+    ],
+    "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/browserleaks_probe/browserleaks.har",
+    "error": null
+  },
+  "framework": {
+    "question_bank_version": "1",
+    "test_matrix_version": "1",
+    "findings": [
+      {
+        "id": "finding-yourinfo-d80b76e4",
+        "category": "third_party_web",
+        "title": "Third-party benchmark page loaded (yourinfo.ai)",
+        "description": "HAR and page excerpt captured for competitive benchmark; third parties may observe exit IP and browser metadata.",
+        "severity": "LOW",
+        "confidence": "HIGH",
+        "kind": "inferred",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "yourinfo_snapshot",
+            "note": null
+          }
+        ],
+        "affected_data_types": [
+          "public_ip",
+          "user_agent",
+          "browser_fingerprint"
+        ],
+        "recipients": [
+          "yourinfo.ai",
+          "asset_hosts"
+        ],
+        "test_conditions": "connected_state_benchmark",
+        "reproducibility_notes": null
+      }
+    ],
+    "question_coverage": [
+      {
+        "question_id": "IDENTITY-001",
+        "question_text": "What identifiers are assigned to the user, app install, browser session, and device?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Browser/session signals captured via fingerprint and optional YourInfo probe.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "yourinfo_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "browserleaks_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IDENTITY-006",
+        "question_text": "Are there long-lived client identifiers transmitted during auth or app startup?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Services contacted list enumerates URLs used during harness (may include auth-adjacent endpoints).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IDENTITY-009",
+        "question_text": "Is the browser fingerprinting surface strong enough to re-identify the same user across sessions?",
+        "category": "identity_correlation",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Fingerprint and BrowserLeaks captures present for re-identification risk assessment.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "browserleaks_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-001",
+        "question_text": "What third parties are involved during signup?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-004",
+        "question_text": "Are analytics or marketing scripts loaded during signup or checkout?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "SIGNUP-010",
+        "question_text": "Are these surfaces behind a CDN/WAF?",
+        "category": "signup_payment",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Third-party/CDN signals may appear in competitor web probes and HAR artifacts.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-001",
+        "question_text": "Where is the marketing site hosted (DNS/routing level)?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Apex DNS/NS data recorded for configured provider domains.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.provider_dns",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-004",
+        "question_text": "What CDN/WAF is used?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Response headers / CDN signatures captured in web probes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.web_probes",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "WEB-008",
+        "question_text": "Does the site leak origin details through headers, TLS metadata, redirects, or asset URLs?",
+        "category": "website_portal",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Review web probe headers, redirects, and HAR for origin leaks.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-001",
+        "question_text": "Which DNS resolvers are used while connected?",
+        "category": "dns",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Resolver tiers observed (local + external).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-002",
+        "question_text": "Are DNS requests tunneled (consistent with VPN exit)?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "DNS-003",
+        "question_text": "Is there DNS fallback to ISP/router/public resolvers?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "DNS-004",
+        "question_text": "Does DNS leak during connect/disconnect/reconnect?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Connect/disconnect DNS not sampled; use --transition-tests when supported.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-009",
+        "question_text": "Are DoH or DoT endpoints used?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "DoH/DoT not isolated from resolver snapshot; inspect raw captures.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "DNS-011",
+        "question_text": "Are resolvers first-party or third-party?",
+        "category": "dns",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Leak flag=False; see notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_servers_observed",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "dns_leak_notes",
+            "note": null
+          }
+        ],
+        "notes": "Heuristic: no obvious public resolver IPs parsed from external page"
+      },
+      {
+        "question_id": "IP-001",
+        "question_text": "Is the real public IPv4 exposed while connected?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Exit IPv4 185.187.168.200; leak flags dns=False webrtc=False ipv6=False.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_v4",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IP-002",
+        "question_text": "Is the real public IPv6 exposed while connected?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "partially_answered",
+        "answer_summary": "No IPv6 exit or IPv6 not returned by endpoints.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "IP-006",
+        "question_text": "Is the real IP exposed through WebRTC?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "WebRTC candidates captured; leak flag=False.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_leak_flag",
+            "note": null
+          }
+        ],
+        "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+      },
+      {
+        "question_id": "IP-007",
+        "question_text": "Is the local LAN IP exposed through WebRTC or browser APIs?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Inspect host candidates vs LAN; see webrtc_notes.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          }
+        ],
+        "notes": "Exit IP appears in candidate set (expected for tunneled public)"
+      },
+      {
+        "question_id": "IP-014",
+        "question_text": "Do leak-check sites disagree about observed IP identity?",
+        "category": "real_ip_leak",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "All 3 echo endpoints agree on IPv4 185.187.168.200.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_sources",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-002",
+        "question_text": "Which domains and IPs are contacted after the tunnel is up?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Post-harness service list captured.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-003",
+        "question_text": "Which control-plane endpoints are used for auth/config/session management?",
+        "category": "control_plane",
+        "testability": "DOCUMENT_RESEARCH",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "Auth/control-plane inventory requires internal docs or app instrumentation.",
+        "evidence_refs": [],
+        "notes": "DOCUMENT_RESEARCH"
+      },
+      {
+        "question_id": "CTRL-004",
+        "question_text": "Which telemetry endpoints are contacted during connection?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Infer from services_contacted and classified endpoints.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "CTRL-009",
+        "question_text": "Is the control plane behind a CDN/WAF?",
+        "category": "control_plane",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "CDN/WAF hints from web headers.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface.web_probes",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-001",
+        "question_text": "What exit IP is assigned for each region?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "Exit IPv4 185.187.168.200 for location us-california-san-francisco-200.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "exit_ip_v4",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-002",
+        "question_text": "What ASN announces the exit IP?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "attribution",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-003",
+        "question_text": "What organization owns the IP range?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "ASN 212238 — CDNEXT Datacamp Limited",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "attribution",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-004",
+        "question_text": "What reverse DNS exists for the exit node?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "PTR lookup errors: ptr_v4: The DNS query name does not exist: 200.168.187.185.in-addr.arpa.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "artifacts.exit_dns_json",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "EXIT-005",
+        "question_text": "Does the observed geolocation match the advertised location?",
+        "category": "exit_infrastructure",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Consistent: exit_geo.location_label matches vpn_location_label ('San Francisco, California, United States').",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "extra.exit_geo",
+            "note": null
+          },
+          {
+            "artifact_path": null,
+            "normalized_pointer": "vpn_location_label",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-001",
+        "question_text": "What external JS files are loaded on the site?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-003",
+        "question_text": "What analytics providers are present?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "THIRDWEB-012",
+        "question_text": "What cookies are set by first-party and third-party scripts?",
+        "category": "third_party_web",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "See web HAR + competitor_surface for external scripts/analytics.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "competitor_surface",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FP-001",
+        "question_text": "Does the site attempt browser fingerprinting?",
+        "category": "browser_tracking",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "answered",
+        "answer_summary": "Fingerprint snapshot captured (harness baseline; does not prove the provider site runs fingerprinting—see THIRDWEB / HAR rows for script-level evidence).",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "fingerprint_snapshot",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FP-011",
+        "question_text": "Does WebRTC run on provider pages?",
+        "category": "browser_tracking",
+        "testability": "DYNAMIC_FULL",
+        "answer_status": "answered",
+        "answer_summary": "WebRTC exercised by harness on leak-test pages.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "webrtc_candidates",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "TELEM-001",
+        "question_text": "Does the app talk to telemetry vendors?",
+        "category": "telemetry_app",
+        "testability": "INTERNAL_UNVERIFIABLE",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+        "evidence_refs": [],
+        "notes": "INTERNAL_UNVERIFIABLE"
+      },
+      {
+        "question_id": "TELEM-004",
+        "question_text": "Does the app send connection events to telemetry systems?",
+        "category": "telemetry_app",
+        "testability": "INTERNAL_UNVERIFIABLE",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "App telemetry requires traffic capture or binary analysis; not proven by this harness alone.",
+        "evidence_refs": [],
+        "notes": "INTERNAL_UNVERIFIABLE"
+      },
+      {
+        "question_id": "OS-001",
+        "question_text": "On macOS/Windows/Linux, do helper processes bypass the tunnel?",
+        "category": "os_specific",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "OS snapshot: Darwin 25.4.0; no process-level tunnel bypass test in this run.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "runner_env",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-001",
+        "question_text": "What leaks during initial connection?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-003",
+        "question_text": "What leaks during reconnect?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Not sampled; optional --transition-tests or manual observation.",
+        "evidence_refs": [],
+        "notes": null
+      },
+      {
+        "question_id": "FAIL-004",
+        "question_text": "What leaks if the VPN app crashes?",
+        "category": "failure_state",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "not_testable_dynamically",
+        "answer_summary": "Crash/kill leak tests not run in this harness by default.",
+        "evidence_refs": [],
+        "notes": "DYNAMIC_PARTIAL"
+      },
+      {
+        "question_id": "LOG-001",
+        "question_text": "What is the provider likely able to log based on observed traffic?",
+        "category": "logging_retention",
+        "testability": "DYNAMIC_PARTIAL",
+        "answer_status": "partially_answered",
+        "answer_summary": "Infer logging surface from observable endpoints and services_contacted.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "question_id": "LOG-005",
+        "question_text": "Are there contradictions between observed traffic and no-logs marketing claims?",
+        "category": "logging_retention",
+        "testability": "DOCUMENT_RESEARCH",
+        "answer_status": "partially_answered",
+        "answer_summary": "Policy text captured; compare claims to observed traffic manually.",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "policies",
+            "note": null
+          }
+        ],
+        "notes": null
+      }
+    ],
+    "risk_scores": {
+      "overall_severity": "LOW",
+      "leak_severity": "INFO",
+      "correlation_risk": "MEDIUM",
+      "third_party_exposure": "MEDIUM",
+      "notes": [
+        "Competitor web/portal probes executed.",
+        "Large services_contacted list."
+      ]
+    },
+    "observed_endpoints": [
+      {
+        "host": "api.ipify.org",
+        "classification": "third_party_analytics",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "api64.ipify.org",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "attribution",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "browserleaks.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "competitor_probe",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "dns",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "fingerprint",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "ipleak.net",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "ipwho.is",
+        "classification": "unknown",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "my.nordaccount.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "nordcheckout.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "policy",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "spf",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "support.nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "surface_probe",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "test-ipv6.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "transit",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "webrtc",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "www.nordvpn.com",
+        "classification": "unknown",
+        "confidence": 0.4,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      },
+      {
+        "host": "yourinfo.ai",
+        "classification": "unknown",
+        "confidence": 0.95,
+        "source": "services_contacted",
+        "evidence_refs": [
+          {
+            "artifact_path": null,
+            "normalized_pointer": "services_contacted",
+            "note": null
+          }
+        ]
+      }
+    ]
+  },
+  "website_exposure_methodology": {
+    "methodology_schema_version": "1.0",
+    "evidence_tier_note": "Desk automation of website-exposure methodology (Phases 1–9). Do not conflate with client resolver / DNS-leak observations (O); see docs/research-questions-and-evidence.md.",
+    "phases": {
+      "1_fetch": "urls_from_config_and_har_summaries",
+      "2_extract": "hosts_parsed_via_urlparse",
+      "3_dedupe": "unique_hosts=10",
+      "4_resolve": "A_AAAA_optional_public_ip_attribution",
+      "5_whois_via_attribution": "sample_only_for_selected_public_ips",
+      "6_classify": "har_tracker_cdn_hints_plus_unknown_bucket",
+      "7_document": "machine_json_hosts_inventory_plus_resolver_samples",
+      "8_dns_infra": "spf_walk_dkim_dmarc_cname_scan",
+      "9_inventory": "rows=22"
+    },
+    "hosts_inventory": {
+      "unique_hosts": [
+        "d.nordvpn.com",
+        "my.nordaccount.com",
+        "nordcheckout.com",
+        "nordvpn.com",
+        "s1.nordcdn.com",
+        "sb.nordcdn.com",
+        "static.zdassets.com",
+        "support.nordvpn.com",
+        "www.googletagmanager.com",
+        "www.nordvpn.com"
+      ],
+      "approx_count": 10,
+      "sources": {
+        "competitor_har": [
+          "nordvpn.com"
+        ],
+        "surface_har": [
+          "d.nordvpn.com",
+          "my.nordaccount.com",
+          "nordcheckout.com",
+          "nordvpn.com",
+          "s1.nordcdn.com",
+          "sb.nordcdn.com",
+          "static.zdassets.com",
+          "support.nordvpn.com",
+          "www.googletagmanager.com",
+          "www.nordvpn.com"
+        ]
+      }
+    },
+    "resolver_results": {
+      "by_host": {
+        "d.nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "my.nordaccount.com": {
+          "a": [
+            "104.18.42.225",
+            "172.64.145.31"
+          ],
+          "aaaa": [
+            "2a06:98c1:3101::6812:2ae1",
+            "2a06:98c1:3107::ac40:911f"
+          ],
+          "error": null
+        },
+        "nordcheckout.com": {
+          "a": [
+            "104.17.160.135",
+            "104.17.223.153"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "s1.nordcdn.com": {
+          "a": [
+            "104.16.155.111",
+            "104.16.156.111"
+          ],
+          "aaaa": [
+            "2606:4700::6810:9b6f",
+            "2606:4700::6810:9c6f"
+          ],
+          "error": null
+        },
+        "sb.nordcdn.com": {
+          "a": [
+            "104.16.155.111",
+            "104.16.156.111"
+          ],
+          "aaaa": [
+            "2606:4700::6810:9b6f",
+            "2606:4700::6810:9c6f"
+          ],
+          "error": null
+        },
+        "static.zdassets.com": {
+          "a": [
+            "216.198.53.3",
+            "216.198.54.3"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "support.nordvpn.com": {
+          "a": [
+            "216.198.53.11",
+            "216.198.54.11"
+          ],
+          "aaaa": [],
+          "error": null
+        },
+        "www.googletagmanager.com": {
+          "a": [
+            "142.251.219.40"
+          ],
+          "aaaa": [
+            "2607:f8b0:4005:803::2008"
+          ],
+          "error": null
+        },
+        "www.nordvpn.com": {
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null
+        }
+      },
+      "ip_attribution_sample": {
+        "104.16.208.203": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.208.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084541-8a877d3c-37c0-4de7-8a02-39db32f3edbb",
+                  "process_time": 97,
+                  "server_id": "app192",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:41.696502",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.208.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.208.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.208.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 4224,
+                    "org_id": 4715,
+                    "name": "Cloudflare",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://www.cloudflare.com"
+                      }
+                    ],
+                    "asn": 13335,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 80000,
+                    "info_prefixes6": 30000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 352,
+                    "fac_count": 222,
+                    "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                    "netixlan_updated": "2026-04-29T17:03:32Z",
+                    "netfac_updated": "2026-04-01T18:35:35Z",
+                    "poc_updated": "2025-12-04T21:15:09Z",
+                    "policy_url": "https://www.cloudflare.com/peering-policy/",
+                    "policy_general": "Open",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "https://www.cloudflarestatus.com/",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                    "created": "2011-09-06T19:40:05Z",
+                    "updated": "2026-04-29T17:00:30Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.19.159.190": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.19.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084543-fd2b6410-e2a9-4c7e-bebc-e89477d20070",
+                  "process_time": 47,
+                  "server_id": "app162",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:43.789859",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.19.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.19.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.19.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 4224,
+                    "org_id": 4715,
+                    "name": "Cloudflare",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://www.cloudflare.com"
+                      }
+                    ],
+                    "asn": 13335,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 80000,
+                    "info_prefixes6": 30000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 352,
+                    "fac_count": 222,
+                    "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                    "netixlan_updated": "2026-04-29T17:03:32Z",
+                    "netfac_updated": "2026-04-01T18:35:35Z",
+                    "poc_updated": "2025-12-04T21:15:09Z",
+                    "policy_url": "https://www.cloudflare.com/peering-policy/",
+                    "policy_general": "Open",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "https://www.cloudflarestatus.com/",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                    "created": "2011-09-06T19:40:05Z",
+                    "updated": "2026-04-29T17:00:30Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.18.42.225": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.18.42.0/24)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "104.18.32.0/19"
+                    },
+                    {
+                      "relation": "less-specific",
+                      "resource": "104.18.32.0/20"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084545-108761a5-a27e-4415-8608-1f6a2fee81dc",
+                  "process_time": 93,
+                  "server_id": "app175",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:45.873550",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "104.18.32.0/19",
+                      "104.18.32.0/20"
+                    ],
+                    "resource": "104.18.42.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 2,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.18.42.0/24 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.18.42.0/24",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "172.64.145.31": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (172.64.145.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084547-25e8aa4a-0b87-413c-88c5-8bc077dc8af6",
+                  "process_time": 61,
+                  "server_id": "app194",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:47.554190",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "172.64.145.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "172.0.0.0/8",
+                      "desc": "Administered by ARIN",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 172.64.145.0/24 | US | arin | 2015-02-25",
+                "parts": [
+                  "13335",
+                  "172.64.145.0/24",
+                  "US",
+                  "arin",
+                  "2015-02-25"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2a06:98c1:3101::6812:2ae1": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3101::/48)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084549-4ab5f843-be20-4259-99e6-bc88c01a9b54",
+                  "process_time": 59,
+                  "server_id": "app183",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:49.503010",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "2a06:98c1:3101::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2a00::/12",
+                      "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "2a06:98c1:3107::ac40:911f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3107::/48)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084550-6cbae11e-53c8-4fa8-950f-a1de73bc962f",
+                  "process_time": 46,
+                  "server_id": "app167",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:50.749922",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "2a06:98c1:3107::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2a00::/12",
+                      "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "104.17.160.135": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.17.160.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084552-e2a8ad30-e78f-4fd6-bb44-46fbe0707c72",
+                  "process_time": 46,
+                  "server_id": "app188",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:52.502964",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.17.160.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.17.160.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.17.160.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.17.223.153": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.17.208.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084554-88da35c8-b538-4e28-817a-ba7e5283198d",
+                  "process_time": 108,
+                  "server_id": "app199",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:54.278144",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.17.208.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.17.208.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.17.208.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.16.155.111": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084556-c0122cfa-37fc-4bcf-a0ba-ecf84b221ae3",
+                  "process_time": 45,
+                  "server_id": "app168",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:56.330079",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "104.16.156.111": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084558-28c0ca10-ea1b-45f8-b334-66851a23e66e",
+                  "process_time": 60,
+                  "server_id": "app185",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:58.106014",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "104.16.144.0/20",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "104.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 13335,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 13335,
+                "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+                "parts": [
+                  "13335",
+                  "104.16.144.0/20",
+                  "US",
+                  "arin",
+                  "2014-03-28"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2606:4700::6810:9b6f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2606:4700::/36"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084559-5287d67e-08af-4577-8397-9245ab1c4b68",
+                  "process_time": 50,
+                  "server_id": "app168",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:45:59.845684",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2606:4700::/36"
+                    ],
+                    "resource": "2606:4700::/44",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "2606:4700::6810:9c6f": {
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [13335]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 13335,
+              "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2606:4700::/36"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084601-1c8b42a1-daa4-45c8-9bb8-3b704790f1bc",
+                  "process_time": 65,
+                  "server_id": "app177",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:01.146487",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 13335,
+                        "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2606:4700::/36"
+                    ],
+                    "resource": "2606:4700::/44",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        },
+        "216.198.53.3": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084602-1c773052-a660-4768-ac8c-9c709605f70a",
+                  "process_time": 59,
+                  "server_id": "app164",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:02.802515",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.53.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.53.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.54.3": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084604-16c0119b-6fda-4b3c-98f6-42ff28332f64",
+                  "process_time": 60,
+                  "server_id": "app177",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:04.890366",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.54.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.54.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.53.11": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084606-947b5ef8-147a-4a10-840b-9e9c5050d031",
+                  "process_time": 70,
+                  "server_id": "app193",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:07.054144",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.53.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.53.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 29612,
+                    "org_id": 4715,
+                    "name": "Cloudflare London",
+                    "aka": "",
+                    "name_long": "",
+                    "website": "https://www.cloudflare.com/",
+                    "social_media": [],
+                    "asn": 209242,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "",
+                    "info_type": "",
+                    "info_types": [],
+                    "info_prefixes4": null,
+                    "info_prefixes6": null,
+                    "info_traffic": "",
+                    "info_ratio": "Not Disclosed",
+                    "info_scope": "Not Disclosed",
+                    "info_unicast": false,
+                    "info_multicast": false,
+                    "info_ipv6": false,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 0,
+                    "fac_count": 0,
+                    "notes": "",
+                    "netixlan_updated": null,
+                    "netfac_updated": null,
+                    "poc_updated": null,
+                    "policy_url": "",
+                    "policy_general": "",
+                    "policy_locations": "",
+                    "policy_ratio": false,
+                    "policy_contracts": "",
+                    "allow_ixp_update": false,
+                    "status_dashboard": null,
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2022-04-02T20:50:15Z",
+                    "updated": "2022-07-27T05:36:09Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "216.198.54.11": {
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [209242]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 209242,
+              "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084608-01a9af65-0a58-4c5b-b9f5-7e8748c3b2b4",
+                  "process_time": 58,
+                  "server_id": "app163",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:08.973490",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 209242,
+                        "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "216.198.54.0/24",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "216.0.0.0/8",
+                      "desc": "ARIN (Status: ALLOCATED)",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 209242,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 209242,
+                "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+                "parts": [
+                  "209242",
+                  "216.198.54.0/24",
+                  "US",
+                  "arin",
+                  "2015-05-29"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=209242'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "142.251.219.40": {
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [15169]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 15169,
+              "holder": "GOOGLE - Google LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (142.250.0.0/15)."
+                    ]
+                  ],
+                  "see_also": [],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084610-166b8ac5-24b8-4927-b591-c5bff0ca589c",
+                  "process_time": 59,
+                  "server_id": "app176",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:11.000059",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 15169,
+                        "holder": "GOOGLE - Google LLC"
+                      }
+                    ],
+                    "related_prefixes": [],
+                    "resource": "142.250.0.0/15",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "142.0.0.0/8",
+                      "desc": "Administered by ARIN",
+                      "name": "IANA IPv4 Address Space Registry"
+                    },
+                    "actual_num_related": 0,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": 15169,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "asn": 15169,
+                "raw_line": "15169 | 142.250.0.0/15 | US | arin | 2012-05-24",
+                "parts": [
+                  "15169",
+                  "142.250.0.0/15",
+                  "US",
+                  "arin",
+                  "2012-05-24"
+                ],
+                "disclaimer": [
+                  "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+                ]
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 433,
+                    "org_id": 574,
+                    "name": "Google LLC",
+                    "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                    "name_long": "",
+                    "website": "https://about.google/intl/en/",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://about.google/intl/en/"
+                      }
+                    ],
+                    "asn": 15169,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "RADB::AS-GOOGLE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 15000,
+                    "info_prefixes6": 10000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 179,
+                    "fac_count": 137,
+                    "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                    "netixlan_updated": "2026-04-03T02:55:16Z",
+                    "netfac_updated": "2026-03-03T05:58:05Z",
+                    "poc_updated": "2023-08-21T21:24:27Z",
+                    "policy_url": "https://peering.google.com/#/options/peering",
+                    "policy_general": "Selective",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2005-02-06T06:41:04Z",
+                    "updated": "2026-03-11T19:57:37Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+            "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+          ]
+        },
+        "2607:f8b0:4005:803::2008": {
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "confidence": 0.7,
+          "confidence_notes": "[website_host] ASNs seen: [15169]",
+          "supporting_sources": [
+            {
+              "name": "ripestat",
+              "asn": 15169,
+              "holder": "GOOGLE - Google LLC",
+              "country": null,
+              "raw": {
+                "prefix_overview": {
+                  "messages": [
+                    [
+                      "warning",
+                      "Given resource is not announced but result has been aligned to first-level less-specific (2607:f8b0:4005::/48)."
+                    ]
+                  ],
+                  "see_also": [
+                    {
+                      "relation": "less-specific",
+                      "resource": "2607:f8b0::/32"
+                    }
+                  ],
+                  "version": "1.3",
+                  "data_call_name": "prefix-overview",
+                  "data_call_status": "supported",
+                  "cached": false,
+                  "query_id": "20260501084613-a0fd1dcf-11ee-4816-81fa-d7c655acd311",
+                  "process_time": 60,
+                  "server_id": "app164",
+                  "build_version": "v0.9.15-2026.04.30",
+                  "pipeline": "1248748",
+                  "status": "ok",
+                  "status_code": 200,
+                  "time": "2026-05-01T08:46:13.121102",
+                  "data": {
+                    "is_less_specific": true,
+                    "announced": true,
+                    "asns": [
+                      {
+                        "asn": 15169,
+                        "holder": "GOOGLE - Google LLC"
+                      }
+                    ],
+                    "related_prefixes": [
+                      "2607:f8b0::/32"
+                    ],
+                    "resource": "2607:f8b0:4005::/48",
+                    "type": "prefix",
+                    "block": {
+                      "resource": "2600::/12",
+                      "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                      "name": "IANA IPv6 Global Unicast Address Assignments"
+                    },
+                    "actual_num_related": 1,
+                    "query_time": "2026-05-01T00:00:00",
+                    "num_filtered_out": 0
+                  }
+                }
+              }
+            },
+            {
+              "name": "team_cymru",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+              }
+            },
+            {
+              "name": "peeringdb",
+              "asn": null,
+              "holder": null,
+              "country": null,
+              "raw": {
+                "data": [
+                  {
+                    "id": 433,
+                    "org_id": 574,
+                    "name": "Google LLC",
+                    "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                    "name_long": "",
+                    "website": "https://about.google/intl/en/",
+                    "social_media": [
+                      {
+                        "service": "website",
+                        "identifier": "https://about.google/intl/en/"
+                      }
+                    ],
+                    "asn": 15169,
+                    "looking_glass": "",
+                    "route_server": "",
+                    "irr_as_set": "RADB::AS-GOOGLE",
+                    "info_type": "Content",
+                    "info_types": [
+                      "Content"
+                    ],
+                    "info_prefixes4": 15000,
+                    "info_prefixes6": 10000,
+                    "info_traffic": "",
+                    "info_ratio": "Mostly Outbound",
+                    "info_scope": "Global",
+                    "info_unicast": true,
+                    "info_multicast": false,
+                    "info_ipv6": true,
+                    "info_never_via_route_servers": false,
+                    "ix_count": 179,
+                    "fac_count": 137,
+                    "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                    "netixlan_updated": "2026-04-03T02:55:16Z",
+                    "netfac_updated": "2026-03-03T05:58:05Z",
+                    "poc_updated": "2023-08-21T21:24:27Z",
+                    "policy_url": "https://peering.google.com/#/options/peering",
+                    "policy_general": "Selective",
+                    "policy_locations": "Preferred",
+                    "policy_ratio": false,
+                    "policy_contracts": "Not Required",
+                    "allow_ixp_update": false,
+                    "status_dashboard": "",
+                    "rir_status": "ok",
+                    "rir_status_updated": "2024-06-26T04:47:55Z",
+                    "logo": null,
+                    "created": "2005-02-06T06:41:04Z",
+                    "updated": "2026-03-11T19:57:37Z",
+                    "status": "ok"
+                  }
+                ],
+                "meta": {}
+              }
+            }
+          ],
+          "disclaimers": [
+            "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+          ]
+        }
+      }
+    },
+    "classifications": {
+      "rows": [
+        {
+          "host": "d.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "my.nordaccount.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "nordcheckout.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "s1.nordcdn.com",
+          "tags": [
+            "cdn_candidate"
+          ]
+        },
+        {
+          "host": "sb.nordcdn.com",
+          "tags": [
+            "cdn_candidate"
+          ]
+        },
+        {
+          "host": "static.zdassets.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "support.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        },
+        {
+          "host": "www.googletagmanager.com",
+          "tags": [
+            "tracker_candidate"
+          ]
+        },
+        {
+          "host": "www.nordvpn.com",
+          "tags": [
+            "unknown"
+          ]
+        }
+      ],
+      "notes": "Heuristic tags from HAR hints + host presence only."
+    },
+    "phase8_dns_infra": {
+      "per_domain": {
+        "nordvpn.com": {
+          "dmarc_txt": [
+            "v=DMARC1; p=reject; sp=reject; pct=100; fo=1; rua=mailto:dmarc@nordsec.com; ruf=mailto:dmarc@nordsec.com"
+          ],
+          "dkim_hit_selectors": {
+            "google": [
+              "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvkogBHxZTMioH4ulfJ8otuf2RLnmEhghaHgkOSkmziUoRNlRr45SSADCTOiEuGfGrX4u/gydunjsz8C0vUeZkP3pg4eehrN8RCez5ANwagSLv4Jle7aJKiy9dnEvyCriiBJxafmrP+plkp8gHpFsfdkmbt+5H0DzOc75PXQ10T2u3RzhLLgNg10wGXab3uYouuqvmvXcAbK6j1xfzNeDAbtAid7PmcPXhnbp8718InpLNKBAB+WxucV4Y0YnMdaxXIHw8eqTULnzynZqSfRPXfF8oGROB5++QP3Y8aGbeuqpQix8ETwyx2ZFQbFvhH8o9PdQmtwnRjfQIbXjFA"
+            ],
+            "zendesk1": [
+              "v=DKIM1;t=s;n=core;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9IqdLrO3Zr2/56MHt8oQVCQorP0Bl2Fz9sM2tFBnJCdB/HogQmuudEg2xAovCN2PYpw44UijIvPuBoT9vxiv6ZCBJTLJXa82r6ke5rE4tbe9NKFIrVIb9S306cJDrnKFMDb8p0dU/Su0+eUR5gVAOtCuz2L8HAzs5edvsEvD/Fb4ny1RLNSEPZkIQLfGhVxQeWANm3+1Jwb/OBVXV9k0nKpWrpgqcmO7NzroJirp014RQY7rGi60JLUubc6XhvoFQBQrtOAdVlZC5wvfS1bgpq5kQpdP7cajIqWCeqxPTeo0ZUpey2ZcaygEsZz0Z3Gs5wDzyuqd7"
+            ],
+            "zendesk2": [
+              "v=DKIM1; t=s; n=core; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmiSFNkgXrO3I8aOaPONDZWHv027rkiGIwb838OyXPgvFDEkCV/qGcdXSjZnaVAadrTm/oKnL8WOltP9zB1FLEuKt0fTi5zRyKPE4oIYCnEzXwrGqzjUcCABQBawQVqvXjDOaYh9Lhp8W5PYOLo905vRW7ipyIMDhuzBOJls91/WWXnNK0OwP3RghiisZjA3K2KqtRwf7w6GjNeNuAMNhvcmgAN15d/mhK+dev/hcRbal66RoYyTD8c0F0isahWH0envEX8aj+SBhheNk0/U37dGE+4nFaY5yP9CUlYjFKDSIKZgHzG4Hci3t/RubU58pi6BCr"
+            ],
+            "default": [
+              "v=spf1 -all"
+            ],
+            "s1": [
+              "k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuRMZIsLiy+xlrUj6lGV2W5bl+zH+xnenDAqszz6TwDZVxU2A5JVc9f9fynf8TWu2AGtmD2ySXNhJuV62VSgogjsxxljKsiTrG8QSAi8v0WVu0J1Blz0kx6GJSpYEcwKCLcWUhhQrrQU9nmHVbSmlAy+iDyEZv9v4O8TcnFs5j+K7mOwXh1VKisIiKZB/q7if4gqfc4Y7mZl23uUO1wAQgPG3EqQbQY7XPnz3oghaayA0sRzA4VFSzh3dFERDC8EJKm8QnUk3CLyp30RH6gsGkoIAaRO6Uc6bAr7mRiGWE1RHQ93TkYU1GXEnGP6bu9WxuSaBErmCquMVFtxV3SqBfQ"
+            ],
+            "s2": [
+              "k=rsa; t=s; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDNIkCp00Zx86ahbJRRQWPXCv65Q76TVqnoilPJ9uYatkVODYe6Xa709Qe83EvLapItG+VGNA18J0+xMmLoIDPBi+uairTVE4WvBl+yNovw3Bei/+HCMC+dKs3aFQAQ2X+S9jt8RrR2UMcqWY8Zm4coIchpAbhdSMkrCV3fZMmvkwIDAQAB"
+            ],
+            "k1": [
+              "v=spf1 -all"
+            ],
+            "selector1": [
+              "v=spf1 -all"
+            ],
+            "selector2": [
+              "v=spf1 -all"
+            ],
+            "smtp": [
+              "v=spf1 -all"
+            ],
+            "mail": [
+              "v=spf1 -all"
+            ]
+          },
+          "cname_aliases": [],
+          "subdomain_cname_scan": {
+            "mail": [
+              "sparkpostmail.com"
+            ],
+            "support": [
+              "nordvpn.zendesk.com"
+            ]
+          },
+          "spf_include_expansion": [
+            "_spf.google.com",
+            "icloud.com",
+            "mail.zendesk.com"
+          ],
+          "spf_errors": []
+        }
+      },
+      "spf_include_graph_flat": [],
+      "subdomain_cname_scans": {},
+      "errors": [],
+      "provider_dns_snapshot_ref": "competitor_surface.provider_dns",
+      "apex_copy": {
+        "nordvpn.com": {
+          "ns": [
+            "lily.ns.cloudflare.com",
+            "seth.ns.cloudflare.com"
+          ],
+          "a": [
+            "104.16.208.203",
+            "104.19.159.190"
+          ],
+          "aaaa": [],
+          "error": null,
+          "txt": [
+            "MS=ms69824556",
+            "google-site-verification=QIh6YGom6DuhiCuoCX1mtuBcxf3zLzUXrMUzZpWkVyw",
+            "oneuptime=2fYJpBXRQsmY3Py",
+            "v=spf1 include:mail.zendesk.com include:_spf.google.com include:icloud.com -all",
+            "MS=9AAAE7D4B160BBC17B316D2992B6B14C64DF4E13",
+            "MS=ms41624661",
+            "MS=ms60989570"
+          ],
+          "mx": [
+            "1 aspmx.l.google.com",
+            "5 alt1.aspmx.l.google.com",
+            "5 alt2.aspmx.l.google.com",
+            "10 alt3.aspmx.l.google.com",
+            "10 alt4.aspmx.l.google.com"
+          ],
+          "caa": [],
+          "rr_errors": {
+            "caa": "The DNS response does not contain an answer to the question: nordvpn.com. IN CAA"
+          }
+        }
+      }
+    },
+    "phase9_third_party_inventory": [
+      {
+        "company_hypothesis": "www.googletagmanager.com",
+        "role": "website_script_or_beacon",
+        "how_discovered": "har_tracker_hint",
+        "evidence_summary": "host:www.googletagmanager.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "s1.nordcdn.com",
+        "role": "cdn_or_edge",
+        "how_discovered": "har_cdn_hint",
+        "evidence_summary": "host:s1.nordcdn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "sb.nordcdn.com",
+        "role": "cdn_or_edge",
+        "how_discovered": "har_cdn_hint",
+        "evidence_summary": "host:sb.nordcdn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "email_mx_inferred",
+        "how_discovered": "apex_mx",
+        "evidence_summary": "nordvpn.com:1 aspmx.l.google.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Cloudflare",
+        "role": "dns_authority_inferred",
+        "how_discovered": "ns",
+        "evidence_summary": "nordvpn.com:lily.ns.cloudflare.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "domain_verification_txt",
+        "how_discovered": "txt",
+        "evidence_summary": "nordvpn.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:google",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector google",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:zendesk1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector zendesk1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:zendesk2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector zendesk2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:default",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector default",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:s1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector s1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:s2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector s2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:k1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector k1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:selector1",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector selector1",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:selector2",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector selector2",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:smtp",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector smtp",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "DKIM:mail",
+        "role": "email_signing_inferred",
+        "how_discovered": "dkim_txt",
+        "evidence_summary": "nordvpn.com selector mail",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "SparkPost/Bird",
+        "role": "transactional_email_inferred",
+        "how_discovered": "cname",
+        "evidence_summary": "mail.nordvpn.com->sparkpostmail.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Zendesk",
+        "role": "support_platform_inferred",
+        "how_discovered": "cname",
+        "evidence_summary": "support.nordvpn.com->nordvpn.zendesk.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Google",
+        "role": "spf_email_sender_inferred",
+        "how_discovered": "spf_include",
+        "evidence_summary": "nordvpn.com->_spf.google.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "Zendesk",
+        "role": "spf_email_sender_inferred",
+        "how_discovered": "spf_include",
+        "evidence_summary": "nordvpn.com->mail.zendesk.com",
+        "evidence_tier": "desk_automation"
+      },
+      {
+        "company_hypothesis": "(provider first-party)",
+        "role": "marketing_and_app_surface",
+        "how_discovered": "config_urls",
+        "evidence_summary": "~10 web hosts observed",
+        "evidence_tier": "desk_automation"
+      }
+    ],
+    "raw_relpaths": {
+      "hosts_inventory": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure/hosts_inventory.json",
+      "resolver_sample": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure/resolver_sample.json",
+      "phase9_inventory": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure/phase9_inventory.json",
+      "phase8_dns_audit": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/website_exposure/phase8_dns_audit.json"
+    },
+    "limits": [
+      "Does_not_replace_human_narrative_for_executive_disclosure",
+      "Cloudflare_or_bot_WAF_may_distort_HAR_coverage"
+    ],
+    "errors": []
+  },
+  "pcap_derived": {
+    "schema_version": "1.0",
+    "source_pcap": "/Users/alauder/Source/doxx/vpn-leaks/.vpn-leaks/capture/session_45f258bcf5f9.pcap",
+    "packet_counts": {
+      "total": 51170,
+      "l3_seen": 51170
+    },
+    "flows_unique_estimate": 406,
+    "flows_sample": [
+      {
+        "key": [
+          "ip4",
+          "b9bba8c0",
+          "0a00002b",
+          "51820",
+          "56766"
+        ],
+        "bytes": 17969408
+      },
+      {
+        "key": [
+          "ip4",
+          "adc21926",
+          "0a00002b",
+          "443",
+          "56212"
+        ],
+        "bytes": 5396779
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "b9bba8c0",
+          "56766",
+          "51820"
+        ],
+        "bytes": 5221046
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0df94a4e",
+          "58225",
+          "443"
+        ],
+        "bytes": 472648
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "65181",
+          "443"
+        ],
+        "bytes": 437320
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efb9d77",
+          "55763",
+          "443"
+        ],
+        "bytes": 352321
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac4092d7",
+          "60207",
+          "443"
+        ],
+        "bytes": 291151
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "65181"
+        ],
+        "bytes": 162660
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "adc21926",
+          "56212",
+          "443"
+        ],
+        "bytes": 143654
+      },
+      {
+        "key": [
+          "ip4",
+          "ac4092d7",
+          "0a00002b",
+          "443",
+          "60207"
+        ],
+        "bytes": 121459
+      },
+      {
+        "key": [
+          "ip4",
+          "8efb9d77",
+          "0a00002b",
+          "443",
+          "55763"
+        ],
+        "bytes": 121210
+      },
+      {
+        "key": [
+          "ip4",
+          "68122929",
+          "0a00002b",
+          "443",
+          "60003"
+        ],
+        "bytes": 111709
+      },
+      {
+        "key": [
+          "ip4",
+          "22954293",
+          "0a00002b",
+          "443",
+          "58226"
+        ],
+        "bytes": 83731
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaea",
+          "0a00002b",
+          "443",
+          "59961"
+        ],
+        "bytes": 66639
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda6a",
+          "49735",
+          "443"
+        ],
+        "bytes": 58422
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62e",
+          "55767",
+          "443"
+        ],
+        "bytes": 44481
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaea",
+          "59961",
+          "443"
+        ],
+        "bytes": 42612
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "58148",
+          "443"
+        ],
+        "bytes": 35064
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda6a",
+          "0a00002b",
+          "443",
+          "49735"
+        ],
+        "bytes": 34144
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812137d",
+          "62123",
+          "443"
+        ],
+        "bytes": 33033
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56841",
+          "443"
+        ],
+        "bytes": 32456
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000000042ec78e0ff5a42",
+          "fe8000000000000014c3d760cd6235e0",
+          "49709",
+          "57813"
+        ],
+        "bytes": 28099
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56675",
+          "443"
+        ],
+        "bytes": 25470
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "56676",
+          "443"
+        ],
+        "bytes": 22709
+      },
+      {
+        "key": [
+          "ip4",
+          "23af3807",
+          "0a00002b",
+          "443",
+          "57106"
+        ],
+        "bytes": 22308
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac409bd1",
+          "63601",
+          "443"
+        ],
+        "bytes": 21695
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000007",
+          "ffffffff",
+          "49154",
+          "6666"
+        ],
+        "bytes": 21624
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62e",
+          "0a00002b",
+          "443",
+          "55767"
+        ],
+        "bytes": 20302
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaae",
+          "0a00002b",
+          "443",
+          "50487"
+        ],
+        "bytes": 19174
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd623",
+          "52422",
+          "443"
+        ],
+        "bytes": 18455
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd623",
+          "0a00002b",
+          "443",
+          "52422"
+        ],
+        "bytes": 18292
+      },
+      {
+        "key": [
+          "ip4",
+          "0df94a4e",
+          "0a00002b",
+          "443",
+          "58225"
+        ],
+        "bytes": 18283
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "23af3807",
+          "57106",
+          "443"
+        ],
+        "bytes": 18252
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122929",
+          "60003",
+          "443"
+        ],
+        "bytes": 16216
+      },
+      {
+        "key": [
+          "ip4",
+          "68120e83",
+          "0a00002b",
+          "443",
+          "61072"
+        ],
+        "bytes": 15999
+      },
+      {
+        "key": [
+          "ip4",
+          "68120f83",
+          "0a00002b",
+          "443",
+          "57733"
+        ],
+        "bytes": 15442
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120e83",
+          "61072",
+          "443"
+        ],
+        "bytes": 13782
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68120f83",
+          "57733",
+          "443"
+        ],
+        "bytes": 13490
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaae",
+          "50487",
+          "443"
+        ],
+        "bytes": 12537
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58220"
+        ],
+        "bytes": 11586
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 11189
+      },
+      {
+        "key": [
+          "ip4",
+          "b9d320de",
+          "0a00002b",
+          "51820",
+          "54405"
+        ],
+        "bytes": 10496
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda4a",
+          "0a00002b",
+          "443",
+          "51118"
+        ],
+        "bytes": 9857
+      },
+      {
+        "key": [
+          "ip4",
+          "12612449",
+          "0a00002b",
+          "443",
+          "58234"
+        ],
+        "bytes": 9382
+      },
+      {
+        "key": [
+          "ip4",
+          "2cee2b04",
+          "0a00002b",
+          "443",
+          "57812"
+        ],
+        "bytes": 9140
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda4a",
+          "51118",
+          "443"
+        ],
+        "bytes": 8544
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc01",
+          "56082",
+          "443"
+        ],
+        "bytes": 8491
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12612449",
+          "58234",
+          "443"
+        ],
+        "bytes": 7922
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56841"
+        ],
+        "bytes": 7831
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3943d5",
+          "56379",
+          "443"
+        ],
+        "bytes": 7663
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0365e034",
+          "55970",
+          "443"
+        ],
+        "bytes": 7515
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58237"
+        ],
+        "bytes": 7506
+      },
+      {
+        "key": [
+          "ip4",
+          "6812137d",
+          "0a00002b",
+          "443",
+          "62123"
+        ],
+        "bytes": 7485
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0365e034",
+          "55904",
+          "443"
+        ],
+        "bytes": 7441
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc01",
+          "0a00002b",
+          "443",
+          "56082"
+        ],
+        "bytes": 7350
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cee2b04",
+          "57812",
+          "443"
+        ],
+        "bytes": 7287
+      },
+      {
+        "key": [
+          "ip4",
+          "ac409bd1",
+          "0a00002b",
+          "443",
+          "63601"
+        ],
+        "bytes": 7249
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58237",
+          "443"
+        ],
+        "bytes": 6875
+      },
+      {
+        "key": [
+          "ip4",
+          "12ad792c",
+          "0a00002b",
+          "443",
+          "58139"
+        ],
+        "bytes": 6824
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd623",
+          "0a00002b",
+          "443",
+          "55271"
+        ],
+        "bytes": 6712
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22954293",
+          "58226",
+          "443"
+        ],
+        "bytes": 6610
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56675"
+        ],
+        "bytes": 6579
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "56676"
+        ],
+        "bytes": 6517
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "36f13c8f",
+          "56738",
+          "443"
+        ],
+        "bytes": 6439
+      },
+      {
+        "key": [
+          "ip4",
+          "0dd9ffec",
+          "0a00002b",
+          "443",
+          "58227"
+        ],
+        "bytes": 6322
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68c08c10",
+          "58231",
+          "443"
+        ],
+        "bytes": 6032
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58223",
+          "443"
+        ],
+        "bytes": 5997
+      },
+      {
+        "key": [
+          "ip4",
+          "ac40990c",
+          "0a00002b",
+          "443",
+          "58179"
+        ],
+        "bytes": 5912
+      },
+      {
+        "key": [
+          "ip6",
+          "fd0523cf1eff4faa04be995fe2298ad2",
+          "fd0523cf1eff4faa04c9bcb35fce531c",
+          "49716",
+          "57813"
+        ],
+        "bytes": 5885
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd623",
+          "55271",
+          "443"
+        ],
+        "bytes": 5786
+      },
+      {
+        "key": [
+          "ip4_raw",
+          "08060001",
+          "08000604",
+          "0",
+          "0"
+        ],
+        "bytes": 5784
+      },
+      {
+        "key": [
+          "ip4",
+          "0365e034",
+          "0a00002b",
+          "443",
+          "55904"
+        ],
+        "bytes": 5694
+      },
+      {
+        "key": [
+          "ip4",
+          "36f13c8f",
+          "0a00002b",
+          "443",
+          "56738"
+        ],
+        "bytes": 5589
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc91",
+          "57724",
+          "443"
+        ],
+        "bytes": 5474
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3943d5",
+          "0a00002b",
+          "443",
+          "56379"
+        ],
+        "bytes": 5373
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc91",
+          "0a00002b",
+          "443",
+          "57724"
+        ],
+        "bytes": 5338
+      },
+      {
+        "key": [
+          "ip4",
+          "0365e034",
+          "0a00002b",
+          "443",
+          "55970"
+        ],
+        "bytes": 5337
+      },
+      {
+        "key": [
+          "ip4",
+          "68c08c10",
+          "0a00002b",
+          "443",
+          "58231"
+        ],
+        "bytes": 5313
+      },
+      {
+        "key": [
+          "ip4",
+          "ac43dc2a",
+          "0a00002b",
+          "443",
+          "60392"
+        ],
+        "bytes": 5266
+      },
+      {
+        "key": [
+          "ip4",
+          "6419b429",
+          "0a00002b",
+          "443",
+          "58236"
+        ],
+        "bytes": 5251
+      },
+      {
+        "key": [
+          "ip6",
+          "fd0523cf1eff4faa04c9bcb35fce531c",
+          "fd0523cf1eff4faa04be995fe2298ad2",
+          "57813",
+          "49716"
+        ],
+        "bytes": 4885
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12612406",
+          "57066",
+          "443"
+        ],
+        "bytes": 4703
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac43dc2a",
+          "60392",
+          "443"
+        ],
+        "bytes": 4696
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd62a",
+          "0a00002b",
+          "443",
+          "58213"
+        ],
+        "bytes": 4669
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "58148"
+        ],
+        "bytes": 4541
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1261242e",
+          "56538",
+          "443"
+        ],
+        "bytes": 4409
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdaae",
+          "0a00002b",
+          "443",
+          "49528"
+        ],
+        "bytes": 4408
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2802",
+          "58170",
+          "443"
+        ],
+        "bytes": 4360
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0dd9ffec",
+          "58227",
+          "443"
+        ],
+        "bytes": 4257
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6811f276",
+          "58159",
+          "443"
+        ],
+        "bytes": 4188
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1261243c",
+          "56884",
+          "443"
+        ],
+        "bytes": 4180
+      },
+      {
+        "key": [
+          "ip4",
+          "2cdb8307",
+          "0a00002b",
+          "443",
+          "58161"
+        ],
+        "bytes": 4169
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "49856",
+          "443"
+        ],
+        "bytes": 4002
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "57735",
+          "443"
+        ],
+        "bytes": 3936
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dc8d",
+          "57737",
+          "443"
+        ],
+        "bytes": 3772
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdaae",
+          "49528",
+          "443"
+        ],
+        "bytes": 3498
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "58204"
+        ],
+        "bytes": 3492
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000020",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 3362
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000001c180eef8a345da8",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 3327
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56432"
+        ],
+        "bytes": 3294
+      },
+      {
+        "key": [
+          "ip4",
+          "a29f87ea",
+          "0a00002b",
+          "443",
+          "49668"
+        ],
+        "bytes": 3220
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "57340"
+        ],
+        "bytes": 3204
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58221",
+          "443"
+        ],
+        "bytes": 3197
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58233",
+          "443"
+        ],
+        "bytes": 3190
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58224",
+          "443"
+        ],
+        "bytes": 3167
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58232",
+          "443"
+        ],
+        "bytes": 3159
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a29f87ea",
+          "49668",
+          "443"
+        ],
+        "bytes": 3135
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12ad792c",
+          "58139",
+          "443"
+        ],
+        "bytes": 3113
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58235",
+          "443"
+        ],
+        "bytes": 3072
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56432",
+          "443"
+        ],
+        "bytes": 3040
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "58204",
+          "443"
+        ],
+        "bytes": 3040
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58220",
+          "443"
+        ],
+        "bytes": 3038
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58228",
+          "443"
+        ],
+        "bytes": 3035
+      },
+      {
+        "key": [
+          "ip4",
+          "a29f85ea",
+          "0a00002b",
+          "443",
+          "49241"
+        ],
+        "bytes": 3033
+      },
+      {
+        "key": [
+          "ip4",
+          "12612406",
+          "0a00002b",
+          "443",
+          "57066"
+        ],
+        "bytes": 2982
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58230",
+          "443"
+        ],
+        "bytes": 2981
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58238",
+          "443"
+        ],
+        "bytes": 2981
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58229",
+          "443"
+        ],
+        "bytes": 2915
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58222",
+          "443"
+        ],
+        "bytes": 2912
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58239",
+          "443"
+        ],
+        "bytes": 2903
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "22e9c52d",
+          "58240",
+          "443"
+        ],
+        "bytes": 2903
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "57340",
+          "443"
+        ],
+        "bytes": 2880
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a29f85ea",
+          "49241",
+          "443"
+        ],
+        "bytes": 2862
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac40990c",
+          "58184",
+          "443"
+        ],
+        "bytes": 2823
+      },
+      {
+        "key": [
+          "ip4",
+          "1261243c",
+          "0a00002b",
+          "443",
+          "56884"
+        ],
+        "bytes": 2731
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "58308"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "58448"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "58540"
+        ],
+        "bytes": 2729
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "7000",
+          "58351"
+        ],
+        "bytes": 2728
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "7000",
+          "58242"
+        ],
+        "bytes": 2726
+      },
+      {
+        "key": [
+          "ip4",
+          "08080404",
+          "0a00002b",
+          "443",
+          "51425"
+        ],
+        "bytes": 2706
+      },
+      {
+        "key": [
+          "ip4",
+          "1261242e",
+          "0a00002b",
+          "443",
+          "56538"
+        ],
+        "bytes": 2666
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56417"
+        ],
+        "bytes": 2663
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "b9d320de",
+          "0",
+          "0"
+        ],
+        "bytes": 2660
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dd86",
+          "0a00002b",
+          "443",
+          "49857"
+        ],
+        "bytes": 2586
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "035f2cb6",
+          "58198",
+          "8884"
+        ],
+        "bytes": 2552
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "57735"
+        ],
+        "bytes": 2520
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3990dd86",
+          "49857",
+          "443"
+        ],
+        "bytes": 2490
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "7000",
+          "58241"
+        ],
+        "bytes": 2417
+      },
+      {
+        "key": [
+          "ip4",
+          "6811f276",
+          "0a00002b",
+          "443",
+          "58159"
+        ],
+        "bytes": 2408
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000001c628c122f1cc477",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2380
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57725",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57739",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57732",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57738",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57728",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57747",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57745",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57741",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57748",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57758",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57752",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57755",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57766",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57768",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57770",
+          "443"
+        ],
+        "bytes": 2376
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "127674e3",
+          "57730",
+          "443"
+        ],
+        "bytes": 2364
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0386fa3f",
+          "60492",
+          "443"
+        ],
+        "bytes": 2364
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "12df828c",
+          "50233",
+          "443"
+        ],
+        "bytes": 2364
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3b1889",
+          "55746",
+          "443"
+        ],
+        "bytes": 2352
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0d3b1889",
+          "55749",
+          "443"
+        ],
+        "bytes": 2352
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "49856"
+        ],
+        "bytes": 2350
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000000042ec78e0ff5a42",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2316
+      },
+      {
+        "key": [
+          "ip4",
+          "68122715",
+          "0a00002b",
+          "443",
+          "56309"
+        ],
+        "bytes": 2309
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56417",
+          "443"
+        ],
+        "bytes": 2295
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6812127d",
+          "58141",
+          "443"
+        ],
+        "bytes": 2279
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00002f",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2279
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2200
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002f",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2176
+      },
+      {
+        "key": [
+          "ip4",
+          "3990dc8d",
+          "0a00002b",
+          "443",
+          "57737"
+        ],
+        "bytes": 2162
+      },
+      {
+        "key": [
+          "ip6",
+          "fe80000000000000466132fffee612f0",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2144
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122715",
+          "56309",
+          "443"
+        ],
+        "bytes": 2069
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000011",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 2064
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd62a",
+          "58213",
+          "443"
+        ],
+        "bytes": 1985
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68121f54",
+          "55148",
+          "443"
+        ],
+        "bytes": 1968
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57725"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57738"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57739"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57732"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57728"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57747"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57745"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57741"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57748"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57758"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57752"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57755"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57766"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57768"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57770"
+        ],
+        "bytes": 1860
+      },
+      {
+        "key": [
+          "ip4",
+          "68121f54",
+          "0a00002b",
+          "443",
+          "55148"
+        ],
+        "bytes": 1854
+      },
+      {
+        "key": [
+          "ip4",
+          "127674e3",
+          "0a00002b",
+          "443",
+          "57730"
+        ],
+        "bytes": 1848
+      },
+      {
+        "key": [
+          "ip4",
+          "0386fa3f",
+          "0a00002b",
+          "443",
+          "60492"
+        ],
+        "bytes": 1848
+      },
+      {
+        "key": [
+          "ip4",
+          "12df828c",
+          "0a00002b",
+          "443",
+          "50233"
+        ],
+        "bytes": 1848
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3b1889",
+          "0a00002b",
+          "443",
+          "55746"
+        ],
+        "bytes": 1836
+      },
+      {
+        "key": [
+          "ip4",
+          "0d3b1889",
+          "0a00002b",
+          "443",
+          "55749"
+        ],
+        "bytes": 1836
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58222"
+        ],
+        "bytes": 1827
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbd28a",
+          "0a00002b",
+          "443",
+          "57573"
+        ],
+        "bytes": 1826
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6419b429",
+          "58236",
+          "443"
+        ],
+        "bytes": 1694
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58239"
+        ],
+        "bytes": 1605
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58229"
+        ],
+        "bytes": 1545
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58238"
+        ],
+        "bytes": 1545
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58240"
+        ],
+        "bytes": 1545
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58223"
+        ],
+        "bytes": 1491
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58232"
+        ],
+        "bytes": 1491
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2cdb8307",
+          "58161",
+          "443"
+        ],
+        "bytes": 1485
+      },
+      {
+        "key": [
+          "ip4",
+          "6431ddf9",
+          "0a00002b",
+          "443",
+          "56789"
+        ],
+        "bytes": 1482
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58228"
+        ],
+        "bytes": 1479
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58230"
+        ],
+        "bytes": 1479
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "6431ddf9",
+          "56789",
+          "443"
+        ],
+        "bytes": 1431
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58224"
+        ],
+        "bytes": 1425
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58233"
+        ],
+        "bytes": 1425
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58235"
+        ],
+        "bytes": 1401
+      },
+      {
+        "key": [
+          "ip4",
+          "22e9c52d",
+          "0a00002b",
+          "443",
+          "58221"
+        ],
+        "bytes": 1335
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000010489695fc3fc856",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 1272
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 1232
+      },
+      {
+        "key": [
+          "ip4",
+          "035f2cb6",
+          "0a00002b",
+          "8884",
+          "58198"
+        ],
+        "bytes": 1089
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080404",
+          "51425",
+          "443"
+        ],
+        "bytes": 1079
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac40990c",
+          "58179",
+          "443"
+        ],
+        "bytes": 1052
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "49152",
+          "57448"
+        ],
+        "bytes": 1021
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000027",
+          "57448",
+          "49152"
+        ],
+        "bytes": 979
+      },
+      {
+        "key": [
+          "ip6",
+          "fe80000000000000466132fffe01a336",
+          "ff0200000000000000000000000000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 924
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000010",
+          "e00000fb",
+          "5353",
+          "5353"
+        ],
+        "bytes": 884
+      },
+      {
+        "key": [
+          "ip4",
+          "6812127d",
+          "0a00002b",
+          "443",
+          "58141"
+        ],
+        "bytes": 843
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbd28a",
+          "57573",
+          "443"
+        ],
+        "bytes": 792
+      },
+      {
+        "key": [
+          "ip4",
+          "a27d2802",
+          "0a00002b",
+          "443",
+          "58170"
+        ],
+        "bytes": 659
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdace",
+          "0a00002b",
+          "443",
+          "49482"
+        ],
+        "bytes": 632
+      },
+      {
+        "key": [
+          "ip4",
+          "ac4094eb",
+          "0a00002b",
+          "443",
+          "56091"
+        ],
+        "bytes": 617
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000001",
+          "0a00002b",
+          "0",
+          "0"
+        ],
+        "bytes": 588
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000001",
+          "0",
+          "0"
+        ],
+        "bytes": 588
+      },
+      {
+        "key": [
+          "ip4",
+          "035253d9",
+          "0a00002b",
+          "443",
+          "54017"
+        ],
+        "bytes": 564
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "035253d9",
+          "54017",
+          "443"
+        ],
+        "bytes": 542
+      },
+      {
+        "key": [
+          "ip4",
+          "404ec801",
+          "0a00002b",
+          "443",
+          "58171"
+        ],
+        "bytes": 492
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "ac4094eb",
+          "56091",
+          "443"
+        ],
+        "bytes": 469
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000027",
+          "58241",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000e",
+          "58242",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "58308",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "58351",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "58448",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "58540",
+          "7000"
+        ],
+        "bytes": 465
+      },
+      {
+        "key": [
+          "ip4",
+          "8c527219",
+          "0a00002b",
+          "443",
+          "56548"
+        ],
+        "bytes": 461
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd5385",
+          "0a00002b",
+          "443",
+          "58149"
+        ],
+        "bytes": 456
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb0e",
+          "0a00002b",
+          "443",
+          "62684"
+        ],
+        "bytes": 443
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdace",
+          "49482",
+          "443"
+        ],
+        "bytes": 437
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2a",
+          "58192",
+          "443"
+        ],
+        "bytes": 400
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd5385",
+          "58149",
+          "443"
+        ],
+        "bytes": 393
+      },
+      {
+        "key": [
+          "ip4",
+          "a27d0d13",
+          "0a00002b",
+          "443",
+          "58209"
+        ],
+        "bytes": 392
+      },
+      {
+        "key": [
+          "ip4",
+          "2295429a",
+          "0a00002b",
+          "443",
+          "58205"
+        ],
+        "bytes": 378
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8c527219",
+          "56548",
+          "443"
+        ],
+        "bytes": 351
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2a",
+          "0a00002b",
+          "443",
+          "58192"
+        ],
+        "bytes": 350
+      },
+      {
+        "key": [
+          "ip6",
+          "fd0523cf1eff4faa04be995fe2298ad2",
+          "fd0523cf1eff4faa04c9bcb35fce531c",
+          "0",
+          "0"
+        ],
+        "bytes": 344
+      },
+      {
+        "key": [
+          "ip4",
+          "ac40990c",
+          "0a00002b",
+          "443",
+          "58184"
+        ],
+        "bytes": 344
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb2a",
+          "0a00002b",
+          "443",
+          "58190"
+        ],
+        "bytes": 342
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d0d13",
+          "58209",
+          "443"
+        ],
+        "bytes": 341
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "a27d2801",
+          "58138",
+          "443"
+        ],
+        "bytes": 305
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "49153",
+          "57447"
+        ],
+        "bytes": 268
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "49153",
+          "57452"
+        ],
+        "bytes": 268
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000010489695fc3fc856",
+          "fe8000000000000014c3d760cd6235e0",
+          "0",
+          "0"
+        ],
+        "bytes": 258
+      },
+      {
+        "key": [
+          "ip6",
+          "fe80000000000000008fa897dc041e87",
+          "fe8000000000000014c3d760cd6235e0",
+          "0",
+          "0"
+        ],
+        "bytes": 258
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb2a",
+          "58190",
+          "443"
+        ],
+        "bytes": 252
+      },
+      {
+        "key": [
+          "ip4",
+          "3647b1c9",
+          "0a00002b",
+          "443",
+          "58169"
+        ],
+        "bytes": 250
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "7492"
+        ],
+        "bytes": 249
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "17124"
+        ],
+        "bytes": 247
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "60782"
+        ],
+        "bytes": 229
+      },
+      {
+        "key": [
+          "ip4",
+          "a27d2801",
+          "0a00002b",
+          "443",
+          "58138"
+        ],
+        "bytes": 229
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000e",
+          "57447",
+          "49153"
+        ],
+        "bytes": 228
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000d",
+          "57452",
+          "49153"
+        ],
+        "bytes": 228
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "443",
+          "56488"
+        ],
+        "bytes": 228
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "4670"
+        ],
+        "bytes": 225
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "34286"
+        ],
+        "bytes": 217
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00001a",
+          "ffffffff",
+          "9999",
+          "9999"
+        ],
+        "bytes": 210
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000020",
+          "0a00002b",
+          "0",
+          "0"
+        ],
+        "bytes": 210
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "3647b1c9",
+          "58169",
+          "443"
+        ],
+        "bytes": 210
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "32862"
+        ],
+        "bytes": 206
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "2295429a",
+          "58205",
+          "443"
+        ],
+        "bytes": 198
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000020",
+          "57449",
+          "49152"
+        ],
+        "bytes": 198
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a00000e",
+          "57446",
+          "49152"
+        ],
+        "bytes": 198
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000013",
+          "57554",
+          "49152"
+        ],
+        "bytes": 198
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000013",
+          "57813",
+          "49821"
+        ],
+        "bytes": 198
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "58180",
+          "443"
+        ],
+        "bytes": 195
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd900a",
+          "58175",
+          "443"
+        ],
+        "bytes": 195
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "58187",
+          "443"
+        ],
+        "bytes": 195
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "681222f4",
+          "58178",
+          "443"
+        ],
+        "bytes": 195
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11fd5384",
+          "58144",
+          "443"
+        ],
+        "bytes": 195
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "60603"
+        ],
+        "bytes": 192
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "56886"
+        ],
+        "bytes": 187
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0df94a52",
+          "58193",
+          "443"
+        ],
+        "bytes": 186
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "41082c5e",
+          "58194",
+          "443"
+        ],
+        "bytes": 186
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "68122292",
+          "58200",
+          "443"
+        ],
+        "bytes": 186
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "1743215d",
+          "58165",
+          "443"
+        ],
+        "bytes": 183
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000020",
+          "0a00002b",
+          "49152",
+          "57449"
+        ],
+        "bytes": 180
+      },
+      {
+        "key": [
+          "ip4",
+          "00000000",
+          "e0000001",
+          "0",
+          "0"
+        ],
+        "bytes": 180
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000d",
+          "0a00002b",
+          "3722",
+          "3722"
+        ],
+        "bytes": 180
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000013",
+          "0a00002b",
+          "49821",
+          "57813"
+        ],
+        "bytes": 178
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "20440"
+        ],
+        "bytes": 170
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "42095"
+        ],
+        "bytes": 169
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "19689"
+        ],
+        "bytes": 167
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000001",
+          "137",
+          "60259"
+        ],
+        "bytes": 163
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "49152",
+          "57446"
+        ],
+        "bytes": 162
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000013",
+          "0a00002b",
+          "49152",
+          "57554"
+        ],
+        "bytes": 162
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "11868"
+        ],
+        "bytes": 156
+      },
+      {
+        "key": [
+          "ip4",
+          "03e99e20",
+          "0a00002b",
+          "443",
+          "58206"
+        ],
+        "bytes": 156
+      },
+      {
+        "key": [
+          "ip4",
+          "601037ae",
+          "0a00002b",
+          "443",
+          "58167"
+        ],
+        "bytes": 156
+      },
+      {
+        "key": [
+          "ip4",
+          "1743215d",
+          "0a00002b",
+          "443",
+          "58165"
+        ],
+        "bytes": 156
+      },
+      {
+        "key": [
+          "ip4",
+          "11399019",
+          "0a00002b",
+          "5223",
+          "58140"
+        ],
+        "bytes": 156
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "14779"
+        ],
+        "bytes": 154
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "29060"
+        ],
+        "bytes": 148
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000010489695fc3fc856",
+          "fe8000000000000014c3d760cd6235e0",
+          "7000",
+          "57647"
+        ],
+        "bytes": 148
+      },
+      {
+        "key": [
+          "ip6",
+          "fe80000000000000008fa897dc041e87",
+          "fe8000000000000014c3d760cd6235e0",
+          "7000",
+          "57648"
+        ],
+        "bytes": 148
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "42328"
+        ],
+        "bytes": 145
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb0e",
+          "62684",
+          "443"
+        ],
+        "bytes": 144
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002f",
+          "e00000fb",
+          "0",
+          "0"
+        ],
+        "bytes": 138
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "0a000020",
+          "3722",
+          "3722"
+        ],
+        "bytes": 138
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "38027"
+        ],
+        "bytes": 136
+      },
+      {
+        "key": [
+          "ip4",
+          "0df94a52",
+          "0a00002b",
+          "443",
+          "58193"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip4",
+          "41082c5e",
+          "0a00002b",
+          "443",
+          "58194"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip4",
+          "68122292",
+          "0a00002b",
+          "443",
+          "58200"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "15093"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda6a",
+          "58162",
+          "443"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda6a",
+          "58163",
+          "443"
+        ],
+        "bytes": 132
+      },
+      {
+        "key": [
+          "ip6",
+          "00000000000000000000000000000000",
+          "ff020000000000000000000000000016",
+          "0",
+          "0"
+        ],
+        "bytes": 130
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "601037ae",
+          "58167",
+          "443"
+        ],
+        "bytes": 129
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "404ec801",
+          "58171",
+          "443"
+        ],
+        "bytes": 129
+      },
+      {
+        "key": [
+          "ip4",
+          "8efa8dbc",
+          "0a00002b",
+          "5228",
+          "58142"
+        ],
+        "bytes": 126
+      },
+      {
+        "key": [
+          "ip6_raw",
+          "2e09ef9608060001080006040002ce24",
+          "2e09ef960a00002b92607b53ed620a00",
+          "0",
+          "0"
+        ],
+        "bytes": 126
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "41558"
+        ],
+        "bytes": 125
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "59481"
+        ],
+        "bytes": 124
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "8140"
+        ],
+        "bytes": 121
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "03e99e20",
+          "58206",
+          "443"
+        ],
+        "bytes": 120
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efa8dbc",
+          "58142",
+          "5228"
+        ],
+        "bytes": 120
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "16939"
+        ],
+        "bytes": 114
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "48023"
+        ],
+        "bytes": 109
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "29617"
+        ],
+        "bytes": 102
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "56448",
+          "53"
+        ],
+        "bytes": 101
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "60329",
+          "53"
+        ],
+        "bytes": 101
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "60329"
+        ],
+        "bytes": 101
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "56448"
+        ],
+        "bytes": 101
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "55054",
+          "53"
+        ],
+        "bytes": 100
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "55054"
+        ],
+        "bytes": 100
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "29060",
+          "53"
+        ],
+        "bytes": 98
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "16939",
+          "53"
+        ],
+        "bytes": 98
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "61575",
+          "53"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "51294",
+          "53"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "61575"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "51294"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "61009",
+          "53"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "64889",
+          "53"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "61009"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "64889"
+        ],
+        "bytes": 97
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "50709",
+          "53"
+        ],
+        "bytes": 96
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "50709"
+        ],
+        "bytes": 96
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "50034",
+          "53"
+        ],
+        "bytes": 96
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "50034"
+        ],
+        "bytes": 96
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "57871"
+        ],
+        "bytes": 93
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "20440",
+          "53"
+        ],
+        "bytes": 92
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "11868",
+          "53"
+        ],
+        "bytes": 92
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000027",
+          "0a00002b",
+          "3722",
+          "3722"
+        ],
+        "bytes": 92
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00000e",
+          "0a00002b",
+          "3722",
+          "3722"
+        ],
+        "bytes": 92
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000001",
+          "0a00002b",
+          "60259",
+          "137"
+        ],
+        "bytes": 92
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "7269"
+        ],
+        "bytes": 91
+      },
+      {
+        "key": [
+          "ip4",
+          "08080808",
+          "0a00002b",
+          "53",
+          "48264"
+        ],
+        "bytes": 91
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "ff020000000000000000000000000016",
+          "0",
+          "0"
+        ],
+        "bytes": 90
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "42095",
+          "53"
+        ],
+        "bytes": 89
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "34286",
+          "53"
+        ],
+        "bytes": 89
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "17124",
+          "53"
+        ],
+        "bytes": 88
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "60782",
+          "53"
+        ],
+        "bytes": 88
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "38027",
+          "53"
+        ],
+        "bytes": 86
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "29617",
+          "53"
+        ],
+        "bytes": 86
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "ff0200000000000000000001ffff5a42",
+          "0",
+          "0"
+        ],
+        "bytes": 86
+      },
+      {
+        "key": [
+          "ip6",
+          "fe800000000000000042ec78e0ff5a42",
+          "fe8000000000000014c3d760cd6235e0",
+          "0",
+          "0"
+        ],
+        "bytes": 86
+      },
+      {
+        "key": [
+          "ip6",
+          "fd0523cf1eff4faa04c9bcb35fce531c",
+          "ff0200000000000000000001ff298ad2",
+          "0",
+          "0"
+        ],
+        "bytes": 86
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000004",
+          "e00000fb",
+          "59373",
+          "5353"
+        ],
+        "bytes": 81
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "42328",
+          "53"
+        ],
+        "bytes": 80
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "56886",
+          "53"
+        ],
+        "bytes": 80
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "4670",
+          "53"
+        ],
+        "bytes": 77
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "48023",
+          "53"
+        ],
+        "bytes": 77
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "19689",
+          "53"
+        ],
+        "bytes": 77
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "57871",
+          "53"
+        ],
+        "bytes": 77
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "60603",
+          "53"
+        ],
+        "bytes": 76
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "8140",
+          "53"
+        ],
+        "bytes": 76
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "14779",
+          "53"
+        ],
+        "bytes": 76
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "59481",
+          "53"
+        ],
+        "bytes": 76
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "41558",
+          "53"
+        ],
+        "bytes": 75
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "7269",
+          "53"
+        ],
+        "bytes": 75
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "15093",
+          "53"
+        ],
+        "bytes": 75
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "48264",
+          "53"
+        ],
+        "bytes": 75
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "32862",
+          "53"
+        ],
+        "bytes": 74
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "7492",
+          "53"
+        ],
+        "bytes": 74
+      },
+      {
+        "key": [
+          "ip6",
+          "fe8000000000000014c3d760cd6235e0",
+          "fe800000000000000042ec78e0ff5a42",
+          "57813",
+          "49709"
+        ],
+        "bytes": 74
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbda4a",
+          "0",
+          "0"
+        ],
+        "bytes": 70
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "8efbdb03",
+          "0",
+          "0"
+        ],
+        "bytes": 70
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "08080808",
+          "0",
+          "0"
+        ],
+        "bytes": 70
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda4a",
+          "0a00002b",
+          "443",
+          "59273"
+        ],
+        "bytes": 69
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbdb03",
+          "0a00002b",
+          "443",
+          "53351"
+        ],
+        "bytes": 69
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda6a",
+          "0a00002b",
+          "443",
+          "58162"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "8efbda6a",
+          "0a00002b",
+          "443",
+          "58163"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "58180"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd900a",
+          "0a00002b",
+          "443",
+          "58175"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "58187"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "681222f4",
+          "0a00002b",
+          "443",
+          "58178"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "11fd5384",
+          "0a00002b",
+          "443",
+          "58144"
+        ],
+        "bytes": 66
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000030",
+          "e00000fb",
+          "0",
+          "0"
+        ],
+        "bytes": 60
+      },
+      {
+        "key": [
+          "ip4",
+          "0a00002b",
+          "11399019",
+          "58140",
+          "5223"
+        ],
+        "bytes": 54
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000011",
+          "e00000fb",
+          "0",
+          "0"
+        ],
+        "bytes": 46
+      },
+      {
+        "key": [
+          "ip4",
+          "0a000018",
+          "e00000fb",
+          "0",
+          "0"
+        ],
+        "bytes": 46
+      },
+      {
+        "key": [
+          "ip6_raw",
+          "2e09ef9608060001080006040002ce24",
+          "2e09ef960a00002be4f4c61bc17e0a00",
+          "0",
+          "0"
+        ],
+        "bytes": 42
+      }
+    ],
+    "tls_clienthello_snis_unique": [
+      "api2.cursor.sh",
+      "mcp.context7.com"
+    ],
+    "opaque_tls_hints": 33,
+    "dns_hostnames_unique": [
+      "api2.cursor.sh",
+      "appsgenaiserver-pa.clients6.google.com",
+      "as.atlassian.com",
+      "b._dns-sd._udp.0.0.0.10.in-addr.arpa",
+      "b._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "b._dns-sd._udp.0.64.168.192.in-addr.arpa",
+      "cobalt.meowing.de",
+      "db._dns-sd._udp.0.0.0.10.in-addr.arpa",
+      "db._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "db._dns-sd._udp.0.64.168.192.in-addr.arpa",
+      "de5282c3ca0c.edge.sdk.awswaf.com",
+      "features.monarch.com",
+      "lb._dns-sd._udp.0.0.0.10.in-addr.arpa",
+      "lb._dns-sd._udp.0.0.5.10.in-addr.arpa",
+      "lb._dns-sd._udp.0.64.168.192.in-addr.arpa",
+      "nexus-websocket-a.intercom.io",
+      "notifier-configs.airbrake.io",
+      "play.google.com",
+      "ssl.gstatic.com",
+      "us5.datadoghq.com",
+      "waa-pa.clients6.google.com",
+      "www.facebook.com"
+    ],
+    "quic_udp_443_packets": 9729,
+    "quic_heuristic_notes": 51,
+    "top_inet_pairs_sample": [
+      {
+        "src": "185.187.168.192",
+        "dst": "10.0.0.43",
+        "bytes": 17969408
+      },
+      {
+        "src": "173.194.25.38",
+        "dst": "10.0.0.43",
+        "bytes": 5396779
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "185.187.168.192",
+        "bytes": 5221046
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "13.249.74.78",
+        "bytes": 472648
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.219.14",
+        "bytes": 472528
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.157.119",
+        "bytes": 352321
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "172.64.146.215",
+        "bytes": 291151
+      },
+      {
+        "src": "142.251.219.14",
+        "dst": "10.0.0.43",
+        "bytes": 167644
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "173.194.25.38",
+        "bytes": 143654
+      },
+      {
+        "src": "172.64.146.215",
+        "dst": "10.0.0.43",
+        "bytes": 121459
+      },
+      {
+        "src": "142.251.157.119",
+        "dst": "10.0.0.43",
+        "bytes": 121210
+      },
+      {
+        "src": "104.18.41.41",
+        "dst": "10.0.0.43",
+        "bytes": 111709
+      },
+      {
+        "src": "34.149.66.147",
+        "dst": "10.0.0.43",
+        "bytes": 83731
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.18.125",
+        "bytes": 82914
+      },
+      {
+        "src": "142.251.218.234",
+        "dst": "10.0.0.43",
+        "bytes": 66639
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.218.106",
+        "bytes": 58686
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "34.233.197.45",
+        "bytes": 52325
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.214.46",
+        "bytes": 44481
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.218.234",
+        "bytes": 42612
+      },
+      {
+        "src": "34.233.197.45",
+        "dst": "10.0.0.43",
+        "bytes": 38685
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "18.118.116.227",
+        "bytes": 38004
+      },
+      {
+        "src": "142.251.218.106",
+        "dst": "10.0.0.43",
+        "bytes": 34276
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "104.18.19.125",
+        "bytes": 33033
+      },
+      {
+        "src": "18.118.116.227",
+        "dst": "10.0.0.43",
+        "bytes": 29748
+      },
+      {
+        "src": "fe:80:00:00:00:00:00:00:00:42:ec:78:e0:ff:5a:42",
+        "dst": "fe:80:00:00:00:00:00:00:14:c3:d7:60:cd:62:35:e0",
+        "bytes": 28185
+      },
+      {
+        "src": "142.251.214.35",
+        "dst": "10.0.0.43",
+        "bytes": 25004
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "142.251.214.35",
+        "bytes": 24241
+      },
+      {
+        "src": "142.251.218.174",
+        "dst": "10.0.0.43",
+        "bytes": 23582
+      },
+      {
+        "src": "35.175.56.7",
+        "dst": "10.0.0.43",
+        "bytes": 22308
+      },
+      {
+        "src": "104.18.18.125",
+        "dst": "10.0.0.43",
+        "bytes": 21770
+      },
+      {
+        "src": "10.0.0.43",
+        "dst": "172.64.155.209",
+        "bytes": 21695
+      },
+      {
+        "src": "10.0.0.7",
+        "dst": "255.255.255.255",
+        "bytes": 21624
+      }
+    ],
+    "limits": [
+      "ECH_ESNI_not_visible",
+      "DoH_not_inferred_from_udp_53",
+      "tcp_segmentation_may_fragment_clienthello",
+      "inner_vpn_payload_may_be_opaque"
+    ],
+    "errors": [],
+    "ja3_ja4": []
+  },
+  "capture_finalize": {
+    "session_id": "45f258bcf5f9",
+    "finalized_at_utc": "2026-05-01T08:46:20.499435+00:00",
+    "source_pcap_cache_path": "/Users/alauder/Source/doxx/vpn-leaks/.vpn-leaks/capture/session_45f258bcf5f9.pcap",
+    "finalize_errors": []
+  },
+  "extra": {
+    "exit_geo": {
+      "source": "ipwho.is",
+      "ip": "185.187.168.200",
+      "country_code": "US",
+      "region": "California",
+      "city": "San Francisco",
+      "connection": {
+        "asn": 212238,
+        "org": "Packethub S.A.",
+        "isp": "Datacamp Limited",
+        "domain": "packethub.net"
+      },
+      "location_id": "us-california-san-francisco-200",
+      "location_label": "San Francisco, California, United States"
+    },
+    "surface_probe": {
+      "probes": [
+        {
+          "url": "https://www.nordvpn.com/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/",
+          "cdn_headers": {
+            "cf-ray": "9f4d82c8df448462-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82c8df448462"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5e0529734c192de1.har",
+          "page_type": "home"
+        },
+        {
+          "url": "https://nordvpn.com/pricing/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/pricing/",
+          "cdn_headers": {
+            "cf-ray": "9f4d82cbfae8ae99-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82cbfae8ae99"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/3cec43152ba057c5.har",
+          "page_type": "pricing"
+        },
+        {
+          "url": "https://my.nordaccount.com/",
+          "error": null,
+          "status": 200,
+          "final_url": "https://my.nordaccount.com/",
+          "cdn_headers": {
+            "cf-ray": "9f4d82ce3ae6cea4-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://my.nordaccount.com/assets/runtime.c392954944a8670a35e1.js",
+            "https://my.nordaccount.com/assets/_formatjs.defaultvendors.3392aa991e49cee93825.js",
+            "https://my.nordaccount.com/assets/regenerator-runtime.defaultvendors.51d6a9d25a2ced4bdb8d.js",
+            "https://my.nordaccount.com/assets/promise-polyfill.defaultvendors.0c84317ed01865b3a6b7.js",
+            "https://my.nordaccount.com/assets/index.0a207e294320c8f97477.js",
+            "https://my.nordaccount.com/assets/_nordsec.defaultvendors.572e2f3be6ffe304f907.chunk.js",
+            "https://my.nordaccount.com/assets/date-fns.defaultvendors.592977043c7d4561d202.chunk.js",
+            "https://my.nordaccount.com/assets/_nord.defaultvendors.d152b9e1023813f041a0.chunk.js",
+            "https://my.nordaccount.com/assets/_sentry.defaultvendors.cb843f853a70d0457cf7.chunk.js",
+            "https://my.nordaccount.com/assets/_sentry-internal.defaultvendors.034bb8b1a0fa856b19d5.chunk.js",
+            "https://my.nordaccount.com/assets/graphql.defaultvendors.2db91e2e25496ff503bb.chunk.js",
+            "https://my.nordaccount.com/assets/react-intl.defaultvendors.7dee90d1f00605a61702.chunk.js",
+            "https://my.nordaccount.com/assets/graphql-request.defaultvendors.443f485a7486fe535145.chunk.js",
+            "https://my.nordaccount.com/assets/_reduxjs.defaultvendors.cf22344d94cd257e0ad1.chunk.js",
+            "https://my.nordaccount.com/assets/react-transition-group.defaultvendors.dd1544ee5d0353a1c51c.chunk.js",
+            "https://my.nordaccount.com/assets/uuid.defaultvendors.eead893baec50d1e9c23.chunk.js",
+            "https://my.nordaccount.com/assets/_babel.defaultvendors.a1d59fe84220e0220774.chunk.js",
+            "https://my.nordaccount.com/assets/react.defaultvendors.78aad35d08a5b3d4089d.chunk.js",
+            "https://my.nordaccount.com/assets/react-dom.defaultvendors.995c811c86640d85b25b.chunk.js",
+            "https://my.nordaccount.com/assets/intl-messageformat.defaultvendors.7b440f2a12314e045ce0.chunk.js",
+            "https://my.nordaccount.com/assets/prop-types.defaultvendors.35bd4599905121b4452f.chunk.js",
+            "https://my.nordaccount.com/assets/react-toastify.defaultvendors.5cabe679c5d3067cb6ec.chunk.js",
+            "https://my.nordaccount.com/assets/dom-helpers.defaultvendors.6e73bc321922b4f6a074.chunk.js",
+            "https://my.nordaccount.com/assets/use-sync-external-store.defaultvendors.ed9ee8ffe42909d13b1a.chunk.js",
+            "https://my.nordaccount.com/assets/scheduler.defaultvendors.38f1999b87de9d343cd9.chunk.js",
+            "https://my.nordaccount.com/assets/react-inlinesvg.defaultvendors.9660e72138e0765193b0.chunk.js",
+            "https://my.nordaccount.com/assets/react-from-dom.defaultvendors.ce5a33ecaecdd67f6892.chunk.js",
+            "https://my.nordaccount.com/assets/react-redux.defaultvendors.d25fa91400ca42cc077f.chunk.js",
+            "https://my.nordaccount.com/assets/js-cookie.defaultvendors.002fb3f4fa5e9d95333e.chunk.js",
+            "https://my.nordaccount.com/assets/immer.defaultvendors.f09e5118b557d6cdcdb0.chunk.js",
+            "https://my.nordaccount.com/assets/clsx.defaultvendors.1faa6083987170b4864e.chunk.js",
+            "https://my.nordaccount.com/assets/_standard-schema.defaultvendors.7e58377df74678c66197.chunk.js",
+            "https://my.nordaccount.com/assets/classnames.defaultvendors.8bc90ba6e8b07a8e8fdd.chunk.js",
+            "https://my.nordaccount.com/assets/react-side-effect.defaultvendors.9c3f593d125d4faecd0c.chunk.js",
+            "https://my.nordaccount.com/assets/react-router.defaultvendors.2d8e01f4a19789f330cc.chunk.js",
+            "https://my.nordaccount.com/assets/react-router-dom.defaultvendors.c5cd25bb13582d235275.chunk.js",
+            "https://my.nordaccount.com/assets/react-intersection-observer.defaultvendors.e59fbfabd9c2e27a0b4f.chunk.js",
+            "https://my.nordaccount.com/assets/react-helmet.defaultvendors.e672b2f66b3b7791a6ca.chunk.js",
+            "https://my.nordaccount.com/assets/react-fast-compare.defaultvendors.f8ff413dc4d3d3df402f.chunk.js",
+            "https://my.nordaccount.com/assets/react-content-loader.defaultvendors.81dc6c8ab0aa44f988b4.chunk.js",
+            "https://my.nordaccount.com/assets/object-assign.defaultvendors.de37ca6a3967ba95f8af.chunk.js",
+            "https://my.nordaccount.com/assets/lodash.isequal.defaultvendors.d7e8a9adee14363904ac.chunk.js",
+            "https://my.nordaccount.com/assets/humps.defaultvendors.167737137fffcf45e86d.chunk.js",
+            "https://my.nordaccount.com/assets/filter-obj.defaultvendors.b61346464b8b6744fe2d.chunk.js",
+            "https://my.nordaccount.com/assets/file-saver.defaultvendors.625061e1f589bdd1fe21.chunk.js",
+            "https://my.nordaccount.com/assets/exenv.defaultvendors.1b7ed5150cf28a7b2477.chunk.js",
+            "https://my.nordaccount.com/assets/decode-uri-component.defaultvendors.e5a971eb831f6f752650.chunk.js",
+            "https://my.nordaccount.com/assets/cross-fetch.defaultvendors.68e7cd14aa67eafb4cb6.chunk.js",
+            "https://my.nordaccount.com/assets/strict-uri-encode.defaultvendors.a5dacf95bccb8a807452.chunk.js",
+            "https://my.nordaccount.com/assets/split-on-first.defaultvendors.8d1e4c5402299b8ba208.chunk.js",
+            "https://my.nordaccount.com/assets/query-string.defaultvendors.87128a48e251ff40f71f.chunk.js",
+            "https://my.nordaccount.com/assets/_remix-run.defaultvendors.a8dbbdf30892d10b61af.chunk.js",
+            "https://my.nordaccount.com/assets/4666.3d565fb961595aa6fb72.chunk.js"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/0096221d6f12d382.har",
+          "page_type": "signup"
+        },
+        {
+          "url": "https://nordcheckout.com/",
+          "error": null,
+          "status": 403,
+          "final_url": "https://nordvpn.com/pricing?redirected_from=nordcheckout.com%2F",
+          "cdn_headers": {
+            "cf-ray": "9f4d82dabaa01fdb-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d82dabaa01fdb"
+          ],
+          "images": [],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5c4416295d131e0b.har",
+          "page_type": "checkout"
+        },
+        {
+          "url": "https://support.nordvpn.com/",
+          "error": null,
+          "status": 200,
+          "final_url": "https://support.nordvpn.com/hc/en-us",
+          "cdn_headers": {
+            "via": "zorg",
+            "cf-ray": "9f4d82e1effcae99-SJC",
+            "server": "cloudflare"
+          },
+          "scripts": [
+            "https://www.googletagmanager.com/gtm.js?id=GTM-WX5CH8",
+            "https://s1.nordcdn.com/d/consent/prod/init.js?isGdpr=true",
+            "https://s1.nordcdn.com/d/nordvpn/prod/index.js?cu=https://d.nordvpn.com/1/cc&p=nordvpn&sni=1",
+            "https://www.googletagmanager.com/gtag/js?id=G-LEXMJ1N516",
+            "https://support.nordvpn.com/hc/en-us",
+            "https://support.nordvpn.com/hc/theming_assets/01KM5FCEA8DSAWC4R1R69CE38Q",
+            "https://s1.nordcdn.com/d/consent/prod/main.js",
+            "https://s1.nordcdn.com/nordvpn/3.816.0/js/unsupported-fallback.min.js",
+            "https://support.nordvpn.com/hc/theming_assets/01K8QJJ1GZQYMV2VYPKWCY7KC7",
+            "https://support.nordvpn.com/hc/theming_assets/01KHNYSGHVJ2VS6PMDB39EB2SB",
+            "https://static.zdassets.com/hc/assets/en-us.a8c200c80dbfa8b39d39.js",
+            "https://static.zdassets.com/hc/assets/hc_enduser-d9740dff469f88fb0ddbf825653eb95c.js",
+            "https://support.nordvpn.com/hc/theming_assets/757086/445532/script.js?digest=45872676122001"
+          ],
+          "images": [
+            "https://sb.nordcdn.com/m/83d4a4bd1d9eb5e5/original/woman-box-nord-vpn-md-svg.svg",
+            "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/app-store.svg",
+            "https://s1.nordcdn.com/nordvpn/media/1.1716.0/images/global/button/download-app/google-play.svg",
+            "https://sb.nordcdn.com/m/2a99ab6c9cf051ac/original/credit-cards.svg"
+          ],
+          "captcha_third_party": false,
+          "har_path": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/23c88e21719d1a9b.har",
+          "page_type": "support"
+        }
+      ],
+      "surface_probe_dir": "runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe",
+      "har_summary": {
+        "har_files": [
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5e0529734c192de1.har",
+            "entry_count": 5,
+            "unique_hosts": [
+              "nordvpn.com",
+              "www.nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/3cec43152ba057c5.har",
+            "entry_count": 3,
+            "unique_hosts": [
+              "nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/0096221d6f12d382.har",
+            "entry_count": 57,
+            "unique_hosts": [
+              "my.nordaccount.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/5c4416295d131e0b.har",
+            "entry_count": 5,
+            "unique_hosts": [
+              "nordcheckout.com",
+              "nordvpn.com"
+            ],
+            "unique_schemes": [
+              "https"
+            ],
+            "tracker_candidates": [],
+            "cdn_candidates": [],
+            "error": null
+          },
+          {
+            "har_path": "/Users/alauder/Source/doxx/vpn-leaks/runs/nordvpn-20260501T084027Z-7f1f4459/raw/us-california-san-francisco-200/surface_probe/har/23c88e21719d1a9b.har",
+            "entry_count": 30,
+            "unique_hosts": [
+              "d.nordvpn.com",
+              "s1.nordcdn.com",
+              "sb.nordcdn.com",
+              "static.zdassets.com",
+              "support.nordvpn.com",
+              "www.googletagmanager.com"
+            ],
+            "unique_schemes": [
+              "blob",
+              "https"
+            ],
+            "tracker_candidates": [
+              "www.googletagmanager.com"
+            ],
+            "cdn_candidates": [
+              "s1.nordcdn.com",
+              "sb.nordcdn.com"
+            ],
+            "error": null
+          }
+        ],
+        "merged_unique_hosts": [
+          "d.nordvpn.com",
+          "my.nordaccount.com",
+          "nordcheckout.com",
+          "nordvpn.com",
+          "s1.nordcdn.com",
+          "sb.nordcdn.com",
+          "static.zdassets.com",
+          "support.nordvpn.com",
+          "www.googletagmanager.com",
+          "www.nordvpn.com"
+        ],
+        "merged_tracker_candidates": [
+          "www.googletagmanager.com"
+        ],
+        "merged_cdn_candidates": [
+          "s1.nordcdn.com",
+          "sb.nordcdn.com"
+        ]
+      }
+    }
+  }
+}
+```
+
+---
+
+
+
+## Appendix
+
+- Canonical JSON per location: `runs/<run_id>/locations/<location_id>/normalized.json`
+- Raw captures: `runs/<run_id>/raw/<location_id>/` (including `yourinfo_probe/`, `competitor_probe/` when present)
+- Regenerate this file: `vpn-leaks report --provider nordvpn`
