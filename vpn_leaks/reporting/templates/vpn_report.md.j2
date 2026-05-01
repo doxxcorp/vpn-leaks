@@ -357,6 +357,27 @@ Large JSON fields use size caps in this markdown file; when an excerpt hits a ca
 {% if dr.methodology_pcap.pcap.errors | length > 0 %}
 **PCAP summarizer notes:** {% for e in dr.methodology_pcap.pcap.errors[:10] %}`{{ e }}`{% if not loop.last %}, {% endif %}{% endfor %}
 {% endif %}
+
+#### PCAP host intelligence
+
+{% if dr.methodology_pcap.pcap_hosts.has_inventory %}
+{% if dr.methodology_pcap.pcap_hosts.notes | length > 0 %}
+{% for n in dr.methodology_pcap.pcap_hosts.notes %}
+- {{ n }}
+{% endfor %}
+{% endif %}
+
+| Host | Source | IP / IPs | Reverse DNS | ASN | Owner | WHOIS summary | dig summary | Bytes | Flows | Lookup errors |
+|------|--------|----------|-------------|-----|-------|---------------|-------------|-------|-------|---------------|
+{% for row in dr.methodology_pcap.pcap_hosts.rows %}| `{{ row.host }}` | {{ row.source }} | {{ row.ips_text }} | {{ row.reverse_dns }} | {{ row.asn }} | {{ row.owner }} | {{ row.whois_summary }} | {{ row.dig_summary }} | {{ row.bytes_observed }} | {{ row.flow_count }} | {{ row.lookup_errors_text }} |
+{% endfor %}
+
+{% if dr.methodology_pcap.pcap_hosts.errors | length > 0 %}
+**Host intelligence notes:** {% for e in dr.methodology_pcap.pcap_hosts.errors[:12] %}`{{ e }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+{% else %}
+*No PCAP host intelligence rows (no public peer IPs or DNS/SNI hostnames discovered).*
+{% endif %}
 {% else %}
 *No `pcap_derived` merge on this location (no **`--attach-capture`** / **`--with-pcap`**, missing active capture session at finalize, or empty PCAP artifact).*
 {% endif %}

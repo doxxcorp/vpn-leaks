@@ -594,11 +594,22 @@ def cmd_report(args: argparse.Namespace) -> int:
     if missing_cfg:
         print(f"Created default VPN config: {cfg_path}", file=sys.stderr)
     name = vpn_config.get("provider_name") or slug
-    p = generate_vpn_report(slug, vpn_name=str(name))
+    total_steps = 11 + (3 if args.asn else 0)
+    report_progress = RunProgress(total_steps, no_progress=args.no_progress)
+    try:
+        p = generate_vpn_report(slug, vpn_name=str(name), progress_step=report_progress.step)
+        if args.asn:
+            p2 = generate_provider_report(
+                int(args.asn),
+                title=args.asn_title,
+                progress_step=report_progress.step,
+            )
+    finally:
+        report_progress.close()
+
     print(str(p))
     print(str(p.with_suffix(".html")))
     if args.asn:
-        p2 = generate_provider_report(int(args.asn), title=args.asn_title)
         print(str(p2))
     return 0
 
@@ -720,6 +731,11 @@ def build_parser() -> argparse.ArgumentParser:
     rep.add_argument("--provider", required=True)
     rep.add_argument("--asn", help="Also emit PROVIDERS/AS<asn>.md")
     rep.add_argument("--asn-title", default=None)
+    rep.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable tqdm bar; still print phase lines to stderr",
+    )
     rep.set_defaults(func=cmd_report)
 
     gx = sub.add_parser(

@@ -1,0 +1,7 @@
+{
+  "exit_ip_v4": "194.195.93.96",
+  "preflight_services": [
+    "https://api.ipify.org"
+  ],
+  "auto_location": true
+}

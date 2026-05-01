@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import markdown
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -33,6 +33,7 @@ WEBRTC_CANDIDATES_MAX = 20
 SERVICES_CONTACTED_MAX = 250
 WEBRTC_RAW_CELL_MAX = 200
 REPORT_FRAMEWORK_JSON_MAX = 400_000
+ProgressStep = Callable[[str], None]
 
 
 def _jinja_env() -> Environment:
@@ -371,7 +372,14 @@ def build_detailed_runs(
     return detailed
 
 
-def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> Path:
+def generate_vpn_report(
+    provider_slug: str,
+    *,
+    vpn_name: str | None = None,
+    progress_step: ProgressStep | None = None,
+) -> Path:
+    if progress_step is not None:
+        progress_step("Report: collect normalized runs")
     rows = collect_normalized_for_provider(provider_slug)
     if not rows:
         runs = repo_root() / "runs"
@@ -387,6 +395,8 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         )
         raise FileNotFoundError(hint)
 
+    if progress_step is not None:
+        progress_step("Report: build location matrix")
     connection_modes = sorted({r[2].get("connection_mode") or "unknown" for r in rows})
     table_rows: list[dict[str, Any]] = []
     asn_notes: dict[int, str] = {}
@@ -408,13 +418,21 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         if isinstance(asn, int):
             asn_notes.setdefault(asn, att.get("holder") or "")
 
+    if progress_step is not None:
+        progress_step("Report: build detailed sections")
     detailed_runs = build_detailed_runs(rows)
+    if progress_step is not None:
+        progress_step("Report: framework rollup")
     framework_rollup = build_framework_rollup(rows)
+    if progress_step is not None:
+        progress_step("Report: web exposure rollup")
     web_exposure = rollup_web_exposure(rows)
     generated_utc = datetime.now(UTC).isoformat()
 
     env = _jinja_env()
     tpl = env.get_template("vpn_report.md.j2")
+    if progress_step is not None:
+        progress_step("Report: render markdown")
     text = tpl.render(
         vpn_name=vpn_name or provider_slug,
         vpn_slug=provider_slug,
@@ -433,20 +451,28 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
     out_dir.mkdir(parents=True, exist_ok=True)
     safe = provider_slug.upper().replace("-", "_")
     out_path = out_dir / f"{safe}.md"
+    if progress_step is not None:
+        progress_step("Report: write markdown")
     out_path.write_text(text, encoding="utf-8")
 
     display_name = vpn_name or provider_slug
     from vpn_leaks.reporting.exposure_graph import build_exposure_graph
 
+    if progress_step is not None:
+        progress_step("Report: build exposure graph")
     exposure_payload = build_exposure_graph(provider_slug)
     html_tpl = env.get_template("vpn_report_document.html.j2")
     report_css = _load_report_static_file("report.css")
     logo_raw = _load_report_static_file("logo-isotype.svg")
+    if progress_step is not None:
+        progress_step("Report: build HTML dashboard")
     dashboard = build_html_dashboard_context(
         rows,
         framework_rollup,
         markdown_basename=f"{safe}.md",
     )
+    if progress_step is not None:
+        progress_step("Report: render HTML")
     html_doc = html_tpl.render(
         document_title=f"{display_name} ({provider_slug})",
         generated_utc=generated_utc,
@@ -459,13 +485,22 @@ def generate_vpn_report(provider_slug: str, *, vpn_name: str | None = None) -> P
         dashboard=dashboard,
     )
     html_path = out_dir / f"{safe}.html"
+    if progress_step is not None:
+        progress_step("Report: write HTML")
     html_path.write_text(html_doc, encoding="utf-8")
 
     return out_path
 
 
-def generate_provider_report(asn: int, *, title: str | None = None) -> Path:
+def generate_provider_report(
+    asn: int,
+    *,
+    title: str | None = None,
+    progress_step: ProgressStep | None = None,
+) -> Path:
     """Aggregate markdown for an underlay ASN across VPNs."""
+    if progress_step is not None:
+        progress_step("Provider report: collect evidence")
     runs = repo_root() / "runs"
     evidence_blocks: list[dict[str, str]] = []
     policy_hashes: list[dict[str, Any]] = []
@@ -504,6 +539,8 @@ def generate_provider_report(asn: int, *, title: str | None = None) -> Path:
 
     env = _jinja_env()
     tpl = env.get_template("provider_report.md.j2")
+    if progress_step is not None:
+        progress_step("Provider report: render markdown")
     text = tpl.render(
         provider_title=title or f"AS{asn}",
         generated_utc=datetime.now(UTC).isoformat(),
@@ -513,6 +550,8 @@ def generate_provider_report(asn: int, *, title: str | None = None) -> Path:
     out_dir = repo_root() / "PROVIDERS"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"AS{asn}.md"
+    if progress_step is not None:
+        progress_step("Provider report: write markdown")
     out_path.write_text(text, encoding="utf-8")
     return out_path
 

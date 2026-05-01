@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "3b9f4e9c-6b38-475e-a1c6-f326f99f42dd.local",
+    "port": 49400,
+    "raw": "candidate:1153250707 1 udp 2113937151 3b9f4e9c-6b38-475e-a1c6-f326f99f42dd.local 49400 typ host generation 0 ufrag nOCi network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "194.195.93.96",
+    "port": 53546,
+    "raw": "candidate:1151906997 1 udp 1677729535 194.195.93.96 53546 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag nOCi network-cost 999"
+  }
+]

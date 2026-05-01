@@ -1,0 +1,17 @@
+{
+  "run_id": "nordvpn-20260501T100504Z-cc878634",
+  "created_utc": "2026-05-01T10:05:04.632020+00:00",
+  "git_sha": "f21edc80b7ae292837c48a661161eee52368b52e",
+  "vpn_provider": "nordvpn",
+  "tool_versions": {
+    "python": "3.12.4"
+  },
+  "runner_env": {
+    "os": "Darwin 25.4.0",
+    "kernel": "25.4.0",
+    "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 10:07:17) [Clang 14.0.6 ]",
+    "browser": null,
+    "vpn_protocol": null,
+    "vpn_client": null
+  }
+}
