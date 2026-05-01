@@ -2,13 +2,13 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-05-01 — **schema 1.5** (`website_exposure_methodology`, `pcap_derived`, `capture_finalize`); **`vpn-leaks capture start|status|abort`**, **`run --attach-capture`** (finalize PCAP → `pcap_summary.json` → merge into `normalized.json`); **`vpn-leaks pcap-summarize`**; automated Phases **1–9** desk bundle in [vpn_leaks/checks/website_exposure_methodology.py](vpn_leaks/checks/website_exposure_methodology.py); reference configs [expressvpn](configs/vpns/expressvpn.yaml) / [mullvad](configs/vpns/mullvad.yaml). Capture path: **tcpdump + dpkt** only — no Wireshark/**tshark**, no **mitmproxy** on the standard operator flow (see [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md))._
+_Last updated: 2026-05-02 — Narrative refresh: **`run --with-pcap`** (harness-managed tcpdump; mutually exclusive with **`--attach-capture`**); stderr **`methodology_config_hints`** (empty **`provider_domains`**, **`surface_urls`**, **`policy_urls`**); optional **`pyproject.toml`** **`[pcap]`** extra (placeholder for future JA helpers; core summarizer stays **dpkt**). **`graph-export`** **`graph_schema` 1.1** adds PCAP-derived edges when **`pcap_derived`** exists. Desk TXT helpers: [vpn_leaks/checks/methodology_email_dns.py](vpn_leaks/checks/methodology_email_dns.py). Authoritative usage: [README.md](README.md) Run § capture + methodology, [docs/methodology.md](docs/methodology.md), [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) (Choosing a PCAP mode)._
 
 ---
 
 ## What this project is
 
-**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional browser fingerprint, **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, **always-on yourinfo.ai** capture (third-party benchmark page: HAR + text excerpt; **`--skip-yourinfo`** to omit), optional **competitor-surface** probes (provider apex DNS, Playwright web/HAR + CDN headers, HTTPS portal checks, traceroute toward exit, bounded stray JSON GETs)—driven by `competitor_probe` in each provider YAML—and optional **`surface_urls`** (tagged Playwright loads → **`surface_probe/`**, e.g. pricing/signup/checkout pages for SPEC web/signup inventory).
+**VPN Leaks** is a Python **CLI harness** for repeatable, **client-observable** VPN benchmarking: exit IP, DNS leaks (local + external HTML), IPv6 exposure, WebRTC candidates, optional fingerprint, pinned **browserleaks** pages (unless **`--skip-browserleaks`** / disabled in config), **public routing attribution** (RIPEstat, Team Cymru, PeeringDB), **privacy policy** fetch with SHA-256 and heuristic keyword summaries, **always-on yourinfo.ai** capture (HAR + excerpt; **`--skip-yourinfo`** to omit), optional **competitor-surface** probes (**`competitor_probe`** in YAML), optional **`surface_urls`** → **`surface_probe/`**, and **automated website-exposure methodology** (**`website_exposure_methodology`** in **`normalized.json`**, Phases **1–9** desk projection; fail-soft). Optional **PCAP**: **`capture start`** + **`run --attach-capture`**, or **`run --with-pcap`**, summarized with **dpkt** only.
 
 - **Package name:** `vpn-leaks` (import: `vpn_leaks`).
 - **Python:** 3.12+ ([pyproject.toml](pyproject.toml)).
@@ -23,17 +23,17 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 
 | Area | Path | Role |
 |------|------|------|
-| CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run`, `report`, `graph-export`, preflight, duplicate guard, per-location suite |
+| CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run` (incl. **`--attach-capture`**, **`--with-pcap`**), **`capture`** `start|status|abort`, **`pcap-summarize`**, `report`, `graph-export`, preflight, duplicate guard |
 | Run progress UI | [vpn_leaks/run_progress.py](vpn_leaks/run_progress.py) | `RunProgress`, `compute_run_total` — tqdm bar + phase descriptions on stderr; text-only lines when not a TTY or **`--no-progress`** |
 | Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (**1.5**: `website_exposure_methodology`, `pcap_derived`, `capture_finalize`; 1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, `ArtifactIndex` (`website_exposure_dir`, `capture_dir`) |
-| Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading |
-| VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs, `manual_gui`, `policy_urls`, location list |
+| Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading; **`methodology_config_hints()`** for methodology/capture-related stderr reminders |
+| VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs (`nordvpn`, `expressvpn`, `mullvad`, `example`, …), `manual_gui`, **`competitor_probe`**, **`surface_urls`**, `policy_urls`, location list |
 | Auto location (ipwho) | [vpn_leaks/auto_connection.py](vpn_leaks/auto_connection.py) | When `--locations` omitted: build `location_id` / label, optional YAML persist |
-| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `competitor_probes`, `surface_probe` (`surface_urls` in YAML), **`website_exposure_methodology`** (Phases 1–9 bundle), **`pcap_summarize`** |
+| Leak checks | [vpn_leaks/checks/](vpn_leaks/checks/) | `ip_check`, `dns`, `ipv6`, `webrtc`, `fingerprint`, `yourinfo_probe`, `browserleaks_probe`, `competitor_probes`, `surface_probe`, **`website_exposure_methodology`**, **`methodology_email_dns`** (pure TXT parsers for tests/desk parity), **`pcap_summarize`** |
 | Capture | [vpn_leaks/capture/](vpn_leaks/capture/) | Session JSON under repo **`.vpn-leaks/capture/`** (gitignored), `finalize_bundle` → `runs/.../raw/<loc>/capture/` |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
-| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py) (HAR + provider DNS + surface matrix rollups for reports), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (visual-first dashboard; **Website and DNS surface** section from harness data; full markdown in collapsible appendix), `PROVIDERS/AS<n>.md`, `graph-export` JSON |
+| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py) (`methodology_and_pcap_sections`, HAR/DNS rollups), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py) (**`graph_schema` 1.1** → optional PCAP/SNI edges), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (methodology + PCAP subsections when data exists; **Website and DNS surface**; appendix), `PROVIDERS/AS<n>.md`, **`graph-export`** JSON |
 | SPEC framework | [vpn_leaks/framework/](vpn_leaks/framework/), [configs/framework/](configs/framework/) | Question bank, coverage, findings, risk scores embedded as `normalized.json` → `framework` (skip with `--no-framework`); see [docs/framework.md](docs/framework.md). Aggregated report **“Next steps”** copy is driven by [configs/framework/report_hints.yaml](configs/framework/report_hints.yaml) plus per-run notes from [coverage.py](vpn_leaks/framework/coverage.py) ([coverage_rollup.py](vpn_leaks/reporting/coverage_rollup.py) merge). |
 | Viewer | [viewer/](viewer/) | 3D graph of `graph-export` output (static HTML + CDN) |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
@@ -50,12 +50,12 @@ playwright install chromium
 # After VPN is connected (manual app) — auto location via ipwho.is:
 vpn-leaks run --provider nordvpn --skip-vpn
 
-# Competitive capture (PCAP spans signup → benchmark): start capture first, then after connect:
-# vpn-leaks capture start [--interface en0]
-# vpn-leaks run --provider nordvpn --skip-vpn --attach-capture
-# Same merge path without a prior capture start (harness-managed tcpdump for that run):
-# vpn-leaks run --provider nordvpn --skip-vpn --with-pcap
-# Repair / inspect PCAP only: vpn-leaks pcap-summarize path/to/file.pcap
+# Competitive capture (PCAP spans signup → benchmark): start capture first, then on-VPN run:
+#   vpn-leaks capture start [-i en0]   # default iface: VPN_LEAKS_CAPTURE_INTERFACE or en0
+#   vpn-leaks run --provider nordvpn --skip-vpn --attach-capture
+# Harness-window PCAP only (no prior capture start; mutually exclusive flags):
+#   vpn-leaks run --provider nordvpn --skip-vpn --with-pcap
+# Repair: vpn-leaks pcap-summarize path/to/file.pcap [-o pcap_summary.json]
 
 # Aggregated markdown + HTML dashboard from all runs for that provider under runs/:
 vpn-leaks report --provider nordvpn
@@ -77,9 +77,13 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 **Locations:** Omitting `--locations` triggers **auto** `location_id` / label (ipwho.is) and can append to `configs/vpns/<slug>.yaml` unless `--no-persist-locations`.
 
-**YourInfo:** After policy fetch, **`vpn-leaks run`** loads **https://yourinfo.ai/** in Playwright (unless **`--skip-yourinfo`**).
+**YourInfo:** After policies, **`vpn-leaks run`** loads **https://yourinfo.ai/** in Playwright (unless **`--skip-yourinfo`**).
 
-**Competitor probes:** If `competitor_probe` is set in the provider YAML, `vpn-leaks run` performs those phases after YourInfo (same VPN session). Skip flags: `--skip-competitor-dns`, `--skip-competitor-web`, `--skip-competitor-portal`, `--skip-competitor-transit`, `--skip-competitor-stray-json`.
+**BrowserLeaks:** After YourInfo unless **`--skip-browserleaks`** (or probe disabled in config).
+
+**Competitor / surface / methodology (order):** With tunnel up: **competitor_probe** → **`surface_urls`** surface_probe → optional **`--transition-tests`** → **`website_exposure_methodology`** (before disconnect). Skip flags: `--skip-competitor-*`. Empty **`competitor_probe.provider_domains`** yields sparse methodology; watch stderr **hints** from **`methodology_config_hints`**.
+
+**PCAP finalize:** After all locations, if **`--attach-capture`** or **`--with-pcap`**: [vpn_leaks/capture/finalize_bundle.py](vpn_leaks/capture/finalize_bundle.py) stops tcpdump, writes **`raw/<loc>/capture/`**, merges **`pcap_derived`** into each new **`normalized.json`**.
 
 ---
 
@@ -87,8 +91,8 @@ vpn-leaks graph-export --provider nordvpn -o exposure-graph.json
 
 | Output | Location |
 |--------|----------|
-| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, optional **competitor_probe/**, optional **surface_probe/** including **`har_summary.json`** when HARs exist, optional **`website_exposure/`** methodology JSON, optional **`capture/`** with `.pcap` + **`pcap_summary.json`**, optional **transitions.json** when `--transition-tests`) |
-| Per-provider rollup | `vpn-leaks report --provider <slug>` → **`VPNs/<SLUG>.md`** (full narrative + **Website and DNS surface** rollup + per-location summary; links [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md)) and **`VPNs/<SLUG>.html`** (dashboard: risk strip, location cards, **website/DNS surface** tables + HAR-derived lists, SPEC by category, coverage bar, embedded 3D exposure graph; slug uppercased, `-` → `_`) |
+| Per run | `runs/<run_id>/` — `run.json`, `summary.md`, `raw/preflight.json`, `locations/<location_id>/normalized.json`, `raw/<location_id>/` (ip-check, dnsleak, webrtc, ipv6, attribution, policy, **yourinfo_probe/**, **browserleaks_probe/** when run, optional **competitor_probe/**, optional **surface_probe/** + **`har_summary.json`**, optional **`website_exposure/`**, optional **`capture/`** `.pcap` + **`pcap_summary.json`**, optional **transitions.json** (`--transition-tests`)) |
+| Per-provider rollup | `vpn-leaks report --provider <slug>` → **`VPNs/<SLUG>.md`** / **`.html`** (per-location **Automated website-exposure methodology & PCAP** when `website_exposure_methodology` / `pcap_derived` present; **Website and DNS surface**; methodology doc link; embedded 3D graph; slug uppercased, `-` → `_`) |
 | Per-ASN rollup | `PROVIDERS/AS<n>.md` |
 
 **Viewing `VPNs/<SLUG>.html`:** Prefer the **HTML** file for a **visual-first** read: severity, leak chips, **per-location cards** (CSS **subgrid** aligns rows across cards; **Exit IPv4/IPv6** both listed; leak **badges** are harness outcomes, not the same as “has IPv6 exit”), **Website and DNS surface** panel when `competitor_probe` / `surface_urls` produced data (merged HAR hints, apex DNS table, surface URL matrix, CDN/tracker lists), SPEC accordions (when multiple locations exist, copy explains **strictest merged** status per question ID), coverage visualization, and the **embedded 3D exposure graph** (same data as `graph-export`; **node labels on load** via `three-spritetext`). The complete markdown-derived report lives in a **collapsed** section (“Full narrative export”). Styles and logo ship from [`vpn_leaks/reporting/static/`](vpn_leaks/reporting/static/) (embedded at render time; aligned with the org **style** repo / doxx design tokens).
@@ -130,13 +134,14 @@ Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run
 | [README.md](README.md) | Setup, commands, purpose, directory index |
 | [vpn-leaks.md](vpn-leaks.md) | Long-form product / research spec |
 | [docs/spec.md](docs/spec.md) | Operational spec |
-| [docs/methodology.md](docs/methodology.md) | Run order |
+| [docs/methodology.md](docs/methodology.md) | Full **`vpn-leaks run`** phase order, PCAP finalize, automated vs manual desk |
 | [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md) | Website third-party exposure methodology; **harness automates** Phases **1–9** into `normalized.json` (`website_exposure_methodology`); manual desk scripts remain optional for edge cases |
-| [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) | UTM golden VM bootstrap, **`capture start` → `run --attach-capture`**, PCAP summarization (**no Wireshark**), implementation backlog |
-| [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
+| [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) | UTM golden VM, **`attach-capture` vs `with-pcap`**, tcpdump/sudo, **dpkt** summarization (**no Wireshark**/mitmproxy), remaining optional backlog |
+| [docs/data-dictionary.md](docs/data-dictionary.md) | `normalized.json` fields + **`graph-export`** overview |
 | [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
-| [RUN-STEPS.md](RUN-STEPS.md) | Step-by-step walkthrough of `vpn-leaks run` (including transition tests vs `skip_vpn`) |
+| [RUN-STEPS.md](RUN-STEPS.md) | Nord-oriented step-through; see header callout for methodology + PCAP (README / **docs/methodology.md**) |
 | [progress.md](progress.md) | Project progress, Nord run table, gap-closure notes, policy notes |
+| [docs/competitor-probe-checklist.md](docs/competitor-probe-checklist.md) | Filling **`competitor_probe`** YAML; **`provider_dns` (O)** vs **`website_exposure_methodology`** (desk automation) vs manual **S** |
 | [HANDOFF.md](HANDOFF.md) | This file: repo map, CLI, artifacts, agent next steps |
 
 ---
@@ -155,7 +160,8 @@ Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run
 2. Before changing behavior, skim **docs/spec.md** and **data-dictionary.md** so JSON fields stay consistent.
 3. After edits, run **`ruff check vpn_leaks tests`** and **`pytest tests -q`**.
 4. **Policy / fetch changes:** touch [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py) and consider Nord + one generic provider in tests.
-5. **Reporting changes:** [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py), [static/report.css](vpn_leaks/reporting/static/report.css), templates under `vpn_leaks/reporting/templates/` (especially `vpn_report.md.j2` and `vpn_report_document.html.j2`), and—when changing rollup “Next steps”—[configs/framework/report_hints.yaml](configs/framework/report_hints.yaml) with [coverage.py](vpn_leaks/framework/coverage.py) / [coverage_rollup.py](vpn_leaks/reporting/coverage_rollup.py).
+5. **Reporting changes:** [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py), [static/report.css](vpn_leaks/reporting/static/report.css), templates (`vpn_report.md.j2`, `vpn_report_document.html.j2`), and—when changing rollup “Next steps”—[configs/framework/report_hints.yaml](configs/framework/report_hints.yaml) with [coverage.py](vpn_leaks/framework/coverage.py) / [coverage_rollup.py](vpn_leaks/reporting/coverage_rollup.py).
+6. **Capture / methodology:** [vpn_leaks/capture/](vpn_leaks/capture/), [finalize_bundle.py](vpn_leaks/capture/finalize_bundle.py), [vpn_leaks/cli.py](vpn_leaks/cli.py) (`--attach-capture`, `--with-pcap`), [website_exposure_methodology.py](vpn_leaks/checks/website_exposure_methodology.py), [pcap_summarize.py](vpn_leaks/checks/pcap_summarize.py), [config_loader.py](vpn_leaks/config_loader.py) hints—keep [docs/methodology.md](docs/methodology.md), [README Run](README.md), and this file in sync.
 
 ---
 
