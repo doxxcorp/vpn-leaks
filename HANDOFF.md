@@ -2,7 +2,7 @@
 
 This document orients future AI coding agents (and humans) to the **vpn-leaks** repository: what it does, where code lives, what has been built, and what is out of scope. For a chronological decision log and benchmark snapshots, see **[progress.md](progress.md)**. For users, start with **[README.md](README.md)**.
 
-_Last updated: 2026-05-02 — Narrative refresh: **`run --with-pcap`** (harness-managed tcpdump; mutually exclusive with **`--attach-capture`**); stderr **`methodology_config_hints`** (empty **`provider_domains`**, **`surface_urls`**, **`policy_urls`**); optional **`pyproject.toml`** **`[pcap]`** extra (placeholder for future JA helpers; core summarizer stays **dpkt**). **`graph-export`** **`graph_schema` 1.1** adds PCAP-derived edges when **`pcap_derived`** exists. Desk TXT helpers: [vpn_leaks/checks/methodology_email_dns.py](vpn_leaks/checks/methodology_email_dns.py). Authoritative usage: [README.md](README.md) Run § capture + methodology, [docs/methodology.md](docs/methodology.md), [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) (Choosing a PCAP mode)._
+_Last updated: 2026-05-02 — Added report-generation progress phases for **`vpn-leaks report`** (tqdm on TTY, fallback `[n/total]` lines on stderr, optional **`report --no-progress`**), plus per-location **PCAP host intelligence** table in report output (public PCAP peer IPs + DNS/SNI hostnames with fail-soft reverse DNS / dig / whois / ASN / owner enrichment). Prior capture/methodology updates remain: **`run --with-pcap`** (mutually exclusive with **`--attach-capture`**), stderr **`methodology_config_hints`**, optional **`[pcap]`** extra placeholder, and **`graph-export`** **`graph_schema` 1.1** PCAP edges._
 
 ---
 
@@ -24,7 +24,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Area | Path | Role |
 |------|------|------|
 | CLI / orchestration | [vpn_leaks/cli.py](vpn_leaks/cli.py) | `run` (incl. **`--attach-capture`**, **`--with-pcap`**), **`capture`** `start|status|abort`, **`pcap-summarize`**, `report`, `graph-export`, preflight, duplicate guard |
-| Run progress UI | [vpn_leaks/run_progress.py](vpn_leaks/run_progress.py) | `RunProgress`, `compute_run_total` — tqdm bar + phase descriptions on stderr; text-only lines when not a TTY or **`--no-progress`** |
+| Run progress UI | [vpn_leaks/run_progress.py](vpn_leaks/run_progress.py) | `RunProgress`, `compute_run_total` — tqdm bar + phase descriptions on stderr; text-only lines when not a TTY or **`--no-progress`**. Reused by **`report`** with report-specific phase ticks |
 | Models / schema | [vpn_leaks/models.py](vpn_leaks/models.py) | `NormalizedRun` (**1.5**: `website_exposure_methodology`, `pcap_derived`, `capture_finalize`; 1.2: `yourinfo_snapshot`; 1.1: `competitor_surface`), policies, attribution, `ArtifactIndex` (`website_exposure_dir`, `capture_dir`) |
 | Config loading | [vpn_leaks/config_loader.py](vpn_leaks/config_loader.py) | Repo root, YAML loading; **`methodology_config_hints()`** for methodology/capture-related stderr reminders |
 | VPN YAML + locations | [vpn_leaks/vpn_config_locations.py](vpn_leaks/vpn_config_locations.py), [configs/vpns/](configs/vpns/) | Provider slugs (`nordvpn`, `expressvpn`, `mullvad`, `example`, …), `manual_gui`, **`competitor_probe`**, **`surface_urls`**, `policy_urls`, location list |
@@ -33,7 +33,7 @@ It does **not** prove what a VPN stores on its servers or automate vendor deskto
 | Capture | [vpn_leaks/capture/](vpn_leaks/capture/) | Session JSON under repo **`.vpn-leaks/capture/`** (gitignored), `finalize_bundle` → `runs/.../raw/<loc>/capture/` |
 | Attribution | [vpn_leaks/attribution/](vpn_leaks/attribution/) | merge, RIPEstat, Cymru, PeeringDB, optional GeoLite |
 | Policy | [vpn_leaks/policy/fetch_policy.py](vpn_leaks/policy/fetch_policy.py), [summarize_policy.py](vpn_leaks/policy/summarize_policy.py) | Fetch HTML, hash, keyword bullets |
-| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py) (`methodology_and_pcap_sections`, HAR/DNS rollups), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py) (**`graph_schema` 1.1** → optional PCAP/SNI edges), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (methodology + PCAP subsections when data exists; **Website and DNS surface**; appendix), `PROVIDERS/AS<n>.md`, **`graph-export`** JSON |
+| Reporting | [vpn_leaks/reporting/generate_reports.py](vpn_leaks/reporting/generate_reports.py), [html_dashboard.py](vpn_leaks/reporting/html_dashboard.py), [web_exposure.py](vpn_leaks/reporting/web_exposure.py) (`methodology_and_pcap_sections`, HAR/DNS rollups, `pcap_host_intelligence`), [exposure_graph.py](vpn_leaks/reporting/exposure_graph.py) (**`graph_schema` 1.1** → optional PCAP/SNI edges), Jinja templates, [static/](vpn_leaks/reporting/static/) (CSS + isotype) | `VPNs/<SLUG>.md` + **`VPNs/<SLUG>.html`** (methodology + PCAP subsections when data exists, including **PCAP host intelligence** table; **Website and DNS surface**; appendix), `PROVIDERS/AS<n>.md`, **`graph-export`** JSON |
 | SPEC framework | [vpn_leaks/framework/](vpn_leaks/framework/), [configs/framework/](configs/framework/) | Question bank, coverage, findings, risk scores embedded as `normalized.json` → `framework` (skip with `--no-framework`); see [docs/framework.md](docs/framework.md). Aggregated report **“Next steps”** copy is driven by [configs/framework/report_hints.yaml](configs/framework/report_hints.yaml) plus per-run notes from [coverage.py](vpn_leaks/framework/coverage.py) ([coverage_rollup.py](vpn_leaks/reporting/coverage_rollup.py) merge). |
 | Viewer | [viewer/](viewer/) | 3D graph of `graph-export` output (static HTML + CDN) |
 | Adapters | [vpn_leaks/adapters/](vpn_leaks/adapters/) | `manual`, `wireguard`, registry |
@@ -65,6 +65,7 @@ vpn-leaks run --provider nordvpn --skip-vpn --transition-tests
 
 # Disable tqdm bar (still prints [n/total] phase lines to stderr):
 vpn-leaks run --provider nordvpn --skip-vpn --no-progress
+vpn-leaks report --provider nordvpn --no-progress
 
 # Per-ASN underlay report:
 vpn-leaks report --provider nordvpn --asn <asn_integer>
