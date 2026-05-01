@@ -24,6 +24,8 @@ locations:
   label: Vancouver, British Columbia, Canada
 - id: de-hamburg-hamburg-154
   label: Hamburg, Hamburg, Germany
+- id: us-california-san-jose-224
+  label: San Jose, California, United States
 credentials:
   username_env: null
   password_env: null

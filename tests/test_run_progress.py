@@ -149,6 +149,36 @@ def test_run_progress_no_bar_prints_lines(capsys: pytest.CaptureFixture[str]) ->
     assert "[2/3] b" in err
 
 
+def test_run_progress_location_prefix_then_clear(capsys: pytest.CaptureFixture[str]) -> None:
+    rp = RunProgress(4, no_progress=True)
+    try:
+        rp.set_location(1, 3, "us-east")
+        rp.step("VPN connect + stabilize")
+        rp.step("Exit IP check")
+        rp.clear_location()
+        rp.step("Writing run summary")
+    finally:
+        rp.close()
+    err = capsys.readouterr().err
+    assert "[1/4] loc=1/3 (us-east) VPN connect + stabilize" in err
+    assert "[2/4] loc=1/3 (us-east) Exit IP check" in err
+    assert "[3/4] Writing run summary" in err
+
+
+def test_run_progress_truncates_long_location_label(capsys: pytest.CaptureFixture[str]) -> None:
+    long_label = "a" * 50
+    rp = RunProgress(1, no_progress=True)
+    try:
+        rp.set_location(2, 4, long_label)
+        rp.step("x")
+    finally:
+        rp.close()
+    err = capsys.readouterr().err
+    assert "loc=2/4" in err
+    assert "(" in err and "…)" in err
+    assert "[1/1] loc=2/4 (" in err
+
+
 def test_run_progress_close_idempotent() -> None:
     rp = RunProgress(1, no_progress=True)
     rp.close()

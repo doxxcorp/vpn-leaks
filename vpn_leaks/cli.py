@@ -246,9 +246,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
 
     try:
-        for loc in locations:
+        n_locs = len(locations)
+        for loc_idx, loc in enumerate(locations, start=1):
             loc_id = str(loc.get("id") or "default")
             loc_label = str(loc.get("label") or loc_id)
+            run_progress.set_location(loc_idx, n_locs, loc_label)
             norm_path = run_root / "locations" / loc_id / "normalized.json"
             if norm_path.is_file() and not args.force:
                 run_progress.step("Skipping (already have normalized.json)")
@@ -527,6 +529,8 @@ def cmd_run(args: argparse.Namespace) -> int:
 
         else:
             loop_completed_normally = True
+
+        run_progress.clear_location()
 
         if capture_finalize_pending:
             run_progress.step("Finalize PCAP session")

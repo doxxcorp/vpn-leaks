@@ -1,0 +1,156 @@
+[
+  {
+    "company_hypothesis": "www.googletagmanager.com",
+    "role": "website_script_or_beacon",
+    "how_discovered": "har_tracker_hint",
+    "evidence_summary": "host:www.googletagmanager.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "s1.nordcdn.com",
+    "role": "cdn_or_edge",
+    "how_discovered": "har_cdn_hint",
+    "evidence_summary": "host:s1.nordcdn.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "sb.nordcdn.com",
+    "role": "cdn_or_edge",
+    "how_discovered": "har_cdn_hint",
+    "evidence_summary": "host:sb.nordcdn.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Google",
+    "role": "email_mx_inferred",
+    "how_discovered": "apex_mx",
+    "evidence_summary": "nordvpn.com:1 aspmx.l.google.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Cloudflare",
+    "role": "dns_authority_inferred",
+    "how_discovered": "ns",
+    "evidence_summary": "nordvpn.com:lily.ns.cloudflare.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Google",
+    "role": "domain_verification_txt",
+    "how_discovered": "txt",
+    "evidence_summary": "nordvpn.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:google",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector google",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:zendesk1",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector zendesk1",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:zendesk2",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector zendesk2",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:default",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector default",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:s1",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector s1",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:s2",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector s2",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:k1",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector k1",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:selector1",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector selector1",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:selector2",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector selector2",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:smtp",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector smtp",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "DKIM:mail",
+    "role": "email_signing_inferred",
+    "how_discovered": "dkim_txt",
+    "evidence_summary": "nordvpn.com selector mail",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "SparkPost/Bird",
+    "role": "transactional_email_inferred",
+    "how_discovered": "cname",
+    "evidence_summary": "mail.nordvpn.com->sparkpostmail.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Zendesk",
+    "role": "support_platform_inferred",
+    "how_discovered": "cname",
+    "evidence_summary": "support.nordvpn.com->nordvpn.zendesk.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Google",
+    "role": "spf_email_sender_inferred",
+    "how_discovered": "spf_include",
+    "evidence_summary": "nordvpn.com->_spf.google.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "Zendesk",
+    "role": "spf_email_sender_inferred",
+    "how_discovered": "spf_include",
+    "evidence_summary": "nordvpn.com->mail.zendesk.com",
+    "evidence_tier": "desk_automation"
+  },
+  {
+    "company_hypothesis": "(provider first-party)",
+    "role": "marketing_and_app_surface",
+    "how_discovered": "config_urls",
+    "evidence_summary": "~10 web hosts observed",
+    "evidence_tier": "desk_automation"
+  }
+]

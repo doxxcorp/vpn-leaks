@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "2246e8f0-e496-4f41-93d8-965b8d404c7e.local",
+    "port": 58835,
+    "raw": "candidate:2280904095 1 udp 2113937151 2246e8f0-e496-4f41-93d8-965b8d404c7e.local 58835 typ host generation 0 ufrag 7QR4 network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "185.211.32.224",
+    "port": 4083,
+    "raw": "candidate:2457007007 1 udp 1677729535 185.211.32.224 4083 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag 7QR4 network-cost 999"
+  }
+]

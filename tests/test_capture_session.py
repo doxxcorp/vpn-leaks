@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 
 import pytest
@@ -23,10 +24,44 @@ class _DummyProc:
         return None
 
 
+class _EarlyExitProc:
+    """tcpdump failed immediately (e.g. macOS BPF permission)."""
+
+    pid = 9002
+
+    def __init__(self, stderr_bytes: bytes) -> None:
+        self.stderr = io.BytesIO(stderr_bytes)
+
+    def poll(self):  # noqa: ANN201
+        return 1
+
+
 @pytest.fixture()
 def isolate_capture_state(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:  # noqa: ANN001
     monkeypatch.setattr("vpn_leaks.capture.paths.repo_root", lambda: tmp_path)
     monkeypatch.setattr("vpn_leaks.capture.session.time.sleep", lambda _s: None)
+
+
+def test_capture_start_early_exit_adds_macos_privilege_hint(
+    isolate_capture_state,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,  # noqa: ARG001
+) -> None:
+    stderr_txt = (
+        "tcpdump: en0: You don't have permission to capture on that device\n"
+        "((cannot open BPF device) /dev/bpf0: Permission denied)\n"
+    )
+    monkeypatch.setattr(
+        "vpn_leaks.capture.session.subprocess.Popen",
+        lambda *_a, **_k: _EarlyExitProc(stderr_txt.encode()),
+    )
+    desc, err = start(interface="en0")
+    assert desc is None and err is not None
+    assert "need sudo on many systems" in err
+    assert "BPF" in err or "/dev/bpf" in err
+    assert "sudo vpn-leaks capture start" in err
+    assert "sudo vpn-leaks run --provider <slug>" in err
+    assert "competitive-capture-playbook.md" in err
 
 
 def test_capture_start_status_abort_mocked(

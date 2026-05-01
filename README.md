@@ -99,7 +99,7 @@ vpn-leaks run --provider example --dry-run --force
 
 ### Packet capture (tcpdump → `pcap_derived`)
 
-PCAP stays **outside** Wireshark/`tshark`/mitmproxy on the supported path—summarization is **Python/`dpkt`** (`pcap_summary.json`). Default interface is **`en0`** or override with **`VPN_LEAKS_CAPTURE_INTERFACE`**. **`tcpdump`** usually needs **sudo** on macOS (see [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md), [HANDOFF.md](HANDOFF.md)).
+PCAP stays **outside** Wireshark/`tshark`/mitmproxy on the supported path—summarization is **Python/`dpkt`** (`pcap_summary.json`). Default interface is **`en0`** or override with **`VPN_LEAKS_CAPTURE_INTERFACE`**. **`tcpdump`** usually needs **sudo** on macOS: run **`sudo vpn-leaks capture start`** and **`sudo vpn-leaks run … --attach-capture`** from the **repo root** so BPF access and finalize (tcpdump teardown) run as the same user (see [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) § *tcpdump privileges*, [HANDOFF.md](HANDOFF.md)).
 
 | Mode | When | Commands |
 |------|------|-----------|

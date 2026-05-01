@@ -55,6 +55,27 @@ def _descriptor_path_for_quarantine(desc: CaptureSessionDescriptor) -> Path:
     return capture_state_dir() / f"aborted-{desc.session_id}.json"
 
 
+def _bpf_or_capture_permission_stderr(err: str) -> bool:
+    el = err.lower()
+    return (
+        "/dev/bpf" in el
+        or "bpf device" in el
+        or "permission denied" in el
+        or "don't have permission to capture" in el
+    )
+
+
+def _tcpdump_permission_hint_extra() -> str:
+    """Help text when tcpdump exits (typical macOS BPF / permission)."""
+    return (
+        "\n\nOn macOS, tcpdump usually needs root for BPF. From the repo root, use matching privileges "
+        "for capture and finalize so the harness can stop tcpdump:"
+        "\n  sudo vpn-leaks capture start"
+        "\n  sudo vpn-leaks run --provider <slug> --skip-vpn --attach-capture"
+        "\nSee docs/competitive-capture-playbook.md (§ tcpdump privileges)."
+    )
+
+
 def start(
     *, interface: str, bpf: str | None = None
 ) -> tuple[CaptureSessionDescriptor | None, str | None]:
@@ -86,7 +107,10 @@ def start(
                 err = proc.stderr.read().decode("utf-8", errors="replace")[:800]
             except Exception:
                 err = ""
-        return None, f"tcpdump exited immediately (need sudo on many systems). {err}".strip()
+        msg = f"tcpdump exited immediately (need sudo on many systems). {err}".strip()
+        if err and _bpf_or_capture_permission_stderr(err):
+            msg += _tcpdump_permission_hint_extra()
+        return None, msg
 
     from datetime import UTC, datetime
 

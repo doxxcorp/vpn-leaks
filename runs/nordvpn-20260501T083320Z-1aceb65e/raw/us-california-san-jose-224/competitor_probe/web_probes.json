@@ -1,0 +1,18 @@
+[
+  {
+    "url": "https://nordvpn.com/",
+    "error": null,
+    "status": 403,
+    "final_url": "https://nordvpn.com/",
+    "cdn_headers": {
+      "cf-ray": "9f4d75c75da67aca-SJC",
+      "server": "cloudflare"
+    },
+    "scripts": [
+      "https://nordvpn.com/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=9f4d75c75da67aca"
+    ],
+    "images": [],
+    "captcha_third_party": false,
+    "har_path": "runs/nordvpn-20260501T083320Z-1aceb65e/raw/us-california-san-jose-224/competitor_probe/har/d945f098fbd5bb50.har"
+  }
+]

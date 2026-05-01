@@ -1,8 +1,0 @@
-{
-  "ptr_v4": {
-    "ip": "185.161.202.154",
-    "ptr": [],
-    "error": "The DNS query name does not exist: 154.202.161.185.in-addr.arpa."
-  },
-  "ptr_v6": null
-}

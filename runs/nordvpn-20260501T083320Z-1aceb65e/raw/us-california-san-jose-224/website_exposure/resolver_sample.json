@@ -1,0 +1,2068 @@
+{
+  "by_host": {
+    "d.nordvpn.com": {
+      "a": [
+        "104.16.208.203",
+        "104.19.159.190"
+      ],
+      "aaaa": [],
+      "error": null
+    },
+    "my.nordaccount.com": {
+      "a": [
+        "104.18.42.225",
+        "172.64.145.31"
+      ],
+      "aaaa": [
+        "2a06:98c1:3101::6812:2ae1",
+        "2a06:98c1:3107::ac40:911f"
+      ],
+      "error": null
+    },
+    "nordcheckout.com": {
+      "a": [
+        "104.17.160.135",
+        "104.17.223.153"
+      ],
+      "aaaa": [],
+      "error": null
+    },
+    "nordvpn.com": {
+      "a": [
+        "104.16.208.203",
+        "104.19.159.190"
+      ],
+      "aaaa": [],
+      "error": null
+    },
+    "s1.nordcdn.com": {
+      "a": [
+        "104.16.155.111",
+        "104.16.156.111"
+      ],
+      "aaaa": [
+        "2606:4700::6810:9b6f",
+        "2606:4700::6810:9c6f"
+      ],
+      "error": null
+    },
+    "sb.nordcdn.com": {
+      "a": [
+        "104.16.155.111",
+        "104.16.156.111"
+      ],
+      "aaaa": [
+        "2606:4700::6810:9b6f",
+        "2606:4700::6810:9c6f"
+      ],
+      "error": null
+    },
+    "static.zdassets.com": {
+      "a": [
+        "216.198.53.3",
+        "216.198.54.3"
+      ],
+      "aaaa": [],
+      "error": null
+    },
+    "support.nordvpn.com": {
+      "a": [
+        "216.198.53.11",
+        "216.198.54.11"
+      ],
+      "aaaa": [],
+      "error": null
+    },
+    "www.googletagmanager.com": {
+      "a": [
+        "142.251.214.40"
+      ],
+      "aaaa": [
+        "2607:f8b0:4005:803::2008"
+      ],
+      "error": null
+    },
+    "www.nordvpn.com": {
+      "a": [
+        "104.16.208.203",
+        "104.19.159.190"
+      ],
+      "aaaa": [],
+      "error": null
+    }
+  },
+  "ip_attribution_sample": {
+    "104.16.208.203": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.16.208.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083647-096bb1cb-89d8-44b2-ada3-5e5485af27b5",
+              "process_time": 48,
+              "server_id": "app181",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:47.460792",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.16.208.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.16.208.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.16.208.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 4224,
+                "org_id": 4715,
+                "name": "Cloudflare",
+                "aka": "",
+                "name_long": "",
+                "website": "https://www.cloudflare.com",
+                "social_media": [
+                  {
+                    "service": "website",
+                    "identifier": "https://www.cloudflare.com"
+                  }
+                ],
+                "asn": 13335,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                "info_type": "Content",
+                "info_types": [
+                  "Content"
+                ],
+                "info_prefixes4": 80000,
+                "info_prefixes6": 30000,
+                "info_traffic": "",
+                "info_ratio": "Mostly Outbound",
+                "info_scope": "Global",
+                "info_unicast": true,
+                "info_multicast": false,
+                "info_ipv6": true,
+                "info_never_via_route_servers": false,
+                "ix_count": 352,
+                "fac_count": 222,
+                "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                "netixlan_updated": "2026-04-29T17:03:32Z",
+                "netfac_updated": "2026-04-01T18:35:35Z",
+                "poc_updated": "2025-12-04T21:15:09Z",
+                "policy_url": "https://www.cloudflare.com/peering-policy/",
+                "policy_general": "Open",
+                "policy_locations": "Preferred",
+                "policy_ratio": false,
+                "policy_contracts": "Not Required",
+                "allow_ixp_update": false,
+                "status_dashboard": "https://www.cloudflarestatus.com/",
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                "created": "2011-09-06T19:40:05Z",
+                "updated": "2026-04-29T17:00:30Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "104.19.159.190": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.19.144.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083648-2429d02c-b031-4196-8b54-72fa2921b255",
+              "process_time": 46,
+              "server_id": "app168",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:48.826704",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.19.144.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.19.144.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.19.144.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 4224,
+                "org_id": 4715,
+                "name": "Cloudflare",
+                "aka": "",
+                "name_long": "",
+                "website": "https://www.cloudflare.com",
+                "social_media": [
+                  {
+                    "service": "website",
+                    "identifier": "https://www.cloudflare.com"
+                  }
+                ],
+                "asn": 13335,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "AS13335:AS-CLOUDFLARE",
+                "info_type": "Content",
+                "info_types": [
+                  "Content"
+                ],
+                "info_prefixes4": 80000,
+                "info_prefixes6": 30000,
+                "info_traffic": "",
+                "info_ratio": "Mostly Outbound",
+                "info_scope": "Global",
+                "info_unicast": true,
+                "info_multicast": false,
+                "info_ipv6": true,
+                "info_never_via_route_servers": false,
+                "ix_count": 352,
+                "fac_count": 222,
+                "notes": "Cloudflare operates a global anycast network. All peers are required to have a complete PeeringDB entry and 24x7 NOC. PeeringDB is used for provisioning peering sessions. The number of prefixes we advertise will vary across sessions, and over time.\n\n**Automatic IX peering** is available through [**Cloudflare Peering Portal**](https://peering.cloudflare.com/). Authenticate using PeeringDB OIDC. ASN admins on PeeringDB are authorized to request peering.\n\nNetworks exchanging more than 10 Gbps of traffic in a single location may request a PNI. Only Nx100G LR4 connections are supported. Networks may also be eligible for embedded caches.\n\nPeering and embedded cache guidelines available at [**cloudflare.com/peering-policy**](https://www.cloudflare.com/peering-policy/).\n\nSubmit verifiable abuse reports to [**cloudflare.com/abuse**](https://www.cloudflare.com/trust-hub/abuse-approach/). Do not send abuse reports to NOC / Policy email addresses.",
+                "netixlan_updated": "2026-04-29T17:03:32Z",
+                "netfac_updated": "2026-04-01T18:35:35Z",
+                "poc_updated": "2025-12-04T21:15:09Z",
+                "policy_url": "https://www.cloudflare.com/peering-policy/",
+                "policy_general": "Open",
+                "policy_locations": "Preferred",
+                "policy_ratio": false,
+                "policy_contracts": "Not Required",
+                "allow_ixp_update": false,
+                "status_dashboard": "https://www.cloudflarestatus.com/",
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": "https://peeringdb-media-prod.s3.amazonaws.com/media/logos_user_supplied/network-4224-70070349.png",
+                "created": "2011-09-06T19:40:05Z",
+                "updated": "2026-04-29T17:00:30Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "104.18.42.225": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.18.42.0/24)."
+                ]
+              ],
+              "see_also": [
+                {
+                  "relation": "less-specific",
+                  "resource": "104.18.32.0/19"
+                },
+                {
+                  "relation": "less-specific",
+                  "resource": "104.18.32.0/20"
+                }
+              ],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083650-b3d24b34-2c6b-42cd-8289-ef8501aadaf4",
+              "process_time": 64,
+              "server_id": "app193",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:50.208806",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [
+                  "104.18.32.0/19",
+                  "104.18.32.0/20"
+                ],
+                "resource": "104.18.42.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 2,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.18.32.0/19 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.18.32.0/19",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "172.64.145.31": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (172.64.145.0/24)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083651-080732f3-cabd-48b3-834a-ff1074a053ef",
+              "process_time": 49,
+              "server_id": "app194",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:51.416603",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "172.64.145.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "172.0.0.0/8",
+                  "desc": "Administered by ARIN",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 172.64.145.0/24 | US | arin | 2015-02-25",
+            "parts": [
+              "13335",
+              "172.64.145.0/24",
+              "US",
+              "arin",
+              "2015-02-25"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "2a06:98c1:3101::6812:2ae1": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3101::/48)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083652-36c4a20d-b0af-4cd0-8a0a-6475d9287c80",
+              "process_time": 61,
+              "server_id": "app196",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:52.622880",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "2a06:98c1:3101::/48",
+                "type": "prefix",
+                "block": {
+                  "resource": "2a00::/12",
+                  "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                  "name": "IANA IPv6 Global Unicast Address Assignments"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+      ]
+    },
+    "2a06:98c1:3107::ac40:911f": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (2a06:98c1:3107::/48)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083653-f01e1d55-1715-4679-9a5e-39d3a28771ac",
+              "process_time": 62,
+              "server_id": "app177",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:53.674680",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "2a06:98c1:3107::/48",
+                "type": "prefix",
+                "block": {
+                  "resource": "2a00::/12",
+                  "desc": "Designated to RIPE NCC on 03 October 2006 (Status: allocated; Note: 2a00::/21 was originally allocated on 2005-04-19. 2a01::/23 was allocated on 2005-07-14. 2a01::/16 (incorporating the 2a01::/23) was allocated on 2005-12-15. The more recent allocation (2006-10-03) incorporates these previous allocations.)",
+                  "name": "IANA IPv6 Global Unicast Address Assignments"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+      ]
+    },
+    "104.17.160.135": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.17.160.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083654-27fd47f2-9ae4-4b2c-baaf-d8ab30d52d06",
+              "process_time": 59,
+              "server_id": "app161",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:54.717691",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.17.160.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.17.160.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.17.160.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "104.17.223.153": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.17.208.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083655-7be5d9ef-324b-4807-bec7-a32d4b6b09e0",
+              "process_time": 56,
+              "server_id": "app184",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:55.881592",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.17.208.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.17.208.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.17.208.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "104.16.155.111": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083657-b41e40d9-cb4e-4c2a-8f3d-c8dbee1a5a8a",
+              "process_time": 50,
+              "server_id": "app195",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:57.123257",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.16.144.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.16.144.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "104.16.156.111": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (104.16.144.0/20)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083658-120f2ce2-6d8f-4a9c-854a-c39a1c2b933a",
+              "process_time": 44,
+              "server_id": "app188",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:58.226322",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "104.16.144.0/20",
+                "type": "prefix",
+                "block": {
+                  "resource": "104.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 13335,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 13335,
+            "raw_line": "13335 | 104.16.144.0/20 | US | arin | 2014-03-28",
+            "parts": [
+              "13335",
+              "104.16.144.0/20",
+              "US",
+              "arin",
+              "2014-03-28"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "2606:4700::6810:9b6f": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                ]
+              ],
+              "see_also": [
+                {
+                  "relation": "less-specific",
+                  "resource": "2606:4700::/36"
+                }
+              ],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083659-9851b1b1-c6a5-4da8-a806-e7b3f7282ad9",
+              "process_time": 45,
+              "server_id": "app189",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:36:59.461992",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [
+                  "2606:4700::/36"
+                ],
+                "resource": "2606:4700::/44",
+                "type": "prefix",
+                "block": {
+                  "resource": "2600::/12",
+                  "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                  "name": "IANA IPv6 Global Unicast Address Assignments"
+                },
+                "actual_num_related": 1,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+      ]
+    },
+    "2606:4700::6810:9c6f": {
+      "asn": 13335,
+      "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [13335]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 13335,
+          "holder": "CLOUDFLARENET - Cloudflare, Inc.",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (2606:4700::/44)."
+                ]
+              ],
+              "see_also": [
+                {
+                  "relation": "less-specific",
+                  "resource": "2606:4700::/36"
+                }
+              ],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083700-ec206ab1-7156-43b7-ac48-f4fe17df2b0b",
+              "process_time": 62,
+              "server_id": "app183",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:00.504554",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 13335,
+                    "holder": "CLOUDFLARENET - Cloudflare, Inc."
+                  }
+                ],
+                "related_prefixes": [
+                  "2606:4700::/36"
+                ],
+                "resource": "2606:4700::/44",
+                "type": "prefix",
+                "block": {
+                  "resource": "2600::/12",
+                  "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                  "name": "IANA IPv6 Global Unicast Address Assignments"
+                },
+                "actual_num_related": 1,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=13335'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+      ]
+    },
+    "216.198.53.3": {
+      "asn": 209242,
+      "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [209242]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083701-3031bbd1-7d7d-49ad-9181-e49a64ec419c",
+              "process_time": 60,
+              "server_id": "app173",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:01.549303",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 209242,
+                    "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "216.198.53.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "216.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 209242,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 209242,
+            "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+            "parts": [
+              "209242",
+              "216.198.53.0/24",
+              "US",
+              "arin",
+              "2015-05-29"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 29612,
+                "org_id": 4715,
+                "name": "Cloudflare London",
+                "aka": "",
+                "name_long": "",
+                "website": "https://www.cloudflare.com/",
+                "social_media": [],
+                "asn": 209242,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "",
+                "info_type": "",
+                "info_types": [],
+                "info_prefixes4": null,
+                "info_prefixes6": null,
+                "info_traffic": "",
+                "info_ratio": "Not Disclosed",
+                "info_scope": "Not Disclosed",
+                "info_unicast": false,
+                "info_multicast": false,
+                "info_ipv6": false,
+                "info_never_via_route_servers": false,
+                "ix_count": 0,
+                "fac_count": 0,
+                "notes": "",
+                "netixlan_updated": null,
+                "netfac_updated": null,
+                "poc_updated": null,
+                "policy_url": "",
+                "policy_general": "",
+                "policy_locations": "",
+                "policy_ratio": false,
+                "policy_contracts": "",
+                "allow_ixp_update": false,
+                "status_dashboard": null,
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": null,
+                "created": "2022-04-02T20:50:15Z",
+                "updated": "2022-07-27T05:36:09Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "216.198.54.3": {
+      "asn": 209242,
+      "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [209242]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083703-e3082753-deda-4175-9015-d64110116abe",
+              "process_time": 57,
+              "server_id": "app187",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:03.164392",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 209242,
+                    "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "216.198.54.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "216.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 209242,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 209242,
+            "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+            "parts": [
+              "209242",
+              "216.198.54.0/24",
+              "US",
+              "arin",
+              "2015-05-29"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 29612,
+                "org_id": 4715,
+                "name": "Cloudflare London",
+                "aka": "",
+                "name_long": "",
+                "website": "https://www.cloudflare.com/",
+                "social_media": [],
+                "asn": 209242,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "",
+                "info_type": "",
+                "info_types": [],
+                "info_prefixes4": null,
+                "info_prefixes6": null,
+                "info_traffic": "",
+                "info_ratio": "Not Disclosed",
+                "info_scope": "Not Disclosed",
+                "info_unicast": false,
+                "info_multicast": false,
+                "info_ipv6": false,
+                "info_never_via_route_servers": false,
+                "ix_count": 0,
+                "fac_count": 0,
+                "notes": "",
+                "netixlan_updated": null,
+                "netfac_updated": null,
+                "poc_updated": null,
+                "policy_url": "",
+                "policy_general": "",
+                "policy_locations": "",
+                "policy_ratio": false,
+                "policy_contracts": "",
+                "allow_ixp_update": false,
+                "status_dashboard": null,
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": null,
+                "created": "2022-04-02T20:50:15Z",
+                "updated": "2022-07-27T05:36:09Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "216.198.53.11": {
+      "asn": 209242,
+      "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [209242]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (216.198.53.0/24)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083704-2e5d5b1c-b61f-4f0f-bf53-e93c53b4e509",
+              "process_time": 83,
+              "server_id": "app165",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:04.703941",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 209242,
+                    "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "216.198.53.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "216.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 209242,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 209242,
+            "raw_line": "209242 | 216.198.53.0/24 | US | arin | 2015-05-29",
+            "parts": [
+              "209242",
+              "216.198.53.0/24",
+              "US",
+              "arin",
+              "2015-05-29"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 29612,
+                "org_id": 4715,
+                "name": "Cloudflare London",
+                "aka": "",
+                "name_long": "",
+                "website": "https://www.cloudflare.com/",
+                "social_media": [],
+                "asn": 209242,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "",
+                "info_type": "",
+                "info_types": [],
+                "info_prefixes4": null,
+                "info_prefixes6": null,
+                "info_traffic": "",
+                "info_ratio": "Not Disclosed",
+                "info_scope": "Not Disclosed",
+                "info_unicast": false,
+                "info_multicast": false,
+                "info_ipv6": false,
+                "info_never_via_route_servers": false,
+                "ix_count": 0,
+                "fac_count": 0,
+                "notes": "",
+                "netixlan_updated": null,
+                "netfac_updated": null,
+                "poc_updated": null,
+                "policy_url": "",
+                "policy_general": "",
+                "policy_locations": "",
+                "policy_ratio": false,
+                "policy_contracts": "",
+                "allow_ixp_update": false,
+                "status_dashboard": null,
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": null,
+                "created": "2022-04-02T20:50:15Z",
+                "updated": "2022-07-27T05:36:09Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "216.198.54.11": {
+      "asn": 209242,
+      "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [209242]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 209242,
+          "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (216.198.54.0/24)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083706-ddf596c4-a2dc-484d-a1fe-9659cdbcc65b",
+              "process_time": 51,
+              "server_id": "app194",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:06.117079",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 209242,
+                    "holder": "CLOUDFLARESPECTRUM Cloudflare London, LLC"
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "216.198.54.0/24",
+                "type": "prefix",
+                "block": {
+                  "resource": "216.0.0.0/8",
+                  "desc": "ARIN (Status: ALLOCATED)",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 209242,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 209242,
+            "raw_line": "209242 | 216.198.54.0/24 | US | arin | 2015-05-29",
+            "parts": [
+              "209242",
+              "216.198.54.0/24",
+              "US",
+              "arin",
+              "2015-05-29"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "error": "Client error '429 Too Many Requests' for url 'https://www.peeringdb.com/api/net?asn=209242'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429"
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "142.251.214.40": {
+      "asn": 15169,
+      "holder": "GOOGLE - Google LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [15169]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (142.250.0.0/15)."
+                ]
+              ],
+              "see_also": [],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083707-4b22fcc4-0ed8-4969-ae09-58a19485c9b7",
+              "process_time": 45,
+              "server_id": "app160",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:07.346878",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 15169,
+                    "holder": "GOOGLE - Google LLC"
+                  }
+                ],
+                "related_prefixes": [],
+                "resource": "142.250.0.0/15",
+                "type": "prefix",
+                "block": {
+                  "resource": "142.0.0.0/8",
+                  "desc": "Administered by ARIN",
+                  "name": "IANA IPv4 Address Space Registry"
+                },
+                "actual_num_related": 0,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": 15169,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "asn": 15169,
+            "raw_line": "15169 | 142.250.0.0/15 | US | arin | 2012-05-24",
+            "parts": [
+              "15169",
+              "142.250.0.0/15",
+              "US",
+              "arin",
+              "2012-05-24"
+            ],
+            "disclaimer": [
+              "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+            ]
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 433,
+                "org_id": 574,
+                "name": "Google LLC",
+                "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                "name_long": "",
+                "website": "https://about.google/intl/en/",
+                "social_media": [
+                  {
+                    "service": "website",
+                    "identifier": "https://about.google/intl/en/"
+                  }
+                ],
+                "asn": 15169,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "RADB::AS-GOOGLE",
+                "info_type": "Content",
+                "info_types": [
+                  "Content"
+                ],
+                "info_prefixes4": 15000,
+                "info_prefixes6": 10000,
+                "info_traffic": "",
+                "info_ratio": "Mostly Outbound",
+                "info_scope": "Global",
+                "info_unicast": true,
+                "info_multicast": false,
+                "info_ipv6": true,
+                "info_never_via_route_servers": false,
+                "ix_count": 179,
+                "fac_count": 137,
+                "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                "netixlan_updated": "2026-04-03T02:55:16Z",
+                "netfac_updated": "2026-03-03T05:58:05Z",
+                "poc_updated": "2023-08-21T21:24:27Z",
+                "policy_url": "https://peering.google.com/#/options/peering",
+                "policy_general": "Selective",
+                "policy_locations": "Preferred",
+                "policy_ratio": false,
+                "policy_contracts": "Not Required",
+                "allow_ixp_update": false,
+                "status_dashboard": "",
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": null,
+                "created": "2005-02-06T06:41:04Z",
+                "updated": "2026-03-11T19:57:37Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs.",
+        "Team Cymru notes some upstream inference is imperfect; treat as cross-check."
+      ]
+    },
+    "2607:f8b0:4005:803::2008": {
+      "asn": 15169,
+      "holder": "GOOGLE - Google LLC",
+      "country": null,
+      "confidence": 0.7,
+      "confidence_notes": "[website_host] ASNs seen: [15169]",
+      "supporting_sources": [
+        {
+          "name": "ripestat",
+          "asn": 15169,
+          "holder": "GOOGLE - Google LLC",
+          "country": null,
+          "raw": {
+            "prefix_overview": {
+              "messages": [
+                [
+                  "warning",
+                  "Given resource is not announced but result has been aligned to first-level less-specific (2607:f8b0:4005::/48)."
+                ]
+              ],
+              "see_also": [
+                {
+                  "relation": "less-specific",
+                  "resource": "2607:f8b0::/32"
+                }
+              ],
+              "version": "1.3",
+              "data_call_name": "prefix-overview",
+              "data_call_status": "supported",
+              "cached": false,
+              "query_id": "20260501083708-df4a1503-ff52-4ffe-9d3d-232ea5a766ca",
+              "process_time": 72,
+              "server_id": "app197",
+              "build_version": "v0.9.15-2026.04.30",
+              "pipeline": "1248748",
+              "status": "ok",
+              "status_code": 200,
+              "time": "2026-05-01T08:37:08.777327",
+              "data": {
+                "is_less_specific": true,
+                "announced": true,
+                "asns": [
+                  {
+                    "asn": 15169,
+                    "holder": "GOOGLE - Google LLC"
+                  }
+                ],
+                "related_prefixes": [
+                  "2607:f8b0::/32"
+                ],
+                "resource": "2607:f8b0:4005::/48",
+                "type": "prefix",
+                "block": {
+                  "resource": "2600::/12",
+                  "desc": "Designated to ARIN on 03 October 2006 (Status: allocated; Note: 2600::/22, 2604::/22, 2608::/22 and 260c::/22 were allocated on 2005-04-19. The more recent allocation (2006-10-03) incorporates all these previous allocations.)",
+                  "name": "IANA IPv6 Global Unicast Address Assignments"
+                },
+                "actual_num_related": 1,
+                "query_time": "2026-05-01T00:00:00",
+                "num_filtered_out": 0
+              }
+            }
+          }
+        },
+        {
+          "name": "team_cymru",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "note": "IPv6: Team Cymru DNS TXT origin lookup not used (v4-only in harness)"
+          }
+        },
+        {
+          "name": "peeringdb",
+          "asn": null,
+          "holder": null,
+          "country": null,
+          "raw": {
+            "data": [
+              {
+                "id": 433,
+                "org_id": 574,
+                "name": "Google LLC",
+                "aka": "Google, YouTube (for Google Fiber see AS16591 record)",
+                "name_long": "",
+                "website": "https://about.google/intl/en/",
+                "social_media": [
+                  {
+                    "service": "website",
+                    "identifier": "https://about.google/intl/en/"
+                  }
+                ],
+                "asn": 15169,
+                "looking_glass": "",
+                "route_server": "",
+                "irr_as_set": "RADB::AS-GOOGLE",
+                "info_type": "Content",
+                "info_types": [
+                  "Content"
+                ],
+                "info_prefixes4": 15000,
+                "info_prefixes6": 10000,
+                "info_traffic": "",
+                "info_ratio": "Mostly Outbound",
+                "info_scope": "Global",
+                "info_unicast": true,
+                "info_multicast": false,
+                "info_ipv6": true,
+                "info_never_via_route_servers": false,
+                "ix_count": 179,
+                "fac_count": 137,
+                "notes": "Peering Operational Issues: Contact noc@google.com 24x7\n\nPeering Requests: https://isp.google.com/iwantpeering\n\nThis link also has information about our traffic delivery and management practices.\n\nPlease note: not all Google content and services may be available at each PoP or Exchange.\n\nGoogle manages the following ASNs: AS15169, AS36040, AS43515, AS36561, AS19527, AS139070, AS396982",
+                "netixlan_updated": "2026-04-03T02:55:16Z",
+                "netfac_updated": "2026-03-03T05:58:05Z",
+                "poc_updated": "2023-08-21T21:24:27Z",
+                "policy_url": "https://peering.google.com/#/options/peering",
+                "policy_general": "Selective",
+                "policy_locations": "Preferred",
+                "policy_ratio": false,
+                "policy_contracts": "Not Required",
+                "allow_ixp_update": false,
+                "status_dashboard": "",
+                "rir_status": "ok",
+                "rir_status_updated": "2024-06-26T04:47:55Z",
+                "logo": null,
+                "created": "2005-02-06T06:41:04Z",
+                "updated": "2026-03-11T19:57:37Z",
+                "status": "ok"
+              }
+            ],
+            "meta": {}
+          }
+        }
+      ],
+      "disclaimers": [
+        "Upstream/peering inference can be imperfect; see Team Cymru and RIPEstat docs."
+      ]
+    }
+  }
+}
