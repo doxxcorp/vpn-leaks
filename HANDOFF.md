@@ -125,6 +125,7 @@ Historical **NordVPN** runs (one exit per connect session) used **`vpn-leaks run
 | [docs/spec.md](docs/spec.md) | Operational spec |
 | [docs/methodology.md](docs/methodology.md) | Run order |
 | [docs/website-exposure-methodology.md](docs/website-exposure-methodology.md) | Manual website third-party exposure analysis (curl, DNS, WHOIS, classification); **after run**, Phases **8–9** + [scripts/desk_dns_audit.sh](scripts/desk_dns_audit.sh), [research/desk-exposure-template.md](research/desk-exposure-template.md) |
+| [docs/competitive-capture-playbook.md](docs/competitive-capture-playbook.md) | UTM golden VM bootstrap, **`capture start` → `run --attach-capture`**, PCAP summarization (**no Wireshark**), implementation backlog |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Fields in `normalized.json` |
 | [docs/framework.md](docs/framework.md) | Question bank, CLI flags (`--capture-baseline`, `--transition-tests`), `framework` object |
 | [RUN-STEPS.md](RUN-STEPS.md) | Step-by-step walkthrough of `vpn-leaks run` (including transition tests vs `skip_vpn`) |
