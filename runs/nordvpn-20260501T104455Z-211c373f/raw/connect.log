@@ -1,0 +1,3 @@
+skip_vpn: not invoking adapter.connect
+skip_vpn: not invoking adapter.disconnect
+wrote /Users/macvm/src/vpn-leaks/runs/nordvpn-20260501T104455Z-211c373f/locations/us-california-san-jose-87/normalized.json

@@ -1,0 +1,4 @@
+skip_vpn: not invoking adapter.connect
+skip_vpn: not invoking adapter.disconnect
+wrote /Users/macvm/src/vpn-leaks/runs/nordvpn-20260501T105329Z-8cb49bd0/locations/us-california-san-jose-87/normalized.json
+attach-capture: merged PCAP summary into /Users/macvm/src/vpn-leaks/runs/nordvpn-20260501T105329Z-8cb49bd0/locations/us-california-san-jose-87/normalized.json

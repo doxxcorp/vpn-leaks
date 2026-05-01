@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "f777795e-e55c-459e-b82f-01dc905f9822.local",
+    "port": 49672,
+    "raw": "candidate:2386622520 1 udp 2113937151 f777795e-e55c-459e-b82f-01dc905f9822.local 49672 typ host generation 0 ufrag jqAZ network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "185.211.32.87",
+    "port": 60748,
+    "raw": "candidate:2387966238 1 udp 1677729535 185.211.32.87 60748 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag jqAZ network-cost 999"
+  }
+]

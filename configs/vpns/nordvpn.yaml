@@ -4,6 +4,8 @@ connection_mode: manual_gui
 locations:
 - id: us-california-san-jose-96
   label: San Jose, California, United States
+- id: us-california-san-jose-87
+  label: San Jose, California, United States
 credentials:
   username_env: null
   password_env: null

@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_type": "host",
+    "protocol": "udp",
+    "address": "011feeb0-b708-42a0-bcd0-2452e16a6592.local",
+    "port": 65122,
+    "raw": "candidate:415465874 1 udp 2113937151 011feeb0-b708-42a0-bcd0-2452e16a6592.local 65122 typ host generation 0 ufrag mlxH network-cost 999"
+  },
+  {
+    "candidate_type": "srflx",
+    "protocol": "udp",
+    "address": "185.211.32.87",
+    "port": 38210,
+    "raw": "candidate:222472082 1 udp 1677729535 185.211.32.87 38210 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag mlxH network-cost 999"
+  }
+]

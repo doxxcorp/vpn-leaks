@@ -1,0 +1,9 @@
+[
+  {
+    "company_hypothesis": "(provider first-party)",
+    "role": "marketing_and_app_surface",
+    "how_discovered": "config_urls",
+    "evidence_summary": "~0 web hosts observed",
+    "evidence_tier": "desk_automation"
+  }
+]
