@@ -377,6 +377,7 @@ details.cc[open] > summary.cc-summary::after {
 .ip-col-ip  { min-width: 120px; color: var(--teal-bright); }
 .ip-col-rdns { color: var(--text-sec); max-width: 200px; }
 .ip-col-asn { white-space: nowrap; }
+.ip-col-upstream { white-space: nowrap; color: var(--text-sec); }
 .ip-col-bytes { text-align: right; color: var(--text-muted); white-space: nowrap; }
 .ip-col-runs  { color: var(--text-muted); max-width: 160px; }
 

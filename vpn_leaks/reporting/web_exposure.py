@@ -89,6 +89,45 @@ def _cymru_asn_bulk(ips: list[str]) -> dict[str, str]:
         return {}
 
 
+def _cymru_asn_names_bulk(asns: list[str]) -> dict[str, str]:
+    """Lookup org names for ASN strings via Team Cymru whois bulk API.
+
+    Returns {asn: "Org Name"} e.g. {"AS3356": "Level 3 Parent, LLC"}.
+    Falls back to empty dict on network error.
+    Response format (verbose): ASN | CC | registry | date | Handle - Name, CC
+    """
+    if not asns:
+        return {}
+    nums = [a.lstrip("ASas") for a in asns if a.lstrip("ASas").isdigit()]
+    if not nums:
+        return {}
+    try:
+        query = "begin\nverbose\n" + "\n".join(f"AS{n}" for n in nums) + "\nend\n"
+        s = socket.create_connection(("whois.cymru.com", 43), timeout=15)
+        s.sendall(query.encode())
+        chunks: list[str] = []
+        while True:
+            data = s.recv(8192)
+            if not data:
+                break
+            chunks.append(data.decode("utf-8", errors="replace"))
+        s.close()
+        result: dict[str, str] = {}
+        for line in "".join(chunks).splitlines():
+            parts = [p.strip() for p in line.split("|")]
+            # verbose ASN line: asn | CC | registry | date | Handle - Name, CC
+            if len(parts) >= 5 and parts[0].isdigit():
+                raw = parts[4].strip()
+                # "ATT-INTERNET4 - AT&T Enterprises, LLC, US" → "AT&T Enterprises, LLC"
+                if " - " in raw:
+                    raw = raw.split(" - ", 1)[1]
+                raw = re.sub(r",\s+[A-Z]{2}$", "", raw).strip()
+                result[f"AS{parts[0]}"] = raw or f"AS{parts[0]}"
+        return result
+    except Exception:
+        return {}
+
+
 def _is_public_ip(value: str) -> bool:
     try:
         ip = ipaddress.ip_address(value)
@@ -1108,6 +1147,22 @@ def build_capture_workspace_rollup(
             "all_snis": sorted(all_snis)[:200],
             "all_dns_hosts": sorted(all_dns_hosts)[:200],
         }
+
+    # Resolve upstream ASN numbers → org names (cached in ip_intel.json under __upstream_asns__)
+    _dc = _load_ip_intel_cache()
+    upstream_asn_cache: dict[str, str] = dict(_dc.get("__upstream_asns__") or {})
+    unknown_upstream = [
+        ua for ua in {e.get("upstream_asn") for e in ip_index.values() if e.get("upstream_asn")}
+        if ua not in upstream_asn_cache
+    ]
+    if unknown_upstream:
+        fetched = _cymru_asn_names_bulk(unknown_upstream)
+        upstream_asn_cache.update(fetched)
+        _dc["__upstream_asns__"] = upstream_asn_cache
+        _save_ip_intel_cache()
+    for entry in ip_index.values():
+        ua = entry.get("upstream_asn")
+        entry["upstream_org"] = upstream_asn_cache.get(ua, ua) if ua else None
 
     # Count unique raw WHOIS handles before any normalization
     raw_org_count = len({e["owner"] for e in ip_index.values() if e["owner"] not in ("—", "")})

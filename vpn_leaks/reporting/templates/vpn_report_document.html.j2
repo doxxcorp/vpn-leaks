@@ -140,6 +140,7 @@
                       <th>Source</th>
                       <th class="ip-col-rdns">Reverse DNS</th>
                       <th class="ip-col-asn">ASN</th>
+                      <th class="ip-col-upstream">Upstream</th>
                       <th class="ip-col-bytes">Bytes</th>
                       <th class="ip-col-runs">Run(s)</th>
                     </tr>
@@ -168,7 +169,7 @@
                           {% set tooltip_lines = [] %}
                           {% if ip_row.owner and ip_row.owner != '—' %}{% set _ = tooltip_lines.append('Org: ' ~ ip_row.owner) %}{% endif %}
                           {% if ip_row.prefix and ip_row.prefix != '—' %}{% set _ = tooltip_lines.append('Prefix: ' ~ ip_row.prefix) %}{% endif %}
-                          {% if ip_row.upstream_asn and ip_row.upstream_asn != '—' %}{% set _ = tooltip_lines.append('Via: ' ~ ip_row.upstream_asn) %}{% endif %}
+                          {# upstream_asn is now a visible table column — omitted from tooltip #}
                           {% if ip_row.whois_summary and ip_row.whois_summary != '—' %}{% set _ = tooltip_lines.append(ip_row.whois_summary) %}{% endif %}
                           <span class="asn-pill" data-tooltip="{{ tooltip_lines | join('&#10;') }}">{{ ip_row.asn }}</span>
                         {% else %}
@@ -179,6 +180,7 @@
                           {% endif %}
                         {% endif %}
                       </td>
+                      <td class="ip-col-upstream">{% if ip_row.upstream_org and ip_row.upstream_org != '—' %}{{ ip_row.upstream_org }}{% elif ip_row.upstream_asn and ip_row.upstream_asn != '—' %}{{ ip_row.upstream_asn }}{% else %}—{% endif %}</td>
                       <td class="ip-col-bytes">{% if ip_row.bytes > 0 %}{{ ip_row.bytes | filesizeformat if ip_row.bytes else '—' }}{% else %}—{% endif %}</td>
                       <td class="ip-col-runs">{{ ip_row.run_ids | join(', ') if ip_row.run_ids else '—' }}</td>
                     </tr>
