@@ -8,11 +8,11 @@ from typing import Any
 
 from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
 from vpn_leaks.reporting.web_exposure import (
+    build_capture_workspace_rollup,
     collect_surface_probe_urls,
     merge_har_signals,
     rollup_web_exposure,
 )
-
 
 # Slugs with a vendored icon under style/icons/<slug>.svg (see configs/framework/questions.yaml).
 _SPEC_CATEGORY_ICON_SLUGS: frozenset[str] = frozenset(
@@ -263,11 +263,14 @@ def build_html_dashboard_context(
     framework_rollup: dict[str, Any],
     *,
     markdown_basename: str,
+    pcap_intel_per_run: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Dashboard props for vpn_report_document.html.j2.
 
     markdown_basename: e.g. NORDVPN.md (sibling link from HTML).
+    pcap_intel_per_run: pre-computed pcap_host_intelligence results keyed by run_id,
+        avoids re-running whois/dig lookups that already ran during Markdown generation.
     """
     merged = framework_rollup.get("merged_coverage") or []
     if not isinstance(merged, list):
@@ -281,9 +284,11 @@ def build_html_dashboard_context(
                 findings.append(normalize_finding(f))
 
     web_exposure = rollup_web_exposure(rows)
+    capture_workspace = build_capture_workspace_rollup(rows, pcap_intel_per_run=pcap_intel_per_run)
 
     return {
         "markdown_basename": markdown_basename,
+        "capture_workspace": capture_workspace,
         "location_cards": build_location_cards(rows),
         "spec_by_category": group_spec_by_category(merged),
         "third_party": extract_third_party_signals(rows),

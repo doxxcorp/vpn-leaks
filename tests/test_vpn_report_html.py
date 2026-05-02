@@ -162,7 +162,7 @@ def test_generate_vpn_report_writes_html(
     assert "Scope test note." in md_text
     assert "dns.google" in md_text
     html = html_path.read_text(encoding="utf-8")
-    assert "Coverage and graph" in html
+    assert "Network intelligence" in html
     assert "strictest" in html
     assert "SPEC framework coverage" in html
     assert "Exposure graph" in html
@@ -170,9 +170,8 @@ def test_generate_vpn_report_writes_html(
     assert "nodeThreeObjectExtend" in html
     assert "graph_schema" in html
     assert "stacked-bar" in html
-    assert "report-appendix" in html
     assert "Full narrative export" in html
-    assert "Benchmark locations" in html
+    assert "Benchmark runs" in html
     assert "loc-section-hint" in html
     assert "Exit IPv6" in html
     assert "loc-grid" in html
@@ -183,7 +182,7 @@ def test_generate_vpn_report_writes_html(
     assert "../style/icons/" in html
     assert "spec-cat-count" in html
     assert "Website and DNS surface" in html
-    assert "web-exposure-table" in html
+    assert "web-table" in html
     assert "Surface URL matrix" in html
 
 

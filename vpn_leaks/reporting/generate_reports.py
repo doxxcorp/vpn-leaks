@@ -421,6 +421,10 @@ def generate_vpn_report(
     if progress_step is not None:
         progress_step("Report: build detailed sections")
     detailed_runs = build_detailed_runs(rows)
+    pcap_intel_per_run = {
+        d["run_id"]: d["methodology_pcap"]["pcap_hosts"]
+        for d in detailed_runs
+    }
     if progress_step is not None:
         progress_step("Report: framework rollup")
     framework_rollup = build_framework_rollup(rows)
@@ -470,6 +474,7 @@ def generate_vpn_report(
         rows,
         framework_rollup,
         markdown_basename=f"{safe}.md",
+        pcap_intel_per_run=pcap_intel_per_run,
     )
     if progress_step is not None:
         progress_step("Report: render HTML")

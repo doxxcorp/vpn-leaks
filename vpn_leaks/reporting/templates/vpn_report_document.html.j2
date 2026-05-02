@@ -7,8 +7,34 @@
   <style>{{ report_css }}</style>
 </head>
 <body>
+
+  {# ── Sticky nav ──────────────────────────────────────── #}
+  {% set sev = dashboard.max_overall_severity %}
+  <nav class="sticky-nav" aria-label="Report navigation">
+    <div class="nav-severity">
+      <span class="severity-pill sev-{% if sev == 'CRITICAL' %}critical{% elif sev == 'HIGH' %}high{% elif sev == 'MEDIUM' %}medium{% elif sev == 'LOW' %}low{% else %}info{% endif %}">
+        {{ sev }}
+      </span>
+    </div>
+    <div class="nav-leaks" aria-label="Leak flags">
+      <span class="leak-chip {% if dashboard.leak_flags.dns %}on{% else %}off{% endif %}">DNS{{ ' !' if dashboard.leak_flags.dns else ' ✓' }}</span>
+      <span class="leak-chip {% if dashboard.leak_flags.webrtc %}on{% else %}off{% endif %}">WebRTC{{ ' !' if dashboard.leak_flags.webrtc else ' ✓' }}</span>
+      <span class="leak-chip {% if dashboard.leak_flags.ipv6 %}on{% else %}off{% endif %}">IPv6{{ ' !' if dashboard.leak_flags.ipv6 else ' ✓' }}</span>
+    </div>
+    <div class="nav-jumps" aria-label="Jump to section">
+      <a href="#capture">Capture</a>
+      <a href="#runs">Runs</a>
+      {% if dashboard.has_framework %}<a href="#spec">SPEC</a>{% endif %}
+      {% if dashboard.web_exposure.has_any %}<a href="#web">Web</a>{% endif %}
+      <a href="#graph">Graph</a>
+      <a href="#narrative">Report</a>
+    </div>
+  </nav>
+
   <div class="shell">
-    <header class="report-header anim-in">
+
+    {# ── Header ──────────────────────────────────────────── #}
+    <header class="report-header anim-in anim-d1">
       {% if logo_svg %}
       <div class="logo-wrap" aria-hidden="true">{{ logo_svg }}</div>
       {% endif %}
@@ -16,6 +42,7 @@
         <h1>{{ document_title }}</h1>
         <p class="report-meta">
           Generated {{ generated_utc }}
+          · {{ dashboard.run_count }} location(s)
           {% if dashboard.markdown_basename %}
           · <a href="{{ dashboard.markdown_basename }}">Markdown export</a>
           {% endif %}
@@ -23,33 +50,222 @@
       </div>
     </header>
 
-    <section class="risk-strip anim-in anim-delay-1" aria-label="Risk summary">
-      {% set sev = dashboard.max_overall_severity %}
-      <span class="severity-pill sev-{% if sev == 'CRITICAL' %}critical{% elif sev == 'HIGH' %}high{% elif sev == 'MEDIUM' %}medium{% elif sev == 'LOW' %}low{% else %}info{% endif %}">
-        Rollup {{ sev }}
-      </span>
-      <div class="leak-chips" aria-label="Leak flags across locations">
-        <span class="leak-chip {% if dashboard.leak_flags.dns %}on{% else %}off{% endif %}">DNS leak: {{ 'yes' if dashboard.leak_flags.dns else 'no' }}</span>
-        <span class="leak-chip {% if dashboard.leak_flags.webrtc %}on{% else %}off{% endif %}">WebRTC leak: {{ 'yes' if dashboard.leak_flags.webrtc else 'no' }}</span>
-        <span class="leak-chip {% if dashboard.leak_flags.ipv6 %}on{% else %}off{% endif %}">IPv6 leak: {{ 'yes' if dashboard.leak_flags.ipv6 else 'no' }}</span>
+    {# ── TIER 1: Capture workspace ───────────────────────── #}
+    <section id="capture" aria-labelledby="capture-h" class="anim-in anim-d2">
+      <h2 class="section-label" id="capture-h">Network intelligence</h2>
+
+      {# KPI row #}
+      {% set cw = dashboard.capture_workspace %}
+      {% set kpis = cw.kpis %}
+      <div class="kpi-row" role="region" aria-label="Capture summary metrics">
+        <article class="kpi-card">
+          <span class="kpi-label">Organizations</span>
+          <span class="kpi-value">{{ kpis.company_count if cw.has_data else '—' }}</span>
+          <span class="kpi-sub">inferred from WHOIS</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">WHOIS handles</span>
+          <span class="kpi-value">{{ kpis.raw_org_count if cw.has_data else '—' }}</span>
+          <span class="kpi-sub">→ {{ kpis.company_count }} canonical{% if cw.has_data and kpis.asn_count %} · {{ kpis.asn_count }} ASN{% if kpis.asn_count != 1 %}s{% endif %}{% endif %}</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">Peer IPs</span>
+          <span class="kpi-value">{{ kpis.ip_count if cw.has_data else '—' }}</span>
+          <span class="kpi-sub">PCAP wire contacts</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">SNI + DNS names</span>
+          <span class="kpi-value">{{ (kpis.sni_count + kpis.dns_host_count) if cw.has_data else '—' }}</span>
+          <span class="kpi-sub">{{ kpis.sni_count }} TLS SNI · {{ kpis.dns_host_count }} DNS</span>
+        </article>
       </div>
-      <span style="color:var(--color-muted);font-size:0.85rem;">{{ dashboard.run_count }} location(s)</span>
-    </section>
 
-    {% if dashboard.top_findings %}
-    <section class="viz-panel anim-in anim-delay-2" aria-labelledby="findings-h">
-      <h3 id="findings-h">High / critical findings</h3>
-      <ul class="findings-list">
-        {% for f in dashboard.top_findings %}
-        <li><strong>{{ f.severity }}</strong> — {{ f.title }} <span style="color:var(--color-muted)">({{ f.category }})</span></li>
+      <p class="provenance-note">
+        <strong>PCAP·WIRE</strong> = peer IPs decoded from tcpdump flows (dpkt, no Wireshark).
+        <strong>INFERRED</strong> = org/ASN from WHOIS — subject to resolver variance.
+        Benchmark location label is where the test ran, not where the peer IP is.
+        {% if kpis.run_count_with_pcap > 0 %}{{ kpis.run_count_with_pcap }} of {{ dashboard.run_count }} location(s) had PCAP data.{% endif %}
+      </p>
+
+      {% if not cw.has_data %}
+      <div class="no-pcap-hint">
+        No PCAP data available for this provider. Run with
+        <code>--attach-capture</code> or <code>--with-pcap</code> to populate
+        the network intelligence workspace.
+      </div>
+      {% else %}
+
+      {# Search filter #}
+      <div class="capture-filter-wrap">
+        <input
+          type="search"
+          id="capture-search"
+          class="capture-search"
+          placeholder="filter by org, ASN, or IP…"
+          aria-label="Filter company clusters"
+          autocomplete="off"
+        />
+      </div>
+
+      {# Company clusters #}
+      <div class="cluster-list" id="cluster-list" role="list">
+        {% for company in cw.companies %}
+        {# Build a searchable text blob for JS filtering #}
+        {% set search_text = (company.name + ' ' + company.asns | map(attribute='asn') | join(' ') + ' ' + company.asns | map(attribute='ips') | sum(start=[]) | map(attribute='ip') | join(' ')) | lower %}
+        <div class="company-cluster" role="listitem" data-search-text="{{ search_text }}">
+          <details class="cc" {% if cw.companies | length == 1 %}open{% endif %}>
+            <summary class="cc-summary">
+              <span class="cc-name">{{ company.name }}</span>
+              <span class="cc-meta">
+                <span class="cc-badge">{{ company.asns | length }} ASN{% if company.asns | length != 1 %}s{% endif %}</span>
+                <span class="cc-badge">{{ company.ip_count }} IP{% if company.ip_count != 1 %}s{% endif %}</span>
+                {% if company.bytes_display %}
+                <span class="cc-badge bytes">{{ company.bytes_display }}</span>
+                {% endif %}
+              </span>
+            </summary>
+
+            <div class="cc-body">
+              {% for asn_grp in company.asns %}
+              <div class="asn-group">
+                <div class="asn-header">
+                  <span class="asn-tag">{{ asn_grp.asn }}</span>
+                </div>
+
+                {% if asn_grp.ips %}
+                <table class="ip-table" aria-label="IP addresses for {{ asn_grp.asn }}">
+                  <thead>
+                    <tr>
+                      <th class="ip-col-ip">IP</th>
+                      <th>Source</th>
+                      <th class="ip-col-rdns">Reverse DNS</th>
+                      <th class="ip-col-asn">ASN</th>
+                      <th class="ip-col-bytes">Bytes</th>
+                      <th class="ip-col-runs">Run(s)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for ip_row in asn_grp.ips %}
+                    <tr>
+                      <td class="ip-col-ip">{{ ip_row.ip }}</td>
+                      <td>
+                        {% set src = ip_row.sources %}
+                        {% if 'pcap_peer_ip' in src and ('pcap_dns' in src or 'pcap_sni' in src) %}
+                          <span class="src-badge src-multi">PCAP·MULTI</span>
+                        {% elif 'pcap_peer_ip' in src %}
+                          <span class="src-badge src-wire">PCAP·WIRE</span>
+                        {% elif 'pcap_dns' in src %}
+                          <span class="src-badge src-dns">PCAP·DNS</span>
+                        {% elif 'pcap_sni' in src %}
+                          <span class="src-badge src-sni">PCAP·SNI</span>
+                        {% else %}
+                          <span class="src-badge src-dns">{{ src }}</span>
+                        {% endif %}
+                      </td>
+                      <td class="ip-col-rdns">{{ ip_row.reverse_dns }}</td>
+                      <td class="ip-col-asn">
+                        {% if ip_row.asn and ip_row.asn != '—' %}
+                          {% set tooltip_lines = [] %}
+                          {% if ip_row.owner and ip_row.owner != '—' %}{% set _ = tooltip_lines.append('Org: ' ~ ip_row.owner) %}{% endif %}
+                          {% if ip_row.whois_summary and ip_row.whois_summary != '—' %}{% set _ = tooltip_lines.append(ip_row.whois_summary) %}{% endif %}
+                          <span class="asn-pill" data-tooltip="{{ tooltip_lines | join('&#10;') }}">{{ ip_row.asn }}</span>
+                        {% else %}
+                          {% if ip_row.owner and ip_row.owner != '—' %}
+                            <span class="asn-pill asn-unknown" data-tooltip="Org: {{ ip_row.owner }}{% if ip_row.whois_summary and ip_row.whois_summary != '—' %}&#10;{{ ip_row.whois_summary }}{% endif %}">—</span>
+                          {% else %}
+                            <span class="asn-none">—</span>
+                          {% endif %}
+                        {% endif %}
+                      </td>
+                      <td class="ip-col-bytes">{% if ip_row.bytes > 0 %}{{ ip_row.bytes | filesizeformat if ip_row.bytes else '—' }}{% else %}—{% endif %}</td>
+                      <td class="ip-col-runs">{{ ip_row.run_ids | join(', ') if ip_row.run_ids else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+        </div>
         {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
+        <div id="cluster-empty" style="display:none;" class="no-pcap-hint">No clusters match that filter.</div>
+      </div>
 
-    <section aria-labelledby="loc-h" class="anim-in anim-delay-2">
-      <h2 class="section-title" id="loc-h">Benchmark locations</h2>
-      <p class="loc-section-hint">Exit IPv4 / IPv6 above are observed tunnel addresses. Tags below are harness leak-test outcomes (not the same as “has IPv6”).</p>
+      {# Raw PCAP signals #}
+      {% if cw.all_snis or cw.all_dns_hosts %}
+      <details class="tier3" style="margin-top:0.5rem;">
+        <summary class="t3-summary">
+          Raw PCAP signals — TLS SNI &amp; DNS hostnames
+          <span class="t3-count">{{ cw.all_snis | length }} SNI · {{ cw.all_dns_hosts | length }} DNS</span>
+        </summary>
+        <div class="t3-body">
+          {% if cw.all_snis %}
+          <p class="web-sub-head">TLS ClientHello SNI ({{ cw.all_snis | length }})</p>
+          <div class="raw-list-wrap">
+            {% for sni in cw.all_snis %}
+            <span>{{ sni }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if cw.all_dns_hosts %}
+          <p class="web-sub-head" style="margin-top:0.75rem;">DNS query names ({{ cw.all_dns_hosts | length }})</p>
+          <div class="raw-list-wrap">
+            {% for h in cw.all_dns_hosts %}
+            <span>{{ h }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+
+      {% endif %}{# end if cw.has_data #}
+
+      {# Per-run evidence table (always shown) #}
+      <details class="tier3" style="margin-top:0.5rem;" {% if not cw.has_data %}open{% endif %}>
+        <summary class="t3-summary">
+          Per-run exit IP &amp; network evidence
+          <span class="t3-count">{{ dashboard.run_count }} location(s)</span>
+        </summary>
+        <div class="t3-body">
+          <div class="evidence-table-wrap">
+            <table class="evidence-table" aria-label="Per-run network evidence">
+              <thead>
+                <tr>
+                  <th>Run / Location</th>
+                  <th>Exit IPv4</th>
+                  <th>Resolvers observed</th>
+                  <th>ASN</th>
+                  <th>Leak verdict</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for loc in dashboard.location_cards %}
+                <tr>
+                  <td>{{ loc.run_id }} / {{ loc.location_id }}</td>
+                  <td>{{ loc.exit_ip_v4 or '—' }}</td>
+                  <td>{{ loc.dns_summary }}</td>
+                  <td>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</td>
+                  <td>
+                    <span class="{% if loc.dns_leak == true %}verdict-fail{% elif loc.dns_leak == false %}verdict-pass{% else %}verdict-unk{% endif %}">DNS</span>
+                    <span class="{% if loc.webrtc_leak == true %}verdict-fail{% elif loc.webrtc_leak == false %}verdict-pass{% else %}verdict-unk{% endif %}">WebRTC</span>
+                    <span class="{% if loc.ipv6_leak == true %}verdict-fail{% elif loc.ipv6_leak == false %}verdict-pass{% else %}verdict-unk{% endif %}">IPv6</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    {# ── TIER 2: Benchmark runs ──────────────────────────── #}
+    <section id="runs" aria-labelledby="runs-h" class="anim-in anim-d3" style="margin-top:2rem;">
+      <h2 class="section-label" id="runs-h">Benchmark runs</h2>
+      <p class="loc-section-hint">Exit IPv4/IPv6 are observed tunnel addresses. Badges are harness leak-test outcomes.</p>
       <div class="loc-grid">
         {% for loc in dashboard.location_cards %}
         <article class="loc-card">
@@ -57,10 +273,9 @@
           <p class="loc-sub">{{ loc.run_id }} / {{ loc.location_id }}</p>
           <dl class="data-row"><dt>Exit IPv4</dt><dd>{{ loc.exit_ip_v4 or '—' }}</dd></dl>
           <dl class="data-row"><dt>Exit IPv6</dt><dd>{{ loc.exit_ip_v6 or '—' }}</dd></dl>
-          <dl class="data-row data-row--asn"><dt>ASN</dt><dd>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</dd></dl>
-          <dl class="data-row"><dt>Mode</dt><dd>{{ loc.connection_mode }}</dd></dl>
+          <dl class="data-row"><dt>ASN</dt><dd>{% if loc.asn %}{{ loc.asn }}{% if loc.asn_holder %} — {{ loc.asn_holder }}{% endif %}{% else %}—{% endif %}</dd></dl>
           <dl class="data-row data-row--resolvers"><dt>Resolvers</dt><dd>{{ loc.dns_summary }}</dd></dl>
-          <div class="flag-row" title="DNS / WebRTC / IPv6 leak flags from this benchmark harness">
+          <div class="flag-row">
             <span class="badge {% if loc.dns_leak == true %}unanswered{% elif loc.dns_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">DNS</span>
             <span class="badge {% if loc.webrtc_leak == true %}unanswered{% elif loc.webrtc_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">WebRTC</span>
             <span class="badge {% if loc.ipv6_leak == true %}unanswered{% elif loc.ipv6_leak == false %}answered{% else %}not_testable_dynamically{% endif %}">IPv6</span>
@@ -70,259 +285,291 @@
       </div>
     </section>
 
-    {% if dashboard.web_exposure.has_any %}
-    <section class="tp-panel anim-in anim-delay-3" aria-labelledby="tp-h">
-      <h2 class="section-title" id="tp-h">Website and DNS surface</h2>
-      <p style="color:var(--color-muted);font-size:0.88rem;margin:0;">HAR-derived hosts and provider DNS from <code>competitor_probe</code> and <code>surface_urls</code> (see <a href="../docs/website-exposure-methodology.md">methodology</a>).</p>
-      <p style="margin:0.5rem 0 0;font-size:0.85rem;">Unique hosts: <strong>{{ dashboard.web_exposure.merged_har.merged_unique_hosts | length }}</strong> · Trackers: <strong>{{ dashboard.web_exposure.merged_har.merged_tracker_candidates | length }}</strong> · CDN hints: <strong>{{ dashboard.web_exposure.merged_har.merged_cdn_candidates | length }}</strong></p>
-      {% if dashboard.web_exposure.dns_rows %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Provider DNS (apex)</p>
-      <div class="web-exposure-table-wrap">
-        <table class="web-exposure-table">
-          <thead>
-            <tr><th>Domain</th><th>NS (sample)</th><th>MX (sample)</th><th>IPv6 apex</th></tr>
-          </thead>
-          <tbody>
-            {% for row in dashboard.web_exposure.dns_rows %}
-            <tr>
-              <td><code>{{ row.domain }}</code></td>
-              <td class="cell-mono">{{ row.ns }}</td>
-              <td class="cell-mono">{{ row.mx }}</td>
-              <td>{{ row.ipv6_note }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {# ── TIER 3: All secondary content ───────────────────── #}
+
+    {# High/critical findings #}
+    {% if dashboard.top_findings %}
+    <details id="findings" class="tier3 anim-in anim-d4">
+      <summary class="t3-summary">
+        High / critical findings
+        <span class="t3-count">{{ dashboard.top_findings | length }}</span>
+      </summary>
+      <div class="t3-body">
+        <ul class="findings-list">
+          {% for f in dashboard.top_findings %}
+          <li><strong>{{ f.severity }}</strong> — {{ f.title }} <span style="color:var(--text-muted)">({{ f.category }})</span></li>
+          {% endfor %}
+        </ul>
       </div>
-      {% endif %}
-      {% if dashboard.third_party.apex_domains %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Apex domains probed</p>
-      <ul class="mono-list">
-        {% for d in dashboard.third_party.apex_domains %}
-        <li>{{ d }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% if dashboard.third_party.portal_hosts %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Portal hosts</p>
-      <ul class="mono-list">
-        {% for h in dashboard.third_party.portal_hosts %}
-        <li>{{ h }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% if dashboard.web_exposure.surface_rows %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Surface URL matrix</p>
-      <div class="web-exposure-table-wrap">
-        <table class="web-exposure-table">
-          <thead>
-            <tr><th>page_type</th><th>URL</th><th>status</th></tr>
-          </thead>
-          <tbody>
-            {% for s in dashboard.web_exposure.surface_rows %}
-            <tr>
-              <td>{{ s.page_type }}</td>
-              <td class="cell-mono">{{ s.url }}</td>
-              <td>{% if s.error %}error{% else %}{{ s.status | default('—') }}{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
-      {% if dashboard.third_party.surface_urls_sample %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Surface URLs (sample)</p>
-      <ul class="mono-list">
-        {% for u in dashboard.third_party.surface_urls_sample %}
-        <li>{{ u }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% if dashboard.third_party.tracker_candidates %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Tracker / analytics candidates (HAR)</p>
-      <ul class="mono-list">
-        {% for t in dashboard.third_party.tracker_candidates %}
-        <li>{{ t }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% if dashboard.third_party.cdn_candidates %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">CDN candidates (HAR)</p>
-      <ul class="mono-list">
-        {% for c in dashboard.third_party.cdn_candidates %}
-        <li>{{ c }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% if dashboard.third_party.probe_urls_sample %}
-      <p style="margin:0.75rem 0 0;font-size:0.85rem;font-weight:600;">Competitor web probe URLs (sample)</p>
-      <ul class="mono-list">
-        {% for u in dashboard.third_party.probe_urls_sample %}
-        <li>{{ u }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-    </section>
+    </details>
     {% endif %}
 
-    <section class="viz-section anim-in anim-delay-3" id="visualizations" aria-labelledby="viz-heading">
-      <h2 class="section-title" id="viz-heading">Coverage and graph</h2>
-
-      <div class="viz-panel">
-        <h3>SPEC framework coverage</h3>
-        {% if framework_rollup.has_framework %}
-        <p class="graph-blurb" style="margin-top:0;">Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Each ID uses the <strong>strictest</strong> status across benchmark rows: unanswered beats partially answered beats answered. Bar shows share of IDs by status. For some <strong>DYNAMIC_PARTIAL</strong> questions (e.g. <strong>FP-001</strong>), <strong>answered</strong> means the harness captured the intended evidence class in <code>normalized.json</code>—not that the English question is fully settled by desk review; use per-ID summaries, category context, and raw artifacts to interpret.</p>
+    {# SPEC framework #}
+    {% if dashboard.has_framework and dashboard.spec_by_category %}
+    <details id="spec" class="tier3 anim-in anim-d4">
+      <summary class="t3-summary">
+        Research checklist (SPEC framework)
+        <span class="t3-count">{{ framework_rollup.question_bank_count }} questions</span>
+      </summary>
+      <div class="t3-body">
+        <p class="graph-blurb" style="margin-top:0.5rem;">
+          Merged per question ID across locations ({{ framework_rollup.question_bank_count }} in bank). Strictest status wins across runs.
+          For <strong>DYNAMIC_PARTIAL</strong> IDs, <strong>answered</strong> means the harness captured the evidence class — not a fully settled desk finding.
+        </p>
         {% set c = framework_rollup.coverage_counts %}
         {% set total = (c.answered + c.partially_answered + c.unanswered + c.not_testable_dynamically) %}
         {% if total > 0 %}
-        <div class="stacked-bar" role="img" aria-label="Framework question coverage stacked by status">
-          <span class="seg answered" style="width: {{ (100 * c.answered / total) }}%"></span>
-          <span class="seg partially_answered" style="width: {{ (100 * c.partially_answered / total) }}%"></span>
-          <span class="seg unanswered" style="width: {{ (100 * c.unanswered / total) }}%"></span>
-          <span class="seg not_testable_dynamically" style="width: {{ (100 * c.not_testable_dynamically / total) }}%"></span>
+        <div class="stacked-bar" role="img" aria-label="SPEC coverage stacked bar">
+          <span class="seg answered"              style="width:{{ (100 * c.answered / total) }}%"></span>
+          <span class="seg partially_answered"    style="width:{{ (100 * c.partially_answered / total) }}%"></span>
+          <span class="seg unanswered"            style="width:{{ (100 * c.unanswered / total) }}%"></span>
+          <span class="seg not_testable_dynamically" style="width:{{ (100 * c.not_testable_dynamically / total) }}%"></span>
         </div>
         <div class="legend">
           <span><i class="dot" style="background:var(--color-answered)"></i> answered {{ c.answered }}</span>
           <span><i class="dot" style="background:var(--color-partial)"></i> partial {{ c.partially_answered }}</span>
           <span><i class="dot" style="background:var(--color-unanswered)"></i> unanswered {{ c.unanswered }}</span>
-          <span><i class="dot" style="background:var(--color-nottest)"></i> N/A dynamic {{ c.not_testable_dynamically }}</span>
+          <span><i class="dot" style="background:var(--color-nottest)"></i> N/A {{ c.not_testable_dynamically }}</span>
         </div>
-        {% else %}
-        <p class="graph-blurb">No coverage entries found.</p>
         {% endif %}
-        {% else %}
-        <p class="graph-blurb">No <code>framework</code> block on normalized runs. Re-run without <code>--no-framework</code>.</p>
+
+        {% if dashboard.run_count > 1 %}
+        <p class="spec-merge-hint" style="margin-top:0.75rem;">
+          Merged answers use the strictest status per question ID across {{ dashboard.run_count }} locations. Open each question or use the markdown export for per-location detail.
+        </p>
         {% endif %}
-      </div>
 
-      <div class="viz-panel">
-        <h3>Exposure graph</h3>
-        <p class="graph-blurb">Same data as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>. <strong>How to read:</strong> the VPN node links to your observed <strong>exit IPv4</strong>, then to its <strong>ASN</strong>; to <strong>policy URLs</strong> when policies were fetched; and (when competitor DNS ran) to <strong>provider apex domains</strong> → <strong>nameservers</strong> → <strong>glue IPs</strong> → <strong>ASN</strong>. Drag to rotate, scroll to zoom. Node labels show on load.</p>
-        <div id="graph-err" hidden></div>
-        <div id="exposure-graph" role="application" aria-label="Exposure graph 3D visualization"></div>
+        {% for cat in dashboard.spec_by_category %}
+        <details class="spec-cat">
+          <summary class="spec-cat-summary">
+            <span class="spec-cat-leading">
+              <img class="spec-cat-icon" src="{{ cat.icon_href }}" width="20" height="20" alt="" decoding="async" loading="lazy"/>
+              <span class="spec-cat-title">{{ cat.category_label }}</span>
+            </span>
+            <span class="spec-cat-count">{{ cat.questions | length }}</span>
+          </summary>
+          <div class="spec-questions">
+            {% for q in cat.questions %}
+            <details class="spec-q">
+              <summary class="spec-q-summary">
+                <span class="spec-q-top">
+                  <span><code>{{ q.question_id }}</code></span>
+                  <span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span>
+                </span>
+                <span class="spec-q-preview">{{ q.list_preview }}</span>
+              </summary>
+              <div class="spec-q-body">
+                <dl class="spec-q-dl">
+                  <dt>Question</dt><dd>{{ q.question_text or '—' }}</dd>
+                  <dt>Status</dt><dd><span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span></dd>
+                  <dt>Summary</dt><dd>{{ q.answer_summary or '—' }}</dd>
+                  {% if q.notes %}<dt>Notes</dt><dd>{{ q.notes }}</dd>{% endif %}
+                  {% if q.next_steps and q.next_steps != '—' %}<dt>Next steps</dt><dd>{{ q.next_steps }}</dd>{% endif %}
+                </dl>
+              </div>
+            </details>
+            {% endfor %}
+          </div>
+        </details>
+        {% endfor %}
       </div>
-    </section>
-
-    {% if dashboard.has_framework and dashboard.spec_by_category %}
-    <section class="spec-zone anim-in anim-delay-4" aria-labelledby="spec-h">
-      <h2 class="section-title" id="spec-h">SPEC questions by category</h2>
-      {% if dashboard.run_count > 1 %}
-      <p class="spec-merge-hint">Merged answers use the strictest status per question ID across all {{ dashboard.run_count }} locations. If one location lacks evidence for a question, the merged row can stay open even when another location looks fine—open each question or use the markdown “Detailed runs” section for per-location coverage.</p>
-      {% endif %}
-      {% for cat in dashboard.spec_by_category %}
-      <details class="spec-cat">
-        <summary class="spec-cat-summary">
-          <span class="spec-cat-leading">
-            <img class="spec-cat-icon" src="{{ cat.icon_href }}" width="24" height="24" alt="" decoding="async" loading="lazy"/>
-            <span class="spec-cat-title">{{ cat.category_label }}</span>
-          </span>
-          <span class="spec-cat-count" aria-label="{{ cat.questions | length }} questions in this category">{{ cat.questions | length }}</span>
-        </summary>
-        <div class="spec-questions">
-          {% for q in cat.questions %}
-          <details class="spec-q">
-            <summary class="spec-q-summary">
-              <span class="spec-q-top">
-                <span class="spec-q-id"><code>{{ q.question_id }}</code></span>
-                <span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span>
-              </span>
-              <span class="spec-q-preview">{{ q.list_preview }}</span>
-            </summary>
-            <div class="spec-q-body">
-              <dl class="spec-q-dl">
-                <dt>Question</dt>
-                <dd>{{ q.question_text or '—' }}</dd>
-                <dt>Status</dt>
-                <dd><span class="badge {{ q.answer_status }}">{{ q.answer_status | replace('_', ' ') }}</span></dd>
-                <dt>Summary</dt>
-                <dd>{{ q.answer_summary or '—' }}</dd>
-                {% if q.notes %}
-                <dt>Notes</dt>
-                <dd>{{ q.notes }}</dd>
-                {% endif %}
-                {% if q.next_steps and q.next_steps != '—' %}
-                <dt>Next steps</dt>
-                <dd>{{ q.next_steps }}</dd>
-                {% endif %}
-              </dl>
-            </div>
-          </details>
-          {% endfor %}
-        </div>
-      </details>
-      {% endfor %}
-    </section>
+    </details>
     {% endif %}
 
-    <details class="report-appendix anim-in anim-delay-4">
-      <summary>Full narrative export (markdown-derived)</summary>
-      <article class="report-body">
-        {{ report_html }}
-      </article>
+    {# Website & DNS surface #}
+    {% if dashboard.web_exposure.has_any %}
+    <details id="web" class="tier3 anim-in anim-d4">
+      <summary class="t3-summary">
+        Website &amp; DNS surface
+        <span class="t3-count">{{ dashboard.web_exposure.merged_har.merged_unique_hosts | length }} hosts</span>
+      </summary>
+      <div class="t3-body">
+        <p class="graph-blurb" style="margin-top:0.5rem;">
+          HAR-derived hosts and provider DNS from <code>competitor_probe</code> and <code>surface_urls</code>
+          (<a href="../docs/website-exposure-methodology.md">methodology</a>).
+          Unique hosts: <strong>{{ dashboard.web_exposure.merged_har.merged_unique_hosts | length }}</strong>
+          · Trackers: <strong>{{ dashboard.web_exposure.merged_har.merged_tracker_candidates | length }}</strong>
+          · CDN hints: <strong>{{ dashboard.web_exposure.merged_har.merged_cdn_candidates | length }}</strong>
+        </p>
+
+        {% if dashboard.web_exposure.dns_rows %}
+        <p class="web-sub-head">Provider DNS (apex)</p>
+        <div class="web-table-wrap">
+          <table class="web-table">
+            <thead><tr><th>Domain</th><th>NS</th><th>MX</th><th>IPv6</th></tr></thead>
+            <tbody>
+              {% for row in dashboard.web_exposure.dns_rows %}
+              <tr>
+                <td><code>{{ row.domain }}</code></td>
+                <td>{{ row.ns }}</td>
+                <td>{{ row.mx }}</td>
+                <td>{{ row.ipv6_note }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if dashboard.third_party.apex_domains %}
+        <p class="web-sub-head">Apex domains probed</p>
+        <ul class="mono-list">{% for d in dashboard.third_party.apex_domains %}<li>{{ d }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if dashboard.web_exposure.surface_rows %}
+        <p class="web-sub-head">Surface URL matrix</p>
+        <div class="web-table-wrap">
+          <table class="web-table">
+            <thead><tr><th>page_type</th><th>URL</th><th>status</th></tr></thead>
+            <tbody>
+              {% for s in dashboard.web_exposure.surface_rows %}
+              <tr>
+                <td>{{ s.page_type }}</td>
+                <td>{{ s.url }}</td>
+                <td>{% if s.error %}error{% else %}{{ s.status | default('—') }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if dashboard.third_party.tracker_candidates %}
+        <p class="web-sub-head">Tracker / analytics candidates (HAR)</p>
+        <ul class="mono-list">{% for t in dashboard.third_party.tracker_candidates %}<li>{{ t }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if dashboard.third_party.cdn_candidates %}
+        <p class="web-sub-head">CDN candidates (HAR)</p>
+        <ul class="mono-list">{% for c in dashboard.third_party.cdn_candidates %}<li>{{ c }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
     </details>
-  </div>
+    {% endif %}
+
+    {# Exposure graph #}
+    <details id="graph" class="tier3 anim-in anim-d5">
+      <summary class="t3-summary">Exposure graph (3D)</summary>
+      <div class="t3-body">
+        <p class="graph-blurb" style="margin-top:0.5rem;">
+          Same data as <code>vpn-leaks graph-export --provider {{ vpn_slug }}</code>.
+          VPN node links to exit IPs → ASNs → policy URLs → provider apex domains → nameservers.
+          Drag to rotate, scroll to zoom.
+        </p>
+        <div id="graph-err" hidden></div>
+        <div id="exposure-graph" role="application" aria-label="3D exposure graph"></div>
+      </div>
+    </details>
+
+    {# Full narrative appendix #}
+    <details id="narrative" class="tier3 anim-in anim-d5">
+      <summary class="t3-summary">Full narrative export (markdown-derived)</summary>
+      <div class="t3-body">
+        <article class="report-body">{{ report_html }}</article>
+      </div>
+    </details>
+
+  </div>{# /shell #}
 
   <script type="application/json" id="vpn-leaks-exposure-graph">{{ exposure_graph_json|safe }}</script>
-  <script type="module">
-    import ForceGraph3D from "https://esm.sh/3d-force-graph@1.73.3?deps=three@0.160.0";
-    import SpriteText from "https://esm.sh/three-spritetext@1.9.4?deps=three@0.160.0";
 
-    const errEl = document.getElementById("graph-err");
-    const mount = document.getElementById("exposure-graph");
+  <script>
+    /* Cluster search filter */
+    (function() {
+      var input = document.getElementById('capture-search');
+      var empty = document.getElementById('cluster-empty');
+      if (!input) return;
+      input.addEventListener('input', function() {
+        var q = input.value.trim().toLowerCase();
+        var clusters = document.querySelectorAll('.company-cluster');
+        var visible = 0;
+        clusters.forEach(function(el) {
+          if (!q || (el.dataset.searchText || '').indexOf(q) !== -1) {
+            delete el.dataset.hidden;
+            visible++;
+          } else {
+            el.dataset.hidden = '1';
+          }
+        });
+        if (empty) empty.style.display = (visible === 0 && q) ? 'block' : 'none';
+      });
+    })();
 
-    function showErr(msg) {
-      errEl.hidden = false;
-      errEl.textContent = msg;
-    }
+    /* Lazy-init 3D graph when #graph details is opened */
+    (function() {
+      var graphDetails = document.getElementById('graph');
+      if (!graphDetails) return;
+      var inited = false;
+      graphDetails.addEventListener('toggle', function() {
+        if (!graphDetails.open || inited) return;
+        inited = true;
+        initGraph();
+      });
+    })();
 
-    function nodeCaption(n) {
-      const typ = n.type || "?";
-      const raw = String(n.label || n.id || "");
-      const snip = raw.length > 42 ? `${raw.slice(0, 40)}…` : raw;
-      return `[${typ}] ${snip}`;
-    }
+    function initGraph() {
+      var errEl = document.getElementById('graph-err');
+      var mount = document.getElementById('exposure-graph');
+      if (!mount) return;
 
-    const rawEl = document.getElementById("vpn-leaks-exposure-graph");
-    let data;
-    try {
-      data = JSON.parse(rawEl.textContent);
-    } catch (e) {
-      showErr("Failed to parse embedded exposure graph JSON — " + e);
-      throw e;
-    }
+      function showErr(msg) {
+        if (errEl) { errEl.hidden = false; errEl.textContent = msg; }
+      }
 
-    const nodes = data.nodes || [];
-    const links = (data.edges || []).map((e) => ({
-      source: e.source,
-      target: e.target,
-      relation: e.relation,
-    }));
+      var rawEl = document.getElementById('vpn-leaks-exposure-graph');
+      var data;
+      try { data = JSON.parse(rawEl.textContent); }
+      catch(e) { showErr('Failed to parse exposure graph JSON — ' + e); return; }
 
-    if (nodes.length === 0) {
-      showErr("No graph nodes for this provider (empty exposure graph).");
-    } else {
-      const fg = ForceGraph3D()(mount)
-        .width(mount.clientWidth)
-        .height(mount.clientHeight)
-        .nodeLabel((n) => `[${n.type}] ${n.label || n.id}`)
-        .nodeAutoColorBy("type")
-        .nodeThreeObjectExtend(true)
-        .nodeThreeObject((n) => {
-          const s = new SpriteText(nodeCaption(n));
-          s.color = "rgba(210, 218, 228, 0.92)";
-          s.textHeight = 3.2;
-          s.position.set(0, -14, 0);
-          return s;
-        })
-        .linkDirectionalParticles(0);
+      var nodes = data.nodes || [];
+      var links = (data.edges || []).map(function(e) {
+        return { source: e.source, target: e.target, relation: e.relation };
+      });
 
-      fg.graphData({ nodes, links });
+      if (nodes.length === 0) {
+        showErr('No graph nodes for this provider (empty exposure graph).');
+        return;
+      }
 
-      const resize = () => {
-        fg.width(mount.clientWidth).height(mount.clientHeight);
-      };
-      const ro = new ResizeObserver(resize);
-      ro.observe(mount);
+      import("https://esm.sh/3d-force-graph@1.73.3?deps=three@0.160.0").then(function(m) {
+        return Promise.all([
+          Promise.resolve(m),
+          import("https://esm.sh/three-spritetext@1.9.4?deps=three@0.160.0"),
+        ]);
+      }).then(function(mods) {
+        var ForceGraph3D = mods[0].default;
+        var SpriteText   = mods[1].default;
+
+        function nodeCaption(n) {
+          var raw = String(n.label || n.id || '');
+          var snip = raw.length > 42 ? raw.slice(0, 40) + '…' : raw;
+          return '[' + (n.type || '?') + '] ' + snip;
+        }
+
+        var fg = ForceGraph3D()(mount)
+          .width(mount.clientWidth)
+          .height(mount.clientHeight)
+          .nodeLabel(function(n) { return '[' + n.type + '] ' + (n.label || n.id); })
+          .nodeAutoColorBy('type')
+          .nodeThreeObjectExtend(true)
+          .nodeThreeObject(function(n) {
+            var s = new SpriteText(nodeCaption(n));
+            s.color = 'rgba(209, 199, 255, 0.9)';
+            s.textHeight = 3.2;
+            s.position.set(0, -14, 0);
+            return s;
+          })
+          .linkDirectionalParticles(0);
+
+        fg.graphData({ nodes: nodes, links: links });
+
+        var ro = new ResizeObserver(function() {
+          fg.width(mount.clientWidth).height(mount.clientHeight);
+        });
+        ro.observe(mount);
+      }).catch(function(e) {
+        showErr('Failed to load 3D graph library — ' + e);
+      });
     }
   </script>
 </body>

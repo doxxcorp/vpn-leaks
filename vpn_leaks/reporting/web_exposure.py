@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import re
 import socket
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +15,76 @@ _DIG_TIMEOUT_S = 6
 _WHOIS_TIMEOUT_S = 8
 _MAX_TXT_VALUES = 4
 _MAX_RESOLVED_IPS = 12
+_IP_INTEL_CACHE_TTL_S: int = 30 * 86400  # 30 days
+
+# Module-level persistent IP intelligence cache (loaded lazily from disk)
+_ip_intel_disk_cache: dict[str, dict[str, Any]] = {}
+_ip_intel_cache_loaded: bool = False
+
+
+def _ip_cache_path() -> Path:
+    from vpn_leaks.config_loader import repo_root  # avoid circular at module load
+
+    return repo_root() / ".cache" / "vpn_leaks" / "ip_intel.json"
+
+
+def _load_ip_intel_cache() -> dict[str, dict[str, Any]]:
+    global _ip_intel_disk_cache, _ip_intel_cache_loaded
+    if _ip_intel_cache_loaded:
+        return _ip_intel_disk_cache
+    _ip_intel_cache_loaded = True
+    try:
+        p = _ip_cache_path()
+        if p.is_file():
+            _ip_intel_disk_cache = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return _ip_intel_disk_cache
+
+
+def _save_ip_intel_cache() -> None:
+    try:
+        p = _ip_cache_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            json.dumps(_ip_intel_disk_cache, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
+def _ip_cache_fresh(entry: dict[str, Any]) -> bool:
+    return (time.time() - float(entry.get("cached_at", 0))) < _IP_INTEL_CACHE_TTL_S
+
+
+def _cymru_asn_bulk(ips: list[str]) -> dict[str, str]:
+    """Batch BGP origin ASN lookup via Team Cymru whois (single TCP connection).
+
+    Returns {ip: "ASnnnn"} for each IP that has a routing origin.
+    Falls back to empty dict on any network error — callers should handle "—" gracefully.
+    """
+    if not ips:
+        return {}
+    try:
+        query = "begin\nverbose\n" + "\n".join(ips) + "\nend\n"
+        s = socket.create_connection(("whois.cymru.com", 43), timeout=15)
+        s.sendall(query.encode())
+        chunks: list[str] = []
+        while True:
+            data = s.recv(8192)
+            if not data:
+                break
+            chunks.append(data.decode("utf-8", errors="replace"))
+        s.close()
+        result: dict[str, str] = {}
+        for line in "".join(chunks).splitlines():
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 2 and parts[0].isdigit():
+                result[parts[1]] = f"AS{parts[0]}"
+        return result
+    except Exception:
+        return {}
 
 
 def _is_public_ip(value: str) -> bool:
@@ -215,7 +287,13 @@ def _pcap_candidate_hosts(pcap: dict[str, Any]) -> tuple[dict[str, dict[str, Any
 
 
 def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
-    """Build per-location PCAP host intelligence rows with live dig/whois enrichment."""
+    """Build per-location PCAP host intelligence rows with whois/dig enrichment.
+
+    Results are cached to disk (.cache/vpn_leaks/ip_intel.json, 30-day TTL) so
+    subsequent report runs skip live lookups for already-seen IPs.
+    ASN is resolved via standard whois first, then a single bulk Team Cymru TCP
+    query for any IPs where whois didn't return a routing origin.
+    """
     pcap = data.get("pcap_derived")
     if not isinstance(pcap, dict) or not pcap:
         return {"has_inventory": False, "rows": [], "errors": [], "notes": []}
@@ -225,12 +303,46 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
     errors: list[str] = []
     notes = [
         "Scope: public peer IPs from PCAP flows/pairs plus DNS/SNI hostnames from PCAP.",
-        "Live lookups are fail-soft and may vary by resolver/time.",
+        "Live lookups cached 30 days in .cache/vpn_leaks/ip_intel.json.",
     ]
+
+    disk_cache = _load_ip_intel_cache()
+    now_ts = time.time()
 
     rdns_cache: dict[str, str] = {}
     whois_cache: dict[str, dict[str, str]] = {}
     dig_cache: dict[tuple[str, bool], tuple[str, dict[str, list[str]], list[str]]] = {}
+
+    # Pre-populate local caches from fresh disk entries (skips live lookups)
+    _empty_resolved: dict[str, list[str]] = {
+        "a": [], "aaaa": [], "cname": [], "mx": [], "txt": [], "ptr": []
+    }
+    for ip, entry in disk_cache.items():
+        if ip.startswith("__") or not _ip_cache_fresh(entry):
+            continue
+        if "rdns" in entry:
+            rdns_cache[ip] = entry["rdns"]
+        if "asn" in entry:
+            whois_cache[ip] = {
+                "asn": entry.get("asn", "—"),
+                "owner": entry.get("owner", "—"),
+                "whois_summary": entry.get("whois_summary", "—"),
+            }
+        if "dig_summary" in entry:
+            dig_cache[(ip, True)] = (
+                entry["dig_summary"],
+                entry.get("dig_resolved") or dict(_empty_resolved),
+                [],
+            )
+
+    # Pre-populate hostname dig results from __hostnames__ sub-dict
+    for hostname, entry in (disk_cache.get("__hostnames__") or {}).items():
+        if _ip_cache_fresh(entry) and "dig_summary" in entry:
+            dig_cache[(hostname, False)] = (
+                entry["dig_summary"],
+                entry.get("dig_resolved") or dict(_empty_resolved),
+                [],
+            )
 
     def reverse_dns(ip: str) -> tuple[str, str | None]:
         if ip in rdns_cache:
@@ -238,10 +350,12 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
         try:
             ptr = socket.gethostbyaddr(ip)[0].strip(".").lower()
             rdns_cache[ip] = ptr
-            return ptr, None
         except Exception:
             rdns_cache[ip] = "—"
+        disk_cache.setdefault(ip, {})["rdns"] = rdns_cache[ip]
+        if rdns_cache[ip] == "—":
             return "—", "reverse_dns_failed"
+        return rdns_cache[ip], None
 
     def whois_for_ip(ip: str) -> tuple[dict[str, str], str | None]:
         if ip in whois_cache:
@@ -256,6 +370,10 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
             "whois_summary": _whois_summary(raw),
         }
         whois_cache[ip] = parsed
+        disk_cache.setdefault(ip, {}).update(
+            {"asn": parsed["asn"], "owner": parsed["owner"],
+             "whois_summary": parsed["whois_summary"]}
+        )
         return parsed, None
 
     for row in rows:
@@ -271,7 +389,11 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
 
         dig_key = (ip, True)
         if dig_key not in dig_cache:
-            dig_cache[dig_key] = _dig_summary_for_host(ip, is_ip=True)
+            dig_summary_str, dig_resolved, dig_errs_live = _dig_summary_for_host(ip, is_ip=True)
+            dig_cache[dig_key] = (dig_summary_str, dig_resolved, dig_errs_live)
+            disk_cache.setdefault(ip, {}).update(
+                {"dig_summary": dig_summary_str, "dig_resolved": dig_resolved}
+            )
         dig_summary, _resolved, dig_errs = dig_cache[dig_key]
         row["dig_summary"] = dig_summary or "—"
         row_errors.extend(dig_errs)
@@ -284,11 +406,34 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
             row_errors.append(werr)
         row["lookup_errors"] = row_errors
 
+    # Bulk Team Cymru ASN lookup for IPs still missing routing origin
+    ips_need_asn = [
+        str(row.get("ip") or "")
+        for row in rows
+        if str(row.get("ip") or "") and row.get("asn") == "—"
+    ]
+    if ips_need_asn:
+        cymru = _cymru_asn_bulk(ips_need_asn)
+        for row in rows:
+            ip = str(row.get("ip") or "")
+            if ip in cymru:
+                row["asn"] = cymru[ip]
+                if ip in whois_cache:
+                    whois_cache[ip]["asn"] = cymru[ip]
+                disk_cache.setdefault(ip, {})["asn"] = cymru[ip]
+
     for host in sorted(host_sources.keys()):
         srcs = sorted(host_sources[host])
         dig_key = (host, False)
         if dig_key not in dig_cache:
-            dig_cache[dig_key] = _dig_summary_for_host(host, is_ip=False)
+            dig_summary_str, dig_resolved, dig_errs_live = _dig_summary_for_host(host, is_ip=False)
+            dig_cache[dig_key] = (dig_summary_str, dig_resolved, dig_errs_live)
+            hostname_store = disk_cache.setdefault("__hostnames__", {})
+            hostname_store[host] = {
+                "dig_summary": dig_summary_str,
+                "dig_resolved": dig_resolved,
+                "cached_at": now_ts,
+            }
         dig_summary, resolved, dig_errs = dig_cache[dig_key]
         ips = [ip for ip in (resolved["a"] + resolved["aaaa"]) if _is_public_ip(ip)]
         if len(ips) > _MAX_RESOLVED_IPS:
@@ -344,6 +489,15 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
     for row in rows_sorted:
         row["ips_text"] = ", ".join(row.get("ips") or []) if row.get("ips") else "—"
         row["lookup_errors_text"] = "; ".join(row.get("lookup_errors") or []) or "—"
+
+    # Stamp cached_at for any IP entry updated in this call, then persist
+    for ip, entry in disk_cache.items():
+        if ip.startswith("__") or not isinstance(entry, dict):
+            continue
+        has_data = "rdns" in entry or "asn" in entry or "dig_summary" in entry
+        if "cached_at" not in entry and has_data:
+            entry["cached_at"] = now_ts
+    _save_ip_intel_cache()
 
     if not rows_sorted:
         errors.append("no_pcap_host_candidates")
@@ -678,4 +832,330 @@ def rollup_web_exposure(
         "portal_hosts": sorted(portal_hosts),
         "probe_urls_sample": probe_urls[:24],
         "has_any": has_any,
+    }
+
+
+def _fmt_bytes(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f} MB"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f} KB"
+    return f"{n} B"
+
+
+# rDNS suffix → canonical company (checked first — most reliable for major CDNs)
+_RDNS_COMPANY: list[tuple[str, str]] = [
+    (".1e100.net", "Google"),
+    (".google.com", "Google"),
+    (".googleusercontent.com", "Google"),
+    (".googlevideo.com", "Google"),
+    (".googleapis.com", "Google"),
+    (".gvt1.com", "Google"),
+    (".gvt2.com", "Google"),
+    (".cloudflare.com", "Cloudflare"),
+    (".cloudflare-dns.com", "Cloudflare"),
+    (".amazonaws.com", "Amazon"),
+    (".awsdns", "Amazon"),
+    (".aws.com", "Amazon"),
+    (".apple.com", "Apple"),
+    (".icloud.com", "Apple"),
+    (".mzstatic.com", "Apple"),
+    (".akamai.net", "Akamai"),
+    (".akamaiedge.net", "Akamai"),
+    (".akamaitechnologies.com", "Akamai"),
+    (".fastly.net", "Fastly"),
+    (".fastly.com", "Fastly"),
+    (".facebook.com", "Meta"),
+    (".fbcdn.net", "Meta"),
+    (".instagram.com", "Meta"),
+    (".github.com", "GitHub"),
+    (".github.io", "GitHub"),
+    (".githubusercontent.com", "GitHub"),
+    (".dropbox.com", "Dropbox"),
+    (".dropboxusercontent.com", "Dropbox"),
+    (".microsoft.com", "Microsoft"),
+    (".azure.com", "Microsoft"),
+    (".windows.net", "Microsoft"),
+    (".office.com", "Microsoft"),
+    (".level3.net", "Lumen Technologies"),
+    (".lumen.com", "Lumen Technologies"),
+]
+
+# WHOIS org-handle prefix → canonical company (checked when rDNS gives no match)
+_OWNER_PREFIX_COMPANY: list[tuple[str, str]] = [
+    ("CLOUDFLARENET", "Cloudflare"),
+    ("CLOUDFLARE", "Cloudflare"),
+    ("GOOGLE", "Google"),
+    ("GOOGL", "Google"),
+    ("GOGL", "Google"),
+    ("AMAZON", "Amazon"),
+    ("AMAZO", "Amazon"),
+    ("APPLE-WWINET", "Apple"),
+    ("APPLE", "Apple"),
+    ("AKAMAI", "Akamai"),
+    ("FASTLY", "Fastly"),
+    ("FACEBOOK", "Meta"),
+    ("FB-", "Meta"),
+    ("INSTAGRAM", "Meta"),
+    ("GITHU", "GitHub"),
+    ("LVLT", "Lumen Technologies"),
+    ("LEVEL3", "Lumen Technologies"),
+    ("DROPB", "Dropbox"),
+    ("MSFT", "Microsoft"),
+    ("MICROSOFT", "Microsoft"),
+    ("AZURE", "Microsoft"),
+    ("AT-88", "AT&T"),
+    ("ATTNI", "AT&T"),
+    ("PACKETHUB", "Packethub"),
+    ("CDNEXT", "Datacamp / CDNext"),
+]
+
+
+def _heuristic_canonical(owner: str, rdns: str) -> str | None:
+    """Return canonical company name from rDNS suffix or owner handle prefix."""
+    rdns_lower = (rdns or "").lower().strip(".")
+    for suffix, name in _RDNS_COMPANY:
+        if rdns_lower.endswith(suffix.lstrip(".")):
+            return name
+    owner_upper = (owner or "").upper().strip()
+    for prefix, name in _OWNER_PREFIX_COMPANY:
+        if owner_upper.startswith(prefix.upper()):
+            return name
+    return None
+
+
+def _normalize_org_names_llm(
+    entries: list[dict[str, str]],
+) -> dict[str, str]:
+    """Use Claude Opus to canonicalize remaining unknown org names.
+
+    entries: list of {owner, rdns} dicts that heuristic couldn't resolve.
+    Returns {owner: canonical_name} mapping; empty dict on any error.
+    Requires ANTHROPIC_API_KEY in the environment.
+    """
+    unique_owners = sorted({e["owner"] for e in entries if e["owner"] not in ("—", "")})
+    if len(unique_owners) <= 1:
+        return {}
+    try:
+        import anthropic  # optional dep; fail-soft if absent
+
+        client = anthropic.Anthropic()
+        names_list = "\n".join(f"- {n}" for n in unique_owners)
+        msg = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=2048,
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        "Map these raw WHOIS/BGP org registration handles to canonical parent "
+                        "company names for a network security report. "
+                        "Group handle variants and subsidiaries under one name. "
+                        "Return ONLY a JSON object {raw: canonical}. "
+                        "No markdown, no explanation.\n\n"
+                        f"Handles:\n{names_list}"
+                    ),
+                }
+            ],
+        )
+        text = msg.content[0].text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(
+                line for line in lines if not line.startswith("```")
+            ).strip()
+        result = json.loads(text)
+        if isinstance(result, dict):
+            return {str(k): str(v) for k, v in result.items()}
+        return {}
+    except Exception:
+        return {}
+
+
+def build_capture_workspace_rollup(
+    rows: list[tuple[str, Path, dict[str, Any]]],
+    pcap_intel_per_run: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Aggregate PCAP peer IPs across all runs into company→ASN→IP clusters.
+
+    Uses whois-enriched rows from pcap_host_intelligence (pre-computed when
+    pcap_intel_per_run is provided, otherwise computed fresh per run).
+    Raw WHOIS org names are normalized to canonical company names via Claude Opus
+    before grouping, so GOOGL-2/GOGL/GOOGLE all cluster under Google.
+    """
+    ip_index: dict[str, dict[str, Any]] = {}
+    all_snis: set[str] = set()
+    all_dns_hosts: set[str] = set()
+    run_count_with_pcap = 0
+
+    for run_id, _path, data in rows:
+        pcap = data.get("pcap_derived")
+        if not isinstance(pcap, dict) or not pcap:
+            continue
+        run_count_with_pcap += 1
+
+        # SNIs and DNS hosts come from raw pcap_derived fields
+        for sni in pcap.get("tls_clienthello_snis_unique") or []:
+            if isinstance(sni, str) and sni.strip():
+                all_snis.add(sni.strip().lower())
+        for host in pcap.get("dns_hostnames_unique") or []:
+            if isinstance(host, str) and host.strip():
+                all_dns_hosts.add(host.strip().lower())
+
+        # Get whois-enriched intel (pre-computed or fresh)
+        if pcap_intel_per_run is not None and run_id in pcap_intel_per_run:
+            intel = pcap_intel_per_run[run_id]
+        else:
+            intel = pcap_host_intelligence(data)
+
+        for row in intel.get("rows") or []:
+            if not isinstance(row, dict):
+                continue
+            ip = str(row.get("host") or row.get("ip") or "")
+            if not ip or not _is_public_ip(ip):
+                continue
+
+            b = int(row.get("bytes_observed") or 0)
+            f = int(row.get("flow_count") or 0)
+            asn = str(row.get("asn") or "—")
+            owner = str(row.get("owner") or "—")
+            rdns = str(row.get("reverse_dns") or "—")
+            src = str(row.get("source") or "pcap_peer_ip")
+            whois_summary = str(row.get("whois_summary") or "—")
+
+            if ip not in ip_index:
+                ip_index[ip] = {
+                    "ip": ip,
+                    "bytes": b,
+                    "flows": f,
+                    "sources": src,
+                    "reverse_dns": rdns,
+                    "asn": asn,
+                    "owner": owner,
+                    "whois_summary": whois_summary,
+                    "run_ids": [run_id],
+                }
+            else:
+                entry = ip_index[ip]
+                entry["bytes"] += b
+                entry["flows"] += f
+                if run_id not in entry["run_ids"]:
+                    entry["run_ids"].append(run_id)
+                # Promote attribution if this run has it and entry doesn't
+                if entry["asn"] == "—" and asn != "—":
+                    entry["asn"] = asn
+                    entry["owner"] = owner
+                    entry["whois_summary"] = whois_summary
+                if entry["reverse_dns"] == "—" and rdns != "—":
+                    entry["reverse_dns"] = rdns
+
+    if not ip_index:
+        return {
+            "has_data": False,
+            "companies": [],
+            "kpis": {
+                "company_count": 0,
+                "raw_org_count": 0,
+                "asn_count": 0,
+                "ip_count": 0,
+                "sni_count": len(all_snis),
+                "dns_host_count": len(all_dns_hosts),
+                "run_count_with_pcap": run_count_with_pcap,
+            },
+            "all_snis": sorted(all_snis)[:200],
+            "all_dns_hosts": sorted(all_dns_hosts)[:200],
+        }
+
+    # Count unique raw WHOIS handles before any normalization
+    raw_org_count = len({e["owner"] for e in ip_index.values() if e["owner"] not in ("—", "")})
+
+    # Step 1: heuristic normalization (rDNS suffix + owner prefix lookup)
+    heuristic_map: dict[str, str] = {}
+    for entry in ip_index.values():
+        raw = entry["owner"]
+        if raw in ("—", ""):
+            continue
+        if raw not in heuristic_map:
+            result = _heuristic_canonical(raw, entry["reverse_dns"])
+            heuristic_map[raw] = result if result else raw
+
+    # Step 2: LLM normalization for names the heuristic couldn't resolve
+    unresolved = [
+        {"owner": raw, "rdns": ""}
+        for raw, canonical in heuristic_map.items()
+        if canonical == raw  # heuristic didn't change it
+    ]
+    llm_map = _normalize_org_names_llm(unresolved)
+
+    def _canonical(raw: str) -> str:
+        if raw in ("—", ""):
+            return "Unknown / no whois"
+        # LLM takes priority over heuristic for names it resolved
+        if raw in llm_map:
+            return llm_map[raw]
+        return heuristic_map.get(raw, raw)
+
+    # Group: canonical_owner → asn → [ip entries]
+    owner_asn: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for entry in ip_index.values():
+        owner = _canonical(entry["owner"])
+        asn = entry["asn"] if entry["asn"] != "—" else "—"
+        owner_asn.setdefault(owner, {}).setdefault(asn, []).append(entry)
+
+    companies: list[dict[str, Any]] = []
+    for owner, asn_map in owner_asn.items():
+        asns: list[dict[str, Any]] = []
+        owner_bytes = 0
+        owner_ips = 0
+        for asn, ip_entries in sorted(asn_map.items()):
+            sorted_ips = sorted(ip_entries, key=lambda r: (-r["bytes"], r["ip"]))
+            asns.append({"asn": asn, "ips": sorted_ips})
+            owner_bytes += sum(r["bytes"] for r in ip_entries)
+            owner_ips += len(ip_entries)
+        # Sort ASNs: known first, then alphabetically
+        asns.sort(key=lambda a: (a["asn"] == "—", a["asn"]))
+        companies.append(
+            {
+                "name": owner,
+                "asns": asns,
+                "ip_count": owner_ips,
+                "bytes_total": owner_bytes,
+                "bytes_display": _fmt_bytes(owner_bytes) if owner_bytes else "",
+            }
+        )
+
+    companies.sort(key=lambda c: (-c["bytes_total"], c["name"].lower()))
+
+    # Cap total IP rows across all companies
+    _MAX_IPS = 200
+    total = 0
+    for co in companies:
+        for asn_grp in co["asns"]:
+            remaining = _MAX_IPS - total
+            if remaining <= 0:
+                asn_grp["ips"] = []
+            elif len(asn_grp["ips"]) > remaining:
+                asn_grp["ips"] = asn_grp["ips"][:remaining]
+            total += len(asn_grp["ips"])
+
+    unique_asns: set[str] = set()
+    for co in companies:
+        for a in co["asns"]:
+            if a["asn"] != "—":
+                unique_asns.add(a["asn"])
+
+    return {
+        "has_data": True,
+        "companies": companies,
+        "kpis": {
+            "company_count": len(companies),
+            "raw_org_count": raw_org_count,
+            "asn_count": len(unique_asns),
+            "ip_count": len(ip_index),
+            "sni_count": len(all_snis),
+            "dns_host_count": len(all_dns_hosts),
+            "run_count_with_pcap": run_count_with_pcap,
+        },
+        "all_snis": sorted(all_snis)[:200],
+        "all_dns_hosts": sorted(all_dns_hosts)[:200],
     }
