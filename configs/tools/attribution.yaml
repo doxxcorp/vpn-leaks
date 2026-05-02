@@ -6,3 +6,9 @@ announced_prefixes_enabled: true
 announced_prefixes_cache_ttl_sec: 86400
 # Optional: path to GeoLite2-ASN.mmdb (never commit the file)
 geolite_asn_path: null
+# Optional: path to GeoLite2-City.mmdb for country/region lookups
+geolite_city_path: null
+# Route Views BGP prefix database (built by `vpn-leaks bgp-update`)
+# Defaults to .cache/vpn_leaks/bgp_prefixes.db when null
+bgp_db_path: null
+routeviews_base: "https://archive.routeviews.org/route-views2/bgpdata"

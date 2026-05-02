@@ -29,6 +29,9 @@ def test_pcap_host_intelligence_scope_and_merge(monkeypatch) -> None:
         "gethostbyaddr",
         lambda ip: (f"ptr-{ip}.example", [], []),
     )
+    monkeypatch.setattr(web_exposure._bgp_module, "lookup_ip", lambda ip, **kw: {})
+    monkeypatch.setattr(web_exposure, "_load_ip_intel_cache", lambda: {})
+    monkeypatch.setattr(web_exposure, "_save_ip_intel_cache", lambda: None)
 
     payload = web_exposure.pcap_host_intelligence(
         {
@@ -75,6 +78,8 @@ def test_pcap_host_intelligence_failsoft(monkeypatch) -> None:
     )
     # Cymru uses a raw socket connection, not _run_cmd — stub it out too
     monkeypatch.setattr(web_exposure, "_cymru_asn_bulk", lambda ips: {})
+    # BGP DB lookup also bypasses _run_cmd — stub it out
+    monkeypatch.setattr(web_exposure._bgp_module, "lookup_ip", lambda ip, **kw: {})
     # Isolate from any on-disk cache that could supply pre-resolved ASNs
     monkeypatch.setattr(web_exposure, "_load_ip_intel_cache", lambda: {})
     monkeypatch.setattr(web_exposure, "_save_ip_intel_cache", lambda: None)

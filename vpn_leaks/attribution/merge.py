@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from vpn_leaks.attribution.asn_prefixes import fetch_announced_prefixes_cached
+from vpn_leaks.attribution.bgp_lookup import lookup_ip as bgp_lookup_ip
 from vpn_leaks.attribution.cymru import cymru_asn_lookup
 from vpn_leaks.attribution.geolite_asn import lookup_asn
 from vpn_leaks.attribution.peeringdb import net_by_asn
@@ -29,6 +30,22 @@ def collect_attribution_sources(
     base = (attr_cfg.get("ripestat_base") or "https://stat.ripe.net/data").rstrip("/")
     sources: list[AttributionSource] = []
     disclaimers: list[str] = []
+
+    # Local BGP DB first (offline, sub-millisecond, also provides prefix + upstream ASN)
+    if addr.version == 4:
+        bgp = bgp_lookup_ip(ip, attr_cfg.get("bgp_db_path"))
+        if bgp.get("asn"):
+            try:
+                asn_int = int(bgp["asn"].lstrip("AS"))
+            except (ValueError, AttributeError):
+                asn_int = None
+            sources.append(
+                AttributionSource(
+                    name="bgp_local",
+                    asn=asn_int,
+                    raw=bgp,
+                )
+            )
 
     try:
         ripe_raw = prefix_overview(ip, base)

@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from vpn_leaks.attribution import bgp_lookup as _bgp_module
+
 _DIG_TIMEOUT_S = 6
 _WHOIS_TIMEOUT_S = 8
 _MAX_TXT_VALUES = 4
@@ -312,6 +314,7 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
     rdns_cache: dict[str, str] = {}
     whois_cache: dict[str, dict[str, str]] = {}
     dig_cache: dict[tuple[str, bool], tuple[str, dict[str, list[str]], list[str]]] = {}
+    bgp_cache: dict[str, dict[str, Any]] = {}
 
     # Pre-populate local caches from fresh disk entries (skips live lookups)
     _empty_resolved: dict[str, list[str]] = {
@@ -334,6 +337,13 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
                 entry.get("dig_resolved") or dict(_empty_resolved),
                 [],
             )
+        if "prefix" in entry:
+            bgp_cache[ip] = {
+                "asn": entry.get("asn", "—"),
+                "upstream_asn": entry.get("upstream_asn"),
+                "prefix": entry.get("prefix"),
+                "source": "routeviews_bgp",
+            }
 
     # Pre-populate hostname dig results from __hostnames__ sub-dict
     for hostname, entry in (disk_cache.get("__hostnames__") or {}).items():
@@ -376,6 +386,21 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
         )
         return parsed, None
 
+    def bgp_for_ip(ip: str) -> dict[str, Any]:
+        """Return BGP routing data from local DB (cached). Sets upstream_asn + prefix."""
+        if ip in bgp_cache:
+            return bgp_cache[ip]
+        result = _bgp_module.lookup_ip(ip)
+        bgp_cache[ip] = result
+        if result.get("prefix"):
+            disk_cache.setdefault(ip, {}).update({
+                "upstream_asn": result.get("upstream_asn"),
+                "prefix": result.get("prefix"),
+            })
+        if result.get("asn"):
+            disk_cache.setdefault(ip, {}).setdefault("asn_bgp", result["asn"])
+        return result
+
     for row in rows:
         ip = str(row.get("ip") or "")
         if not ip:
@@ -404,9 +429,19 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
         row["whois_summary"] = whois["whois_summary"]
         if werr:
             row_errors.append(werr)
+
+        # BGP lookup: fill ASN when whois failed + always provide prefix + upstream
+        bgp = bgp_for_ip(ip)
+        if row["asn"] == "—" and bgp.get("asn"):
+            row["asn"] = bgp["asn"]
+            whois_cache.setdefault(ip, {})["asn"] = bgp["asn"]
+            disk_cache.setdefault(ip, {})["asn"] = bgp["asn"]
+        row["upstream_asn"] = bgp.get("upstream_asn") or disk_cache.get(ip, {}).get("upstream_asn")
+        row["prefix"] = bgp.get("prefix") or disk_cache.get(ip, {}).get("prefix")
+
         row["lookup_errors"] = row_errors
 
-    # Bulk Team Cymru ASN lookup for IPs still missing routing origin
+    # Team Cymru fallback for IPs still missing ASN after whois + BGP lookup
     ips_need_asn = [
         str(row.get("ip") or "")
         for row in rows
@@ -1022,6 +1057,8 @@ def build_capture_workspace_rollup(
             rdns = str(row.get("reverse_dns") or "—")
             src = str(row.get("source") or "pcap_peer_ip")
             whois_summary = str(row.get("whois_summary") or "—")
+            upstream_asn = row.get("upstream_asn") or None
+            prefix = row.get("prefix") or None
 
             if ip not in ip_index:
                 ip_index[ip] = {
@@ -1033,6 +1070,8 @@ def build_capture_workspace_rollup(
                     "asn": asn,
                     "owner": owner,
                     "whois_summary": whois_summary,
+                    "upstream_asn": upstream_asn,
+                    "prefix": prefix,
                     "run_ids": [run_id],
                 }
             else:
@@ -1048,6 +1087,10 @@ def build_capture_workspace_rollup(
                     entry["whois_summary"] = whois_summary
                 if entry["reverse_dns"] == "—" and rdns != "—":
                     entry["reverse_dns"] = rdns
+                if not entry.get("upstream_asn") and upstream_asn:
+                    entry["upstream_asn"] = upstream_asn
+                if not entry.get("prefix") and prefix:
+                    entry["prefix"] = prefix
 
     if not ip_index:
         return {

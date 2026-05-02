@@ -797,6 +797,18 @@ def build_parser() -> argparse.ArgumentParser:
     psum.add_argument("-o", "--output", default=None, help="Output JSON path")
     psum.set_defaults(func=cmd_pcap_summarize)
 
+    bgp = sub.add_parser(
+        "bgp-update",
+        help="Download latest Route Views MRT RIB and rebuild .cache/vpn_leaks/bgp_prefixes.db",
+    )
+    bgp.add_argument("--url", default=None, help="Override RIB .bz2 URL")
+    bgp.add_argument(
+        "--rib-file", default=None, metavar="PATH",
+        help="Use local .bz2 file instead of downloading",
+    )
+    bgp.add_argument("--db", default=None, metavar="PATH", help="Output DB path (default: auto)")
+    bgp.set_defaults(func=cmd_bgp_update)
+
     return p
 
 
@@ -848,6 +860,24 @@ def cmd_pcap_summarize(args: argparse.Namespace) -> int:
     write_pcap_summary_json(pc, outp)
     print(str(outp))
     return 0
+
+
+def cmd_bgp_update(args: argparse.Namespace) -> int:
+    from vpn_leaks.attribution.bgp_build import build_bgp_db
+    from vpn_leaks.attribution.bgp_lookup import _default_db_path
+
+    db_path = Path(args.db).resolve() if args.db else _default_db_path()
+    rib_file = Path(args.rib_file).resolve() if args.rib_file else None
+    try:
+        result = build_bgp_db(db_path, rib_url=args.url, rib_file=rib_file, progress=True)
+        print(
+            f"prefixes={result['prefix_count']:,}  db={result['db_path']}  "
+            f"size={result['db_size_mb']:.0f}MB  elapsed={result['elapsed_s']:.0f}s"
+        )
+        return 0
+    except Exception as e:
+        print(f"bgp-update failed: {e}", file=sys.stderr)
+        return 1
 
 
 def main() -> None:
