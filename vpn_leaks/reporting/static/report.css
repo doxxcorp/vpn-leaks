@@ -95,9 +95,7 @@ code { font-family: var(--font-mono); font-size: 0.87em; }
 
 /* ── Shell ────────────────────────────────────────────────── */
 .shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem 1.25rem 4rem;
+  padding: 1.5rem 2rem 4rem;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
@@ -808,3 +806,54 @@ details.spec-q[open] > summary.spec-q-summary::after { content: "−"; }
   .kpi-row    { grid-template-columns: 1fr 1fr; }
   .shell      { padding: 1rem 0.9rem 3rem; }
 }
+
+/* ── ASN Topology DAG ───────────────────────────── */
+.asn-dag-wrap {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(27,193,188,0.12);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+#asn-dag-svg { display: block; width: 100%; transition: height 0.3s ease; cursor: grab; }
+#asn-dag-svg.dag-panning { cursor: grabbing; }
+.dag-node { cursor: pointer; }
+.dag-label {
+  fill: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  pointer-events: none;
+  text-anchor: middle;
+}
+.dag-label-upstream { fill: var(--text-muted); font-size: 10px; }
+.dag-label-asn { fill: var(--teal-bright); font-size: 9.5px; }
+.dag-edge { stroke: rgba(27,193,188,0.25); stroke-width: 1.5; fill: none; }
+.dag-edge-asn { stroke: rgba(77,255,248,0.18); stroke-width: 1; }
+.dag-node-dimmed circle { opacity: 0.15; }
+.dag-node-dimmed text   { opacity: 0.15; }
+.dag-highlight circle   { filter: drop-shadow(0 0 6px rgba(27,193,188,0.7)); }
+.dag-panel {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid rgba(27,193,188,0.3);
+  border-radius: 4px;
+  padding: 0.7rem 0.9rem 0.7rem 0.75rem;
+  min-width: 260px;
+  max-width: 360px;
+  z-index: 10;
+  font-size: 0.76rem;
+}
+.dag-panel.hidden { display: none; }
+.dag-panel-close {
+  position: absolute; top: 0.35rem; right: 0.6rem;
+  cursor: pointer; color: var(--text-muted); font-size: 0.8rem;
+}
+.dag-panel-close:hover { color: var(--text); }
+.dag-panel-asn {
+  color: var(--teal-bright);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  margin: 0 0 0.5rem;
+}
+.dag-panel-more { color: var(--text-muted); font-size: 0.7rem; margin: 0.4rem 0 0; }

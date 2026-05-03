@@ -95,6 +95,8 @@
       </div>
       {% else %}
 
+      <script type="application/json" id="dag-companies">{{ cw.companies | tojson }}</script>
+
       {# Search filter #}
       <div class="capture-filter-wrap">
         <input
@@ -105,6 +107,15 @@
           aria-label="Filter company clusters"
           autocomplete="off"
         />
+      </div>
+
+      {# ASN Topology DAG #}
+      <div class="asn-dag-wrap" id="asn-dag-wrap">
+        <svg id="asn-dag-svg" aria-label="ASN topology map"></svg>
+        <div id="dag-panel" class="dag-panel hidden">
+          <span class="dag-panel-close" id="dag-panel-close" role="button" aria-label="Close">&#x2715;</span>
+          <div id="dag-panel-body"></div>
+        </div>
       </div>
 
       {# Company clusters #}
@@ -498,6 +509,312 @@
         if (empty) empty.style.display = (visible === 0 && q) ? 'block' : 'none';
       });
     })();
+
+    /* ASN Topology DAG — static Sugiyama barycenter layout */
+    function initDag() {
+      var dataEl = document.getElementById('dag-companies');
+      var wrap   = document.getElementById('asn-dag-wrap');
+      var svgEl  = document.getElementById('asn-dag-svg');
+      if (!dataEl || !wrap || !svgEl) return;
+
+      var companies;
+      try { companies = JSON.parse(dataEl.textContent); }
+      catch(e) { return; }
+      if (!companies || companies.length === 0) { wrap.style.display = 'none'; return; }
+
+      var nodes = [], links = [];
+      var seenUp = {};
+      companies.forEach(function(company) {
+        var cId = 'c:' + company.name;
+        nodes.push({ id: cId, type: 'company', name: company.name, layer: 1, data: company });
+        var seenForCompany = {};
+        (company.asns || []).forEach(function(ag) {
+          (ag.ips || []).forEach(function(ip) {
+            var ul = (ip.upstream_org && ip.upstream_org !== '—') ? ip.upstream_org
+                   : (ip.upstream_asn && ip.upstream_asn !== '—') ? ip.upstream_asn : null;
+            if (!ul || seenForCompany[ul]) return;
+            seenForCompany[ul] = true;
+            var uId = 'u:' + ul;
+            if (!seenUp[uId]) { seenUp[uId] = true; nodes.push({ id: uId, type: 'upstream', name: ul, layer: 0 }); }
+            links.push({ source: uId, target: cId, type: 'transit' });
+          });
+        });
+      });
+
+      import('https://esm.sh/d3@7').then(function(d3) {
+        var R      = { upstream: 26, company: 30, asn: 18 };
+        var STROKE = { upstream: '#9A91C8', company: '#1BC1BC', asn: '#4DFFF8' };
+        var LY     = { 0: 130, 1: 390, 2: 660 };
+        var H0 = 560, H1 = 880;
+        var W = wrap.clientWidth || 900;
+        var curH = H0;
+        var expandedSet = {};
+        var nodeById = {};
+
+        /* Connected-component analysis (union-find on string IDs) */
+        var compList = [], numComps = 1;
+        function buildComponents() {
+          var par = {};
+          nodes.forEach(function(n) { par[n.id] = n.id; });
+          function find(x) { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; }
+          links.forEach(function(l) {
+            var s = typeof l.source === 'object' ? l.source.id : l.source;
+            var t = typeof l.target === 'object' ? l.target.id : l.target;
+            var rs = find(s), rt = find(t);
+            if (rs !== rt) par[rs] = rt;
+          });
+          var cm = {};
+          nodes.forEach(function(n) { var r = find(n.id); n._comp = r; (cm[r] = cm[r] || []).push(n); });
+          compList = Object.values(cm).sort(function(a, b) { return b.length - a.length; });
+          numComps = compList.length || 1;
+        }
+
+        function rebuildNodeById() {
+          nodeById = {};
+          nodes.forEach(function(n) { nodeById[n.id] = n; });
+        }
+
+        /* Proportional horizontal zones: wider for components with more nodes per layer */
+        function assignZones(w) {
+          var weights = compList.map(function(comp) {
+            var byLayer = {};
+            comp.forEach(function(n) { byLayer[n.layer] = (byLayer[n.layer] || 0) + 1; });
+            var vals = Object.values(byLayer);
+            return vals.length ? Math.max.apply(null, vals) : 1;
+          });
+          var totalW = weights.reduce(function(a, b) { return a + b; }, 0) || 1;
+          var offset = 0;
+          compList.forEach(function(comp, ci) {
+            var zw = (weights[ci] / totalW) * w;
+            var zx = offset + zw / 2;
+            comp.forEach(function(n) { n._zoneX = zx; n._zoneW = zw; });
+            offset += zw;
+          });
+        }
+
+        /* Sugiyama barycenter heuristic: minimize crossings with alternating sweeps */
+        function barycenterLayout() {
+          function getLayer(ly) { return nodes.filter(function(n) { return n.layer === ly; }); }
+          function place(grp) {
+            if (!grp.length) return;
+            var zx = grp[0]._zoneX || W / 2;
+            var zw = grp[0]._zoneW || W;
+            var r = R[grp[0].type] || 26;
+            var pad = r + 16;
+            var usable = Math.max(zw - 2 * pad, 0);
+            var step = grp.length > 1 ? usable / (grp.length - 1) : 0;
+            var start = grp.length > 1 ? zx - usable / 2 : zx;
+            grp.forEach(function(n, i) { n.x = start + i * step; n.y = LY[n.layer] || LY[1]; });
+          }
+          function seedLayer(ly) {
+            var byZone = {};
+            getLayer(ly).forEach(function(n) { var k = n._comp; (byZone[k] = byZone[k] || []).push(n); });
+            Object.values(byZone).forEach(place);
+          }
+          function bcSortLayer(layer, refLayer) {
+            var refPos = {};
+            getLayer(refLayer).forEach(function(n) { refPos[n.id] = n.x || 0; });
+            var byZone = {};
+            getLayer(layer).forEach(function(n) {
+              var nbrXs = [];
+              links.forEach(function(l) {
+                var s = typeof l.source === 'object' ? l.source.id : l.source;
+                var t = typeof l.target === 'object' ? l.target.id : l.target;
+                if (t === n.id && refPos[s] !== undefined) nbrXs.push(refPos[s]);
+                if (s === n.id && refPos[t] !== undefined) nbrXs.push(refPos[t]);
+              });
+              n._bc = nbrXs.length
+                ? nbrXs.reduce(function(a, b) { return a + b; }, 0) / nbrXs.length
+                : (n._zoneX || W / 2);
+              var k = n._comp; (byZone[k] = byZone[k] || []).push(n);
+            });
+            Object.values(byZone).forEach(function(grp) {
+              grp.sort(function(a, b) { return a._bc - b._bc; });
+              place(grp);
+            });
+          }
+          seedLayer(0); seedLayer(1); seedLayer(2);
+          for (var pass = 0; pass < 4; pass++) {
+            if (pass % 2 === 0) { bcSortLayer(1, 0); bcSortLayer(2, 1); }
+            else                { bcSortLayer(1, 2); bcSortLayer(0, 1); }
+          }
+        }
+
+        buildComponents(); assignZones(W); barycenterLayout(); rebuildNodeById();
+
+        svgEl.setAttribute('height', curH);
+        var svg = d3.select(svgEl).attr('width', W).attr('height', curH);
+
+        svg.append('defs').append('marker')
+          .attr('id', 'dag-arrow').attr('viewBox', '0 -5 10 10')
+          .attr('refX', 18).attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
+          .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', 'rgba(27,193,188,0.4)');
+
+        var contentG = svg.append('g').attr('class', 'dag-content');
+        var linkG = contentG.append('g');
+        var nodeG = contentG.append('g');
+
+        /* Pan-only zoom (no scroll-zoom); skip events originating from nodes */
+        var dagPan = d3.zoom()
+          .scaleExtent([1, 1])
+          .filter(function(event) {
+            if (event.type === 'wheel') return false;
+            var el = event.target;
+            while (el && el !== svgEl) {
+              if (el.classList && el.classList.contains('dag-node')) return false;
+              el = el.parentNode;
+            }
+            return true;
+          })
+          .on('start', function() { svgEl.classList.add('dag-panning'); })
+          .on('zoom',  function(ev) { contentG.attr('transform', 'translate(' + ev.transform.x + ',' + ev.transform.y + ')'); })
+          .on('end',   function() { svgEl.classList.remove('dag-panning'); });
+        svg.call(dagPan);
+
+        function linkKey(d) {
+          var s = typeof d.source === 'object' ? d.source.id : d.source;
+          var t = typeof d.target === 'object' ? d.target.id : d.target;
+          return s + '>' + t;
+        }
+
+        function ePath(d) {
+          var s = typeof d.source === 'object' ? d.source : nodeById[d.source];
+          var t = typeof d.target === 'object' ? d.target : nodeById[d.target];
+          if (!s || !t || s.x === undefined) return '';
+          var y1 = s.y + R[s.type], y2 = t.y - R[t.type], my = (y1 + y2) / 2;
+          return 'M' + s.x + ',' + y1 + ' C' + s.x + ',' + my + ' ' + t.x + ',' + my + ' ' + t.x + ',' + y2;
+        }
+
+        /* render(dur): sync DOM + animate nodes/edges to their computed positions */
+        function render(dur) {
+          var lSel = linkG.selectAll('path').data(links, linkKey);
+          var lEnter = lSel.enter().append('path')
+            .attr('class', function(d) { return 'dag-edge' + (d.type === 'asn' ? ' dag-edge-asn' : ''); })
+            .attr('marker-end', 'url(#dag-arrow)').attr('opacity', 0);
+          lSel.exit().transition().duration(dur).attr('opacity', 0).remove();
+          lEnter.merge(lSel).transition().duration(dur).attr('opacity', 1).attr('d', ePath);
+
+          var nSel = nodeG.selectAll('g.dag-node').data(nodes, function(d) { return d.id; });
+          var ent = nSel.enter().append('g')
+            .attr('class', function(d) { return 'dag-node dag-node-' + d.type; })
+            .attr('transform', function(d) { return 'translate(' + (d.x||W/2) + ',' + (d.y||LY[d.layer]||LY[1]) + ')'; })
+            .attr('opacity', 0).on('click', onClick);
+          ent.append('circle')
+            .attr('r', function(d) { return R[d.type]; })
+            .attr('fill', 'var(--bg-card)')
+            .attr('stroke', function(d) { return STROKE[d.type]; })
+            .attr('stroke-width', 2);
+          ent.append('text')
+            .attr('class', function(d) { return 'dag-label dag-label-' + d.type; })
+            .attr('dy', function(d) { return R[d.type] + 14; })
+            .text(function(d) { return d.name.length > 16 ? d.name.slice(0, 15) + '…' : d.name; });
+          ent.transition().duration(dur).attr('opacity', 1);
+          nSel.exit().transition().duration(dur).attr('opacity', 0).remove();
+          nSel.transition().duration(dur).attr('transform', function(d) {
+            return 'translate(' + (d.x || 0) + ',' + (d.y || 0) + ')';
+          });
+        }
+
+        render(0);
+
+        function onClick(ev, d) {
+          ev.stopPropagation();
+          if (d.type === 'company') { toggleCo(d); }
+          else if (d.type === 'asn') { showPanel(ev, d); }
+          else if (d.type === 'upstream') {
+            var tgts = new Set();
+            links.forEach(function(l) {
+              var s = typeof l.source === 'object' ? l.source.id : l.source;
+              var t = typeof l.target === 'object' ? l.target.id : l.target;
+              if (s === d.id) tgts.add(t);
+            });
+            nodeG.selectAll('.dag-node-company').classed('dag-highlight', function(n) { return tgts.has(n.id); });
+          }
+        }
+
+        function toggleCo(cn) {
+          if (expandedSet[cn.id]) {
+            var aIds = new Set((cn.data.asns || []).map(function(a) { return 'a:' + cn.id + ':' + a.asn; }));
+            nodes = nodes.filter(function(n) { return !aIds.has(n.id); });
+            links = links.filter(function(l) {
+              var t = typeof l.target === 'object' ? l.target.id : l.target;
+              return !aIds.has(t);
+            });
+            delete expandedSet[cn.id];
+            nodeG.selectAll('.dag-node-company').filter(function(n) { return n.id === cn.id; })
+              .select('circle').attr('stroke', '#1BC1BC');
+            if (!Object.keys(expandedSet).length) { curH = H0; svg.transition().duration(300).attr('height', curH); }
+          } else {
+            expandedSet[cn.id] = true;
+            curH = H1; svg.transition().duration(300).attr('height', curH);
+            (cn.data.asns || []).forEach(function(ag) {
+              var aId = 'a:' + cn.id + ':' + ag.asn;
+              /* Seed near parent so new nodes don't fly in from origin */
+              nodes.push({ id: aId, type: 'asn', name: ag.asn, layer: 2, data: ag, x: cn.x, y: LY[2], _zoneX: cn._zoneX, _zoneW: cn._zoneW, _comp: cn._comp });
+              links.push({ source: cn.id, target: aId, type: 'asn' });
+            });
+            nodeG.selectAll('.dag-node-company').filter(function(n) { return n.id === cn.id; })
+              .select('circle').attr('stroke', '#DB00DB');
+          }
+          buildComponents(); assignZones(W); barycenterLayout(); rebuildNodeById();
+          render(300);
+        }
+
+        function showPanel(ev, d) {
+          var panel = document.getElementById('dag-panel');
+          var body  = document.getElementById('dag-panel-body');
+          if (!panel || !body) return;
+          var ag = d.data, ips = (ag.ips || []).slice(0, 10);
+          body.innerHTML = '<p class="dag-panel-asn">' + (ag.asn || '—') + '</p>'
+            + '<table class="ip-table"><thead><tr>'
+            + '<th class="ip-col-ip">IP</th><th class="ip-col-rdns">rDNS</th><th>Bytes</th>'
+            + '</tr></thead><tbody>'
+            + ips.map(function(ip) {
+                return '<tr><td class="ip-col-ip">' + (ip.ip||'—') + '</td>'
+                  + '<td class="ip-col-rdns">' + (ip.reverse_dns||'—') + '</td>'
+                  + '<td>' + (ip.bytes > 0 ? formatBytes(ip.bytes) : '—') + '</td></tr>';
+              }).join('')
+            + '</tbody></table>'
+            + ((ag.ips||[]).length > 10 ? '<p class="dag-panel-more">+ ' + ((ag.ips||[]).length - 10) + ' more…</p>' : '');
+          var wr = wrap.getBoundingClientRect();
+          panel.style.left = Math.max(8, Math.min(ev.clientX - wr.left + 12, wr.width - 340)) + 'px';
+          panel.style.top  = Math.max(8, ev.clientY - wr.top - 20) + 'px';
+          panel.classList.remove('hidden');
+        }
+
+        document.getElementById('dag-panel-close').addEventListener('click', function() {
+          document.getElementById('dag-panel').classList.add('hidden');
+        });
+        svg.on('click', function() {
+          document.getElementById('dag-panel').classList.add('hidden');
+          nodeG.selectAll('.dag-node-company').classed('dag-highlight', false);
+        });
+
+        var si = document.getElementById('capture-search');
+        if (si) si.addEventListener('input', function() {
+          var q = si.value.trim().toLowerCase();
+          nodeG.selectAll('.dag-node-company').classed('dag-node-dimmed', function(n) {
+            return q && n.name.toLowerCase().indexOf(q) === -1;
+          });
+        });
+
+        new ResizeObserver(function() {
+          W = wrap.clientWidth;
+          assignZones(W); barycenterLayout(); rebuildNodeById();
+          svg.attr('width', W);
+          render(200);
+        }).observe(wrap);
+
+      }).catch(function(e) { console.warn('DAG load failed', e); wrap.style.display = 'none'; });
+    }
+
+    function formatBytes(b) {
+      if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+      if (b >= 1024) return (b / 1024).toFixed(1) + ' KB';
+      return b + ' B';
+    }
+
+    initDag();
 
     /* Lazy-init 3D graph when #graph details is opened */
     (function() {
