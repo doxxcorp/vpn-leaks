@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NORDVPN BLUF — TCPDUMP-Focused Report</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a30;
+      --panel2: #0f162a;
+      --text: #e8eefc;
+      --muted: #a3b1cf;
+      --border: #2a3963;
+      --ok: #32c27a;
+      --warn: #f0b84a;
+      --chip: #1a2543;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 36px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 8px;
+      line-height: 1.25;
+    }
+
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.05rem; }
+    h3 { font-size: 0.95rem; }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 2px;
+    }
+
+    .bluf-line {
+      font-size: 1rem;
+      margin: 6px 0 10px;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      border: 1px solid rgba(50, 194, 122, 0.45);
+      color: #bff8d8;
+      background: rgba(50, 194, 122, 0.12);
+      margin-left: 8px;
+    }
+
+    .grid4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .kpi {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      padding: 9px 10px;
+    }
+
+    .kpi .k {
+      display: block;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 3px;
+    }
+
+    .kpi .v {
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+    }
+
+    .chip.ok {
+      color: #c9ffe2;
+      border-color: rgba(50,194,122,0.35);
+    }
+
+    .chip.warn {
+      color: #ffe4b1;
+      border-color: rgba(240,184,74,0.35);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 8px 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 600;
+    }
+
+    td.mono, .mono {
+      font-family: var(--mono);
+      font-size: 0.84rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      margin-top: 8px;
+      background: rgba(255,255,255,0.01);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .grid4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1>NORDVPN Report (BLUF) <span class="pill">LOW risk</span></h1>
+      <p class="meta">Generated: 2026-05-01T11:02:17Z · Provider: nordvpn · Locations: 3</p>
+
+      <p class="bluf-line">
+        Bottom line: Leak checks are clean (<strong>DNS/WebRTC/IPv6 = no leaks flagged</strong>), and the most important collected evidence is
+        the observed <strong>exit IPs, DNS resolvers, and tcpdump-derived network peers</strong> shown below.
+      </p>
+
+      <div class="grid4">
+        <div class="kpi">
+          <span class="k">Exit IPv4s observed</span>
+          <span class="v mono">194.195.93.96, 185.211.32.87</span>
+        </div>
+        <div class="kpi">
+          <span class="k">Exit ASN</span>
+          <span class="v">AS212238 (CDNEXT Datacamp Limited)</span>
+        </div>
+        <div class="kpi">
+          <span class="k">Leak verdict</span>
+          <span class="v">DNS no · WebRTC no · IPv6 no</span>
+        </div>
+        <div class="kpi">
+          <span class="k">Coverage posture</span>
+          <span class="v">8 answered · 23 partial · 7 unanswered</span>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip ok">No high/critical findings</span>
+        <span class="chip warn">Evidence gaps remain (web/control-plane)</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Priority Evidence: IPs + DNS + Networks (tcpdump first)</h2>
+      <p class="small">This section is intentionally first because these are the highest-signal artifacts for quick triage.</p>
+
+      <h3>1) Exit IP and resolver evidence by run</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Run / Location</th>
+            <th>Exit IPv4</th>
+            <th>Resolver snapshot</th>
+            <th>ASN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">nordvpn-20260501T100504Z-cc878634 / us-california-san-jose-96</td>
+            <td class="mono">194.195.93.96</td>
+            <td class="mono">100.64.0.2, 194.195.93.90, 194.195.93.96</td>
+            <td>AS212238</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T104455Z-211c373f / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.89, 185.211.32.87</td>
+            <td>AS212238</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T105329Z-8cb49bd0 / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.79, 185.211.32.87</td>
+            <td>AS212238</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:12px;">2) tcpdump network intelligence (from pcap_summary / host intelligence)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Peer IP (public)</th>
+            <th>Resolved host / SNI</th>
+            <th>ASN</th>
+            <th>Owner / Org</th>
+            <th>Observed role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">[paste-from-pcap]</td>
+            <td class="mono">[hostname-or-sni]</td>
+            <td>[ASn]</td>
+            <td>[owner]</td>
+            <td>[dns, web, cdn, telemetry, unknown]</td>
+          </tr>
+          <tr>
+            <td class="mono">[paste-from-pcap]</td>
+            <td class="mono">[hostname-or-sni]</td>
+            <td>[ASn]</td>
+            <td>[owner]</td>
+            <td>[dns, web, cdn, telemetry, unknown]</td>
+          </tr>
+          <tr>
+            <td class="mono">[paste-from-pcap]</td>
+            <td class="mono">[hostname-or-sni]</td>
+            <td>[ASn]</td>
+            <td>[owner]</td>
+            <td>[dns, web, cdn, telemetry, unknown]</td>
+          </tr```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NordVPN BLUF — TCPDump-First Report</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#131a2e; --panel2:#0f1528; --text:#e9edf8; --muted:#9aa6c1;
+      --ok:#2fbf71; --warn:#f4b740; --bad:#e35d6a; --border:#253154; --chip:#1c2642; --link:#88b5ff;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    a{color:var(--link);text-decoration:none} a:hover{text-decoration:underline}
+    .shell{max-width:1200px;margin:0 auto;padding:24px 18px 40px}
+    .header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+    .header h1{margin:0 0 6px;font-size:1.6rem}
+    .meta{margin:0;color:var(--muted);font-size:.9rem}
+    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:14px;margin:10px 0}
+    .title{margin:0 0 8px;font-size:1.08rem}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.76rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid rgba(47,191,113,.5);background:rgba(47,191,113,.12);color:#b7ffd8}
+    .bluf{line-height:1.5;margin:8px 0 10px}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .metric{border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02);padding:9px}
+    .k{display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+    .v{font-size:.95rem;font-weight:700}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:.8rem;color:var(--muted)}
+    .chip.ok{color:#b7ffd8;border-color:rgba(47,191,113,.35)}
+    .chip.warn{color:#ffe0a3;border-color:rgba(244,183,64,.35)}
+    table{width:100%;border-collapse:collapse;font-size:.9rem}
+    th,td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+    th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    details{border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.01);margin-top:8px}
+    summary{cursor:pointer;font-weight:600}
+    .note{color:var(--muted);font-size:.85rem;line-height:1.45}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+    @media (max-width:620px){.header{flex-direction:column}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>NordVPN (nordvpn) — TCPDump-First BLUF</h1>
+        <p class="meta">Generated: 2026-05-01T11:02:17Z · Runs included: 3 · Focus: IPs, DNS, and networks seen in capture</p>
+      </div>
+      <p class="meta"><a href="NORDVPN.md">Open full markdown report</a></p>
+    </header>
+
+    <section class="panel">
+      <h2 class="title">Bottom Line Up Front <span class="pill">LOW risk</span></h2>
+      <p class="bluf">
+        No DNS/WebRTC/IPv6 leak flags were observed in the 3 benchmark locations. Exit traffic clustered on
+        <strong>AS212238 (CDNEXT Datacamp Limited)</strong>. The most important remaining work is deeper third-party website telemetry coverage, not core tunnel leak behavior.
+      </p>
+      <div class="grid">
+        <article class="metric"><span class="k">Leak flags</span><span class="v">DNS: no · WebRTC: no · IPv6: no</span></article>
+        <article class="metric"><span class="k">Observed exit IPs</span><span class="v mono">194.195.93.96, 185.211.32.87</span></article>
+        <article class="metric"><span class="k">Primary network</span><span class="v">AS212238</span></article>
+        <article class="metric"><span class="k">Coverage status</span><span class="v">8 answered · 23 partial · 7 unanswered</span></article>
+      </div>
+      <div class="chips">
+        <span class="chip ok">Tunnel leak checks passed in all 3 runs</span>
+        <span class="chip warn">Website/control-plane evidence still partial</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Most Important Evidence (TCPDump / Network First)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Run / Location</th>
+            <th>Exit IPv4</th>
+            <th>Resolvers observed</th>
+            <th>Announced Network</th>
+            <th>Leak verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">nordvpn-20260501T100504Z-cc878634 / us-california-san-jose-96</td>
+            <td class="mono">194.195.93.96</td>
+            <td class="mono">100.64.0.2, 194.195.93.90, 194.195.93.96</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T104455Z-211c373f / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.89, 185.211.32.87</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T105329Z-8cb49bd0 / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.79, 185.211.32.87</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Interpretation: resolver + exit IP alignment is consistent with tunneled behavior. No obvious public resolver leak pattern was flagged by the harness.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">PCAP-Derived Host/Network Intelligence (Priority View)</h2>
+      <div class="two">
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Observed peer/host IP</th>
+                <th>Likely role</th>
+                <th>Network owner hint</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">194.195.93.96</td><td>VPN exit / resolver contact</td><td>AS212238 (CDNEXT Datacamp Limited)</td></tr>
+              <tr><td class="mono">194.195.93.90</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">185.211.32.87</td><td>VPN exit / resolver contact</td><td>AS212238 (CDNEXT Datacamp Limited)</td></tr>
+              <tr><td class="mono">185.211.32.89</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">185.211.32.79</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">100.64.0.2</td><td>Local/tunnel-side resolver gateway</td><td>CGNAT/private range</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>DNS signal</th>
+                <th>Observed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Resolver families</td><td class="mono">local + external resolver tiers present</td></tr>
+              <tr><td>Leak flag</td><td>No leak flagged across all locations</td></tr>
+              <tr><td>PTR / reverse DNS</td><td class="mono">194.195.93.96 PTR NXDOMAIN in report notes</td></tr>
+              <tr><td>Cross-source IP consistency</td><td>3 echo sources agreed per run</td></tr>
+              <tr><td>IPv6 exit behavior</td><td>No IPv6 exit reported in these runs</td></tr>
+            </tbody>
+          </table>
+          <p class="note">
+            This section is deliberately concise: it keeps only tcpdump-adjacent evidence needed for fast triage.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Immediate Actions</h2>
+      <ol>
+        <li>Keep this network/IP-first block at top of every provider report.</li>
+        <li>Add top 10 destination IPs and DNS query domains from `pcap_summary.json` when available.</li>
+        <li>Push all non-essential narrative and category detail into appendices by default.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Appendices (Collapsed by Default)</h2>
+
+      <details>
+        <summary>Appendix A — Full SPEC coverage and unresolved IDs</summary>
+        <div class="note">
+          Include your existing “SPEC questions by category” accordion unchanged, but keep it out of the default decision flow.
+        </div>
+      </details>
+
+      <details>
+        <summary>Appendix B — Website/DNS surface deep detail (HAR, trackers, CDN hints)</summary>
+        <div class="note">
+          Keep long host lists, URL matrices, and tracking/cdn candidate dumps here.
+        </div>
+      </details>
+
+      <details>
+        <summary>Appendix C — Full narrative export</summary>
+        <div class="note">
+          Embed the markdown-derived full report body here.
+        </div>
+      </details>
+    </section>
+
+    <p class="meta" style="margin-top:10px;">
+      Standalone sample HTML designed for BLUF readability with tcpdump-relevant evidence first.
+    </p>
+  </main>
+</body>
+</html>
+``````html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NordVPN BLUF — TCPDump-First Report</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#131a2e; --panel2:#0f1528; --text:#e9edf8; --muted:#9aa6c1;
+      --ok:#2fbf71; --warn:#f4b740; --bad:#e35d6a; --border:#253154; --chip:#1c2642; --link:#88b5ff;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    a{color:var(--link);text-decoration:none} a:hover{text-decoration:underline}
+    .shell{max-width:1200px;margin:0 auto;padding:24px 18px 40px}
+    .header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+    .header h1{margin:0 0 6px;font-size:1.6rem}
+    .meta{margin:0;color:var(--muted);font-size:.9rem}
+    .panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:14px;margin:10px 0}
+    .title{margin:0 0 8px;font-size:1.08rem}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.76rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid rgba(47,191,113,.5);background:rgba(47,191,113,.12);color:#b7ffd8}
+    .bluf{line-height:1.5;margin:8px 0 10px}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .metric{border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02);padding:9px}
+    .k{display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+    .v{font-size:.95rem;font-weight:700}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:.8rem;color:var(--muted)}
+    .chip.ok{color:#b7ffd8;border-color:rgba(47,191,113,.35)}
+    .chip.warn{color:#ffe0a3;border-color:rgba(244,183,64,.35)}
+    table{width:100%;border-collapse:collapse;font-size:.9rem}
+    th,td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+    th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    details{border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.01);margin-top:8px}
+    summary{cursor:pointer;font-weight:600}
+    .note{color:var(--muted);font-size:.85rem;line-height:1.45}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+    @media (max-width:620px){.header{flex-direction:column}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>NordVPN (nordvpn) — TCPDump-First BLUF</h1>
+        <p class="meta">Generated: 2026-05-01T11:02:17Z · Runs included: 3 · Focus: IPs, DNS, and networks seen in capture</p>
+      </div>
+      <p class="meta"><a href="NORDVPN.md">Open full markdown report</a></p>
+    </header>
+
+    <section class="panel">
+      <h2 class="title">Bottom Line Up Front <span class="pill">LOW risk</span></h2>
+      <p class="bluf">
+        No DNS/WebRTC/IPv6 leak flags were observed in the 3 benchmark locations. Exit traffic clustered on
+        <strong>AS212238 (CDNEXT Datacamp Limited)</strong>. The most important remaining work is deeper third-party website telemetry coverage, not core tunnel leak behavior.
+      </p>
+      <div class="grid">
+        <article class="metric"><span class="k">Leak flags</span><span class="v">DNS: no · WebRTC: no · IPv6: no</span></article>
+        <article class="metric"><span class="k">Observed exit IPs</span><span class="v mono">194.195.93.96, 185.211.32.87</span></article>
+        <article class="metric"><span class="k">Primary network</span><span class="v">AS212238</span></article>
+        <article class="metric"><span class="k">Coverage status</span><span class="v">8 answered · 23 partial · 7 unanswered</span></article>
+      </div>
+      <div class="chips">
+        <span class="chip ok">Tunnel leak checks passed in all 3 runs</span>
+        <span class="chip warn">Website/control-plane evidence still partial</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Most Important Evidence (TCPDump / Network First)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Run / Location</th>
+            <th>Exit IPv4</th>
+            <th>Resolvers observed</th>
+            <th>Announced Network</th>
+            <th>Leak verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">nordvpn-20260501T100504Z-cc878634 / us-california-san-jose-96</td>
+            <td class="mono">194.195.93.96</td>
+            <td class="mono">100.64.0.2, 194.195.93.90, 194.195.93.96</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T104455Z-211c373f / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.89, 185.211.32.87</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+          <tr>
+            <td class="mono">nordvpn-20260501T105329Z-8cb49bd0 / us-california-san-jose-87</td>
+            <td class="mono">185.211.32.87</td>
+            <td class="mono">100.64.0.2, 185.211.32.79, 185.211.32.87</td>
+            <td>AS212238 — CDNEXT Datacamp Limited</td>
+            <td>DNS pass · WebRTC pass · IPv6 pass</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Interpretation: resolver + exit IP alignment is consistent with tunneled behavior. No obvious public resolver leak pattern was flagged by the harness.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">PCAP-Derived Host/Network Intelligence (Priority View)</h2>
+      <div class="two">
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Observed peer/host IP</th>
+                <th>Likely role</th>
+                <th>Network owner hint</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">194.195.93.96</td><td>VPN exit / resolver contact</td><td>AS212238 (CDNEXT Datacamp Limited)</td></tr>
+              <tr><td class="mono">194.195.93.90</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">185.211.32.87</td><td>VPN exit / resolver contact</td><td>AS212238 (CDNEXT Datacamp Limited)</td></tr>
+              <tr><td class="mono">185.211.32.89</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">185.211.32.79</td><td>Resolver-side endpoint</td><td>Likely same provider network block</td></tr>
+              <tr><td class="mono">100.64.0.2</td><td>Local/tunnel-side resolver gateway</td><td>CGNAT/private range</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>DNS signal</th>
+                <th>Observed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Resolver families</td><td class="mono">local + external resolver tiers present</td></tr>
+              <tr><td>Leak flag</td><td>No leak flagged across all locations</td></tr>
+              <tr><td>PTR / reverse DNS</td><td class="mono">194.195.93.96 PTR NXDOMAIN in report notes</td></tr>
+              <tr><td>Cross-source IP consistency</td><td>3 echo sources agreed per run</td></tr>
+              <tr><td>IPv6 exit behavior</td><td>No IPv6 exit reported in these runs</td></tr>
+            </tbody>
+          </table>
+          <p class="note">
+            This section is deliberately concise: it keeps only tcpdump-adjacent evidence needed for fast triage.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Immediate Actions</h2>
+      <ol>
+        <li>Keep this network/IP-first block at top of every provider report.</li>
+        <li>Add top 10 destination IPs and DNS query domains from <span class="mono">pcap_summary.json</span> when available.</li>
+        <li>Push all non-essential narrative and category detail into appendices by default.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2 class="title">Appendices (Collapsed by Default)</h2>
+
+      <details>
+        <summary>Appendix A — Full SPEC coverage and unresolved IDs</summary>
+        <div class="note">
+          Include your existing “SPEC questions by category” accordion unchanged, but keep it out of the default decision flow.
+        </div>
+      </details>
+
+      <details>
+        <summary>Appendix B — Website/DNS surface deep detail (HAR, trackers, CDN hints)</summary>
+        <div class="note">
+          Keep long host lists, URL matrices, and tracking/cdn candidate dumps here.
+        </div>
+      </details>
+
+      <details>
+        <summary>Appendix C — Full narrative export</summary>
+        <div class="note">
+          Embed the markdown-derived full report body here.
+        </div>
+      </details>
+    </section>
+
+    <p class="meta" style="margin-top:10px;">
+      Standalone sample HTML designed for BLUF readability with tcpdump-relevant evidence first.
+    </p>
+  </main>
+</body>
+</html>
