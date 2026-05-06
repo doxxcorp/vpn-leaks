@@ -786,7 +786,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep partial PCAP file in cache (default: delete alongside abort)",
     )
 
-    for leaf in (pst, pst2, pst3):
+    pst4 = csub.add_parser(
+        "idle",
+        help="Capture VPN-app telemetry BEFORE the tunnel is connected (TASK-10; requires sudo)",
+    )
+    pst4.add_argument("--provider", required=True, help="VPN provider slug (e.g. nordvpn)")
+    pst4.add_argument("--duration", type=int, default=120, help="Seconds to capture (default: 120)")
+    pst4.add_argument("-i", "--interface", default=None, metavar="IFACE",
+                      help="Network interface (default: $VPN_LEAKS_CAPTURE_INTERFACE or en0)")
+    pst4.add_argument("--bpf", default=None, metavar="EXPR", help="Optional tcpdump filter")
+    pst4.add_argument("-o", "--output", default=None,
+                      help="Output JSON path (default: runs/idle_telemetry/<provider>-<ts>.json)")
+
+    for leaf in (pst, pst2, pst3, pst4):
         leaf.set_defaults(func=cmd_capture)
 
     psum = sub.add_parser(
@@ -846,6 +858,35 @@ def cmd_capture(args: argparse.Namespace) -> int:
         ok, msg = cap_abort(discard_pcap=not bool(getattr(args, "keep_pcap", False)))
         print(msg, file=sys.stderr)
         return 0 if ok else 1
+
+    if cmd == "idle":
+        from vpn_leaks.checks.idle_telemetry import run_idle_capture
+
+        iface = args.interface or iface_default
+        try:
+            slug = normalize_provider_slug(args.provider)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return 2
+        try:
+            result = run_idle_capture(
+                provider=slug,
+                duration=int(args.duration),
+                interface=str(iface),
+                output=getattr(args, "output", None),
+                bpf=getattr(args, "bpf", None),
+            )
+        except Exception as e:
+            print(f"capture idle failed: {e}", file=sys.stderr)
+            return 1
+        print(json.dumps({
+            "provider": result["provider"],
+            "duration_seconds": result["duration_seconds"],
+            "captured_at": result["captured_at"],
+            "summary": result["summary"],
+            "output_path": result.get("output_path"),
+        }, indent=2))
+        return 0
 
     print(f"Unknown capture command: {cmd}", file=sys.stderr)
     return 2

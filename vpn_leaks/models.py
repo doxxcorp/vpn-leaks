@@ -246,10 +246,47 @@ class CaptureSessionFinalize(BaseModel):
     finalize_errors: list[str] = Field(default_factory=list)
 
 
+class IdleTelemetryContact(BaseModel):
+    """One contact attributed during a `vpn-leaks capture idle` window."""
+
+    ip: str = ""
+    host: str = ""
+    asn: str = ""
+    owner: str = ""
+    bytes: int = 0
+    flows: int = 0
+    reverse_dns: str = ""
+    upstream_asn: str | None = None
+    as_path: str | None = None
+    sources: str = ""
+    role: str = "unknown"
+
+
+class IdleTelemetrySummary(BaseModel):
+    total_contacts: int = 0
+    provider_owned: int = 0
+    third_party: int = 0
+    dns_resolvers: int = 0
+
+
+class IdleTelemetryResult(BaseModel):
+    """Result of `vpn-leaks capture idle` (TASK-10): contacts before tunnel up."""
+
+    provider: str = ""
+    duration_seconds: int = 0
+    captured_at: str = ""
+    interface: str = ""
+    pcap_path: str | None = None
+    pcap_summary_path: str | None = None
+    contacts: list[IdleTelemetryContact] = Field(default_factory=list)
+    summary: IdleTelemetrySummary = Field(default_factory=IdleTelemetrySummary)
+    output_path: str | None = None
+
+
 class NormalizedRun(BaseModel):
     """One location run — minimum fields per project spec."""
 
-    schema_version: str = "1.5"
+    schema_version: str = "1.6"
     run_id: str
     timestamp_utc: str = Field(default_factory=utc_now_iso)
     runner_env: RunnerEnv = Field(default_factory=RunnerEnv)
@@ -312,5 +349,9 @@ class NormalizedRun(BaseModel):
     capture_finalize: CaptureSessionFinalize | None = Field(
         default=None,
         description="Attach-capture session finalization audit row.",
+    )
+    idle_telemetry: IdleTelemetryResult | None = Field(
+        default=None,
+        description="Pre-tunnel app telemetry (TASK-10); from `vpn-leaks capture idle`.",
     )
     extra: dict[str, Any] = Field(default_factory=dict)

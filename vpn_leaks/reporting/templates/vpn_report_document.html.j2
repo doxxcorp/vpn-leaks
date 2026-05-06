@@ -76,7 +76,18 @@
         <article class="kpi-card">
           <span class="kpi-label">SNI + DNS names</span>
           <span class="kpi-value">{{ (kpis.sni_count + kpis.dns_host_count) if cw.has_data else '—' }}</span>
-          <span class="kpi-sub">{{ kpis.sni_count }} TLS SNI · {{ kpis.dns_host_count }} DNS</span>
+          <span class="kpi-sub">{{ kpis.sni_count }} TLS SNI · {{ kpis.dns_host_count }} DNS{% if cw.tls_ca_count %} · {{ cw.tls_ca_count }} CA{% if cw.tls_ca_count != 1 %}s{% endif %}{% endif %}</span>
+        </article>
+        {# TASK-06 — role-based KPI tile distinguishes provider-chosen contacts from routing infra #}
+        {% set rc = cw.role_counts or {} %}
+        <article class="kpi-card kpi-card--roles">
+          <span class="kpi-label">Contacts by role</span>
+          <span class="kpi-value">
+            <span class="role-badge role-provider-analytics">{{ rc.get('provider-analytics', 0) }}</span>
+            <span class="role-badge role-dns-resolver">{{ rc.get('dns-resolver', 0) }}</span>
+            <span class="role-badge role-vpn-control">{{ rc.get('vpn-control', 0) }}</span>
+          </span>
+          <span class="kpi-sub">analytics · resolver · vpn-control{% if cw.dns_operator_count %} · {{ cw.dns_operator_count }} NS op{% endif %}</span>
         </article>
       </div>
 
@@ -94,6 +105,14 @@
         the network intelligence workspace.
       </div>
       {% else %}
+
+      {# TASK-12: top-of-section SDK callout if any analytics SDKs were detected on the wire #}
+      {% if cw.sdk_matches %}
+      <div class="callout callout--warn">
+        <strong>⚠ {{ cw.sdk_matches | length }} analytics SDK(s) detected on the wire:</strong>
+        {% for sdk_name, ips in cw.sdk_matches.items() %}<span class="role-badge role-sdk">{{ sdk_name }}</span>{% endfor %}
+      </div>
+      {% endif %}
 
       <script type="application/json" id="dag-companies">{{ cw.companies | tojson }}</script>
 
@@ -152,7 +171,10 @@
                       <th class="ip-col-rdns">Reverse DNS</th>
                       <th class="ip-col-asn">ASN</th>
                       <th class="ip-col-upstream">Upstream</th>
+                      <th class="ip-col-aspath">AS Path</th>
+                      <th class="ip-col-role">Role</th>
                       <th class="ip-col-bytes">Bytes</th>
+                      <th class="ip-col-flows">Flows</th>
                       <th class="ip-col-runs">Run(s)</th>
                     </tr>
                   </thead>
@@ -174,7 +196,12 @@
                           <span class="src-badge src-dns">{{ src }}</span>
                         {% endif %}
                       </td>
-                      <td class="ip-col-rdns">{{ ip_row.reverse_dns }}</td>
+                      <td class="ip-col-rdns">
+                        {{ ip_row.reverse_dns }}
+                        {% if ip_row.tls_chain and ip_row.tls_chain.issuer_o %}
+                        <br><span class="tls-issuer" title="TLS leaf certificate issuer">CA: {{ ip_row.tls_chain.issuer_o }}</span>
+                        {% endif %}
+                      </td>
                       <td class="ip-col-asn">
                         {% if ip_row.asn and ip_row.asn != '—' %}
                           {% set tooltip_lines = [] %}
@@ -192,7 +219,17 @@
                         {% endif %}
                       </td>
                       <td class="ip-col-upstream">{% if ip_row.upstream_org and ip_row.upstream_org != '—' %}{{ ip_row.upstream_org }}{% elif ip_row.upstream_asn and ip_row.upstream_asn != '—' %}{{ ip_row.upstream_asn }}{% else %}—{% endif %}</td>
+                      <td class="ip-col-aspath">{% if ip_row.as_path and ip_row.as_path != '—' %}<span class="aspath-pill">{{ ip_row.as_path }}</span>{% else %}—{% endif %}</td>
+                      <td class="ip-col-role">
+                        {% if ip_row.sdk_match %}
+                        <span class="role-badge role-sdk" title="Known analytics SDK endpoint">SDK · {{ ip_row.sdk_match }}</span>
+                        {% else %}
+                        {% set role = ip_row.role or 'unknown' %}
+                        <span class="role-badge role-{{ role }}">{{ role }}</span>
+                        {% endif %}
+                      </td>
                       <td class="ip-col-bytes">{% if ip_row.bytes > 0 %}{{ ip_row.bytes | filesizeformat if ip_row.bytes else '—' }}{% else %}—{% endif %}</td>
+                      <td class="ip-col-flows">{{ ip_row.flows if ip_row.flows else '—' }}</td>
                       <td class="ip-col-runs">{{ ip_row.run_ids | join(', ') if ip_row.run_ids else '—' }}</td>
                     </tr>
                     {% endfor %}
@@ -232,6 +269,40 @@
             {% endfor %}
           </div>
           {% endif %}
+        </div>
+      </details>
+      {% endif %}
+
+      {# DNS operators (TASK-04) — authoritative NS for each PCAP DNS hostname, grouped by operator org #}
+      {% if cw.dns_operators_by_org %}
+      <details class="tier3" style="margin-top:0.5rem;">
+        <summary class="t3-summary">
+          DNS operators — authoritative nameserver attribution
+          <span class="t3-count">{{ cw.dns_operator_count }} operator(s) · {{ cw.dns_operators | length }} hostname(s)</span>
+        </summary>
+        <div class="t3-body">
+          <p class="graph-blurb" style="margin-top:0.5rem;">
+            For each DNS hostname queried over the wire, the apex domain's authoritative nameserver
+            is resolved and BGP-attributed. The NS operator sees every query, even before any TCP
+            connection is made.
+          </p>
+          {% for org, hosts in cw.dns_operators_by_org.items() %}
+          <p class="web-sub-head">{{ org }} <span class="t3-count">{{ hosts | length }} hostname(s)</span></p>
+          <div class="web-table-wrap">
+            <table class="web-table" aria-label="DNS hostnames operated by {{ org }}">
+              <thead><tr><th>Hostname</th><th>Nameserver</th><th>NS ASN</th></tr></thead>
+              <tbody>
+                {% for h in hosts %}
+                <tr>
+                  <td><code>{{ h.hostname }}</code></td>
+                  <td>{{ h.ns_host }}</td>
+                  <td>{{ h.ns_asn }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endfor %}
         </div>
       </details>
       {% endif %}
@@ -315,6 +386,136 @@
           <li><strong>{{ f.severity }}</strong> — {{ f.title }} <span style="color:var(--text-muted)">({{ f.category }})</span></li>
           {% endfor %}
         </ul>
+      </div>
+    </details>
+    {% endif %}
+
+    {# Signup & Checkout Exposure (TASK-08, TASK-09) — pre-registration phase third parties + payments #}
+    {% if dashboard.signup_exposure and dashboard.signup_exposure.has_data %}
+    {% set sx = dashboard.signup_exposure %}
+    <details id="signup-exposure" class="tier3 anim-in anim-d4">
+      <summary class="t3-summary">
+        Signup &amp; Checkout exposure
+        <span class="t3-count">{{ sx.third_party_domains | length }} third parties · {{ sx.payment_processors | length }} payment proc · {{ sx.pages_analyzed }} page(s)</span>
+      </summary>
+      <div class="t3-body">
+        <p class="graph-blurb" style="margin-top:0.5rem;">
+          HAR analysis of <code>page_type=signup|checkout|pricing|order</code>. Third-party
+          domains here see the user's real IP <em>before</em> any VPN tunnel is established.
+          Payment processors permanently link payment identity to VPN subscription.
+        </p>
+
+        {% if sx.advertising_pixel_warning %}
+        <div class="callout callout--warn">
+          <strong>⚠ Advertising pixels detected on signup/checkout.</strong> Meta, Google
+          Ads, LinkedIn, Snapchat, or TikTok pixels firing on these pages receive
+          purchase-attribution data including IP and device fingerprints.
+        </div>
+        {% endif %}
+
+        {% if sx.payment_processors %}
+        <p class="web-sub-head">Payment infrastructure</p>
+        <div class="payment-cards">
+          {% for pp in sx.payment_processors %}
+          <article class="payment-card">
+            <h4 class="payment-card-name">{{ pp.processor_name }}</h4>
+            <p class="payment-card-domain"><code>{{ pp.domain }}</code></p>
+            <p class="payment-card-exposure">{{ pp.data_exposure }}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if sx.third_party_domains %}
+        <p class="web-sub-head">Third-party domains on signup &amp; checkout pages</p>
+        <div class="web-table-wrap">
+          <table class="web-table" aria-label="Third-party domains on signup pages">
+            <thead><tr><th>Domain</th><th>Category</th><th>Pages</th><th class="ip-col-flows">Requests</th></tr></thead>
+            <tbody>
+              {% for tp in sx.third_party_domains %}
+              <tr>
+                <td><code>{{ tp.domain }}</code></td>
+                <td><span class="cat-badge cat-{{ tp.category }}">{{ tp.category }}</span></td>
+                <td>{{ tp.page_types | join(', ') }}</td>
+                <td class="ip-col-flows">{{ tp.request_count }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+        {% if sx.analytics_event_requests %}
+        <p class="web-sub-head">Analytics / pixel event requests (sample)</p>
+        <ul class="mono-list">
+          {% for ev in sx.analytics_event_requests[:25] %}
+          <li><strong>{{ ev.platform }}</strong> · <span class="t3-count">{{ ev.page_type }}</span> · <code>{{ ev.url }}</code></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if sx.form_action_endpoints %}
+        <p class="web-sub-head">Cross-origin POST endpoints (form actions / AJAX)</p>
+        <ul class="mono-list">
+          {% for fa in sx.form_action_endpoints[:25] %}
+          <li><span class="t3-count">{{ fa.page_type }}</span> · <code>{{ fa.method }} {{ fa.url }}</code></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </details>
+    {% endif %}
+
+    {# App Idle Telemetry (TASK-10) — pre-tunnel exposure #}
+    {% if dashboard.idle_telemetry %}
+    {% set idle = dashboard.idle_telemetry %}
+    <details id="idle-telemetry" class="tier3 anim-in anim-d4">
+      <summary class="t3-summary">
+        App idle telemetry (pre-tunnel)
+        <span class="t3-count">{{ idle.summary.total_contacts }} contact(s) · {{ idle.summary.third_party }} third-party · {{ idle.duration_seconds }}s</span>
+      </summary>
+      <div class="t3-body">
+        <p class="graph-blurb" style="margin-top:0.5rem;">
+          Captured by <code>vpn-leaks capture idle --provider {{ idle.provider }}</code> on
+          <code>{{ idle.captured_at }}</code> over interface <code>{{ idle.interface }}</code>.
+          Contacts shown here happened with the VPN app running but the tunnel
+          <strong>not yet connected</strong> — they used the user's real ISP.
+        </p>
+
+        {% if idle.summary.third_party > 0 %}
+        <div class="callout callout--warn">
+          <strong>⚠ {{ idle.summary.third_party }} third-party contact(s) before tunnel up.</strong>
+          These represent data exposure that the user cannot prevent short of not running
+          the VPN app at all.
+        </div>
+        {% endif %}
+
+        {% if idle.contacts %}
+        <div class="evidence-table-wrap">
+          <table class="evidence-table" aria-label="Idle telemetry contacts">
+            <thead><tr>
+              <th>IP / host</th>
+              <th>Owner</th>
+              <th>ASN</th>
+              <th>Role</th>
+              <th class="ip-col-bytes">Bytes</th>
+              <th class="ip-col-flows">Flows</th>
+            </tr></thead>
+            <tbody>
+              {% for c in idle.contacts %}
+              <tr>
+                <td class="ip-col-ip">{{ c.ip or c.host or '—' }}</td>
+                <td>{{ c.owner or '—' }}</td>
+                <td class="ip-col-asn">{{ c.asn or '—' }}</td>
+                <td class="ip-col-role"><span class="role-badge role-{{ c.role or 'unknown' }}">{{ c.role or 'unknown' }}</span></td>
+                <td class="ip-col-bytes">{% if c.bytes > 0 %}{{ c.bytes | filesizeformat }}{% else %}—{% endif %}</td>
+                <td class="ip-col-flows">{{ c.flows if c.flows else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
       </div>
     </details>
     {% endif %}
@@ -524,6 +725,14 @@
 
       var nodes = [], links = [];
       var seenUp = {};
+      var seenHop = {};
+      var seenLink = {};
+      function addLink(s, t, type) {
+        var k = s + '>' + t;
+        if (seenLink[k]) return;
+        seenLink[k] = true;
+        links.push({ source: s, target: t, type: type });
+      }
       companies.forEach(function(company) {
         var cId = 'c:' + company.name;
         nodes.push({ id: cId, type: 'company', name: company.name, layer: 1, data: company });
@@ -532,20 +741,60 @@
           (ag.ips || []).forEach(function(ip) {
             var ul = (ip.upstream_org && ip.upstream_org !== '—') ? ip.upstream_org
                    : (ip.upstream_asn && ip.upstream_asn !== '—') ? ip.upstream_asn : null;
-            if (!ul || seenForCompany[ul]) return;
-            seenForCompany[ul] = true;
-            var uId = 'u:' + ul;
-            if (!seenUp[uId]) { seenUp[uId] = true; nodes.push({ id: uId, type: 'upstream', name: ul, layer: 0 }); }
-            links.push({ source: uId, target: cId, type: 'transit' });
+            var uId = null;
+            if (ul && !seenForCompany[ul]) {
+              seenForCompany[ul] = true;
+              uId = 'u:' + ul;
+              if (!seenUp[uId]) { seenUp[uId] = true; nodes.push({ id: uId, type: 'upstream', name: ul, layer: 0 }); }
+              addLink(uId, cId, 'transit');
+            } else if (ul) {
+              uId = 'u:' + ul;
+            }
+
+            /* TASK-05: parse full BGP AS path; create transit-hop nodes between
+             * Tier-1 ingress and the immediate upstream. The path is a
+             * space-separated list "ingress middle1 middle2 origin"; hops[last]
+             * is origin (= ip.asn), and hops[len-2] is typically the upstream.
+             * We only render hops *before* the upstream (i.e. hops[0..len-3]). */
+            var pathStr = ip.as_path;
+            if (!pathStr || pathStr === '—' || !uId) return;
+            var hops = String(pathStr).trim().split(/\s+/);
+            if (hops.length < 3) return;
+            var transitHops = hops.slice(0, hops.length - 2);
+            transitHops.forEach(function(hopAsn, i) {
+              var hId = 'h:AS' + hopAsn;
+              var layerOffset = transitHops.length - i;  // 1..N (1 closest to upstream)
+              if (!seenHop[hId]) {
+                seenHop[hId] = true;
+                nodes.push({ id: hId, type: 'transit', name: 'AS' + hopAsn, layer: -layerOffset });
+              }
+              var nextId = (i < transitHops.length - 1) ? 'h:AS' + transitHops[i + 1] : uId;
+              addLink(hId, nextId, 'transit');
+            });
           });
         });
       });
 
       import('https://esm.sh/d3@7').then(function(d3) {
-        var R      = { upstream: 26, company: 30, asn: 18 };
-        var STROKE = { upstream: '#9A91C8', company: '#1BC1BC', asn: '#4DFFF8' };
-        var LY     = { 0: 130, 1: 390, 2: 660 };
-        var H0 = 560, H1 = 880;
+        var R      = { upstream: 26, company: 30, asn: 18, transit: 14 };
+        var STROKE = { upstream: '#9A91C8', company: '#1BC1BC', asn: '#4DFFF8', transit: 'rgba(255,160,60,0.7)' };
+        /* TASK-05: dynamic LY map — build from min/max layer once nodes are known. */
+        var allLayers = Array.from(new Set(nodes.map(function(n) { return n.layer; }))).sort(function(a, b) { return a - b; });
+        var minLayer = allLayers[0];
+        var maxLayer = allLayers[allLayers.length - 1];
+        /* Existing layout: layer 0 (upstream) at y=130, layer 1 (company) at y=390, layer 2 (asn) at y=660.
+         * Spacing of ~260 between adjacent layers; transit hops above upstream get smaller y. */
+        var SPACING = 260;
+        var BASE_Y_FOR_LAYER_0 = 130;
+        var LY = {};
+        allLayers.forEach(function(ly) {
+          LY[ly] = BASE_Y_FOR_LAYER_0 + (ly - 0) * SPACING;
+        });
+        /* Compute extra top headroom for negative layers; shift all positions down so transit fits. */
+        var extraTop = (minLayer < 0) ? Math.abs(minLayer) * (SPACING - 60) : 0;
+        Object.keys(LY).forEach(function(k) { LY[k] += extraTop; });
+        var H0 = (LY[maxLayer] || 660) + 100;
+        var H1 = H0 + 320;
         var W = wrap.clientWidth || 900;
         var curH = H0;
         var expandedSet = {};
@@ -633,10 +882,16 @@
               place(grp);
             });
           }
-          seedLayer(0); seedLayer(1); seedLayer(2);
+          /* TASK-05: layers may now include negative numbers (transit hops above upstream).
+           * Seed all layers, then alternately sweep top→bottom and bottom→top across the
+           * dynamic layer set to refine barycenter ordering. */
+          allLayers.forEach(function(ly) { seedLayer(ly); });
           for (var pass = 0; pass < 4; pass++) {
-            if (pass % 2 === 0) { bcSortLayer(1, 0); bcSortLayer(2, 1); }
-            else                { bcSortLayer(1, 2); bcSortLayer(0, 1); }
+            if (pass % 2 === 0) {
+              for (var i = 1; i < allLayers.length; i++) bcSortLayer(allLayers[i], allLayers[i - 1]);
+            } else {
+              for (var j = allLayers.length - 2; j >= 0; j--) bcSortLayer(allLayers[j], allLayers[j + 1]);
+            }
           }
         }
 

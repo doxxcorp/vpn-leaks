@@ -9,4 +9,4 @@ def test_normalized_json_roundtrip():
     )
     s = n.model_dump_json()
     assert "example" in s
-    assert n.schema_version == "1.5"
+    assert n.schema_version == "1.6"

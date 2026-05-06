@@ -188,6 +188,9 @@ code { font-family: var(--font-mono); font-size: 0.87em; }
   transition: background 0.15s;
 }
 .kpi-card:hover { background: var(--bg-elevated); }
+.kpi-card--roles { border-top-color: var(--magenta); }
+.kpi-card--roles .kpi-value { display: flex; gap: 0.35rem; align-items: center; font-size: 1.1rem; }
+.kpi-card--roles .role-badge { font-size: 0.95rem; padding: 0.18rem 0.5rem; }
 .kpi-label {
   font-size: 0.62rem;
   font-family: var(--font-mono);
@@ -374,9 +377,78 @@ details.cc[open] > summary.cc-summary::after {
 .ip-table tr:last-child td { border-bottom: none; }
 .ip-col-ip  { min-width: 120px; color: var(--teal-bright); }
 .ip-col-rdns { color: var(--text-sec); max-width: 200px; }
+.tls-issuer { font-size: 0.65rem; color: var(--yellow); font-family: var(--font-mono); letter-spacing: 0.02em; }
 .ip-col-asn { white-space: nowrap; }
 .ip-col-upstream { white-space: nowrap; color: var(--text-sec); }
+.ip-col-aspath { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+.aspath-pill { letter-spacing: 0.02em; }
+.ip-col-role { white-space: nowrap; }
+.role-badge { display: inline-block; font-size: 0.62rem; padding: 0.1rem 0.35rem; border-radius: 3px; font-family: var(--font-mono); letter-spacing: 0.02em; }
+.role-vpn-control { background: rgba(27,193,188,0.15); color: var(--teal-bright); }
+.role-vpn-data { background: rgba(27,193,188,0.10); color: var(--teal); }
+.role-provider-analytics { background: rgba(219,0,219,0.15); color: var(--magenta); }
+.role-dns-resolver { background: rgba(154,145,200,0.20); color: var(--text-muted); }
+.role-routing-infra { background: rgba(255,160,60,0.15); color: rgba(255,160,60,0.9); }
+.role-unknown { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+.role-sdk { background: rgba(219,0,219,0.25); color: var(--magenta); font-weight: 600; }
+
+/* TASK-08 / TASK-09: Signup & Checkout Exposure */
+.callout {
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+.callout--warn {
+  border-left-color: var(--red);
+  background: rgba(255,77,106,0.08);
+  color: var(--text);
+}
+.cat-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.cat-analytics    { background: rgba(219,0,219,0.15); color: var(--magenta); }
+.cat-advertising  { background: rgba(255,77,106,0.15); color: var(--red); }
+.cat-cdn          { background: rgba(154,145,200,0.20); color: var(--text-muted); }
+.cat-payment      { background: rgba(255,213,79,0.15); color: var(--yellow); }
+.cat-unknown      { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+.payment-cards {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin: 0.6rem 0 1rem;
+}
+.payment-card {
+  background: var(--bg-card);
+  border-top: 2px solid var(--yellow);
+  padding: 0.7rem 0.85rem;
+  border-radius: 4px;
+}
+.payment-card-name {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.payment-card-domain {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.payment-card-exposure {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-sec);
+  line-height: 1.4;
+}
 .ip-col-bytes { text-align: right; color: var(--text-muted); white-space: nowrap; }
+.ip-col-flows { text-align: right; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); }
 .ip-col-runs  { color: var(--text-muted); max-width: 160px; }
 
 /* ── ASN pill + tooltip ───────────────────────────────────────── */
@@ -828,6 +900,8 @@ details.spec-q[open] > summary.spec-q-summary::after { content: "−"; }
 }
 .dag-label-upstream { fill: var(--text-muted); font-size: 10px; }
 .dag-label-asn { fill: var(--teal-bright); font-size: 9.5px; }
+.dag-node-transit circle { stroke: rgba(255,160,60,0.6); stroke-width: 1.5; }
+.dag-label-transit { fill: rgba(255,160,60,0.7); font-size: 9px; }
 .dag-edge { stroke: rgba(27,193,188,0.25); stroke-width: 1.5; fill: none; }
 .dag-edge-asn { stroke: rgba(77,255,248,0.18); stroke-width: 1; }
 .dag-node-dimmed circle { opacity: 0.15; }

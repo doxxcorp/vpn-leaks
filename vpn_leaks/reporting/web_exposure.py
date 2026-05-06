@@ -128,6 +128,70 @@ def _cymru_asn_names_bulk(asns: list[str]) -> dict[str, str]:
         return {}
 
 
+def _resolve_dns_operators(
+    hostnames: list[str],
+    ip_intel_cache: dict[str, Any],
+) -> dict[str, dict[str, str]]:
+    """For each hostname, resolve apex NS records + run BGP lookup on the NS IP.
+
+    Returns ``{hostname: {ns_host, ns_ip, ns_asn, ns_org}}``. Cached on disk
+    under ``ip_intel_cache["__dns_operators__"]`` so re-runs are instant.
+
+    Fail-soft: any per-hostname error stores ``{... : "—"}`` for that entry; an
+    ImportError on dnspython returns an empty dict (caller treats as no data).
+    """
+    try:
+        import dns.resolver  # noqa: PLC0415
+    except ImportError:
+        return {}
+
+    cache: dict[str, dict[str, str]] = dict(ip_intel_cache.get("__dns_operators__") or {})
+    results: dict[str, dict[str, str]] = {}
+    upstream_org_cache: dict[str, str] = dict(ip_intel_cache.get("__upstream_asns__") or {})
+
+    fresh: list[tuple[str, str]] = []  # (hostname, ns_asn) for org-name lookup
+    for hostname in hostnames:
+        if hostname in cache:
+            results[hostname] = cache[hostname]
+            continue
+        entry: dict[str, str]
+        try:
+            parts = hostname.rstrip(".").split(".")
+            apex = ".".join(parts[-2:]) if len(parts) >= 2 else hostname
+            ns_answers = dns.resolver.resolve(apex, "NS", lifetime=4.0)
+            ns_host = str(ns_answers[0].target).rstrip(".")
+            a_answers = dns.resolver.resolve(ns_host, "A", lifetime=4.0)
+            ns_ip = str(a_answers[0])
+            bgp = _bgp_module.lookup_ip(ns_ip)
+            ns_asn = bgp.get("asn") or "—"
+            entry = {
+                "ns_host": ns_host,
+                "ns_ip": ns_ip,
+                "ns_asn": ns_asn,
+                "ns_org": "—",
+            }
+            if ns_asn != "—":
+                fresh.append((hostname, ns_asn))
+        except Exception:
+            entry = {"ns_host": "—", "ns_ip": "—", "ns_asn": "—", "ns_org": "—"}
+        cache[hostname] = entry
+        results[hostname] = entry
+
+    # Resolve org names for any new ASNs not already cached.
+    new_asns = sorted({asn for _h, asn in fresh if asn not in upstream_org_cache})
+    if new_asns:
+        fetched = _cymru_asn_names_bulk(new_asns)
+        upstream_org_cache.update(fetched)
+        ip_intel_cache["__upstream_asns__"] = upstream_org_cache
+    for hostname, asn in fresh:
+        org = upstream_org_cache.get(asn) or asn
+        cache[hostname]["ns_org"] = org
+        results[hostname]["ns_org"] = org
+
+    ip_intel_cache["__dns_operators__"] = cache
+    return results
+
+
 def _is_public_ip(value: str) -> bool:
     try:
         ip = ipaddress.ip_address(value)
@@ -381,6 +445,7 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
                 "asn": entry.get("asn", "—"),
                 "upstream_asn": entry.get("upstream_asn"),
                 "prefix": entry.get("prefix"),
+                "as_path": entry.get("as_path"),
                 "source": "routeviews_bgp",
             }
 
@@ -426,15 +491,22 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
         return parsed, None
 
     def bgp_for_ip(ip: str) -> dict[str, Any]:
-        """Return BGP routing data from local DB (cached). Sets upstream_asn + prefix."""
-        if ip in bgp_cache:
-            return bgp_cache[ip]
+        """Return BGP routing data from local DB (cached). Sets upstream_asn + prefix.
+
+        If the in-memory cache entry was populated from a legacy disk cache that
+        predates TASK-01, ``as_path`` will be missing. Re-query in that case so
+        the AS Path column populates on the next report run.
+        """
+        cached = bgp_cache.get(ip)
+        if cached is not None and cached.get("as_path"):
+            return cached
         result = _bgp_module.lookup_ip(ip)
         bgp_cache[ip] = result
         if result.get("prefix"):
             disk_cache.setdefault(ip, {}).update({
                 "upstream_asn": result.get("upstream_asn"),
                 "prefix": result.get("prefix"),
+                "as_path": result.get("as_path"),
             })
         if result.get("asn"):
             disk_cache.setdefault(ip, {}).setdefault("asn_bgp", result["asn"])
@@ -450,6 +522,10 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
         row["reverse_dns"] = rdns
         if rdns_err:
             row_errors.append(rdns_err)
+        # TASK-12: flag known analytics-SDK endpoints by IP+rDNS
+        sdk_name = _match_sdk_endpoint(str(row.get("host") or ip), rdns)
+        if sdk_name:
+            row["sdk_match"] = sdk_name
 
         dig_key = (ip, True)
         if dig_key not in dig_cache:
@@ -477,6 +553,7 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
             disk_cache.setdefault(ip, {})["asn"] = bgp["asn"]
         row["upstream_asn"] = bgp.get("upstream_asn") or disk_cache.get(ip, {}).get("upstream_asn")
         row["prefix"] = bgp.get("prefix") or disk_cache.get(ip, {}).get("prefix")
+        row["as_path"] = bgp.get("as_path") or disk_cache.get(ip, {}).get("as_path")
 
         row["lookup_errors"] = row_errors
 
@@ -535,22 +612,59 @@ def pcap_host_intelligence(data: dict[str, Any]) -> dict[str, Any]:
             if werr:
                 row_errors.append(f"{ip}:{werr}")
 
-        rows.append(
-            {
-                "host": host,
-                "source": "+".join(srcs),
-                "ip": "—",
-                "ips": ips,
-                "bytes_observed": 0,
-                "flow_count": 0,
-                "reverse_dns": ", ".join(sorted(set(rdns_list))) if rdns_list else "—",
-                "asn": ", ".join(sorted(asns)) if asns else "—",
-                "owner": ", ".join(sorted(owners)) if owners else "—",
-                "whois_summary": " || ".join(whois_lines)[:1000] if whois_lines else "—",
-                "dig_summary": dig_summary or "—",
-                "lookup_errors": row_errors,
-            },
-        )
+        new_row: dict[str, Any] = {
+            "host": host,
+            "source": "+".join(srcs),
+            "ip": "—",
+            "ips": ips,
+            "bytes_observed": 0,
+            "flow_count": 0,
+            "reverse_dns": ", ".join(sorted(set(rdns_list))) if rdns_list else "—",
+            "asn": ", ".join(sorted(asns)) if asns else "—",
+            "owner": ", ".join(sorted(owners)) if owners else "—",
+            "whois_summary": " || ".join(whois_lines)[:1000] if whois_lines else "—",
+            "dig_summary": dig_summary or "—",
+            "lookup_errors": row_errors,
+        }
+        sdk_name = _match_sdk_endpoint(host, new_row["reverse_dns"])
+        if sdk_name:
+            new_row["sdk_match"] = sdk_name
+        rows.append(new_row)
+
+    # TLS certificate chain probe (TASK-11) for SNI rows + SDK propagation (TASK-12)
+    # for any host-level row. The IP table iterates peer-IP rows only, so anything
+    # discovered on a DNS/SNI hostname row also has to be stamped onto the resolved
+    # peer-IP rows when those IPs were observed in PCAP.
+    tls_chains_cache: dict[str, dict[str, Any]] = dict(disk_cache.get("__tls_chains__") or {})
+    tls_chains_dirty = False
+    ip_to_row = {str(r.get("ip")): r for r in rows if _is_public_ip(str(r.get("ip") or ""))}
+    for row in rows:
+        host = str(row.get("host") or "")
+        src = str(row.get("source") or "")
+        if not host or _is_public_ip(host):
+            continue
+        is_sni = "pcap_sni" in src
+        if is_sni:
+            if host in tls_chains_cache:
+                chain = tls_chains_cache[host]
+            else:
+                from vpn_leaks.checks.tls_probe import probe_tls_chain  # noqa: PLC0415
+                chain = probe_tls_chain(host)
+                tls_chains_cache[host] = chain
+                tls_chains_dirty = True
+            row["tls_chain"] = chain
+            for resolved_ip in (row.get("ips") or []):
+                peer_row = ip_to_row.get(str(resolved_ip))
+                if peer_row is not None and not peer_row.get("tls_chain"):
+                    peer_row["tls_chain"] = chain
+        sdk_name = row.get("sdk_match")
+        if sdk_name:
+            for resolved_ip in (row.get("ips") or []):
+                peer_row = ip_to_row.get(str(resolved_ip))
+                if peer_row is not None and not peer_row.get("sdk_match"):
+                    peer_row["sdk_match"] = sdk_name
+    if tls_chains_dirty:
+        disk_cache["__tls_chains__"] = tls_chains_cache
 
     rows_sorted = sorted(
         rows,
@@ -909,6 +1023,395 @@ def rollup_web_exposure(
     }
 
 
+_PAYMENT_PROCESSORS: dict[str, str] = {
+    "stripe.com": "Stripe",
+    "js.stripe.com": "Stripe",
+    "q.stripe.com": "Stripe",
+    "paypal.com": "PayPal",
+    "paypalobjects.com": "PayPal",
+    "braintreegateway.com": "Braintree (PayPal)",
+    "adyen.com": "Adyen",
+    "checkout.com": "Checkout.com",
+    "klarna.com": "Klarna",
+    "coinbase.com": "Coinbase Commerce",
+    "btcpay": "BTCPay (self-hosted)",
+    "cryptomus.com": "Cryptomus",
+    "coingate.com": "CoinGate",
+}
+
+_PAYMENT_DATA_EXPOSURE: dict[str, str] = {
+    "Stripe": (
+        "Card number, billing name, billing address, email, IP address, device "
+        "fingerprint. Permanently links payment identity to VPN subscription."
+    ),
+    "PayPal": (
+        "PayPal account email or card details, billing address, transaction "
+        "metadata, IP address. Identity is linked across the PayPal network."
+    ),
+    "Braintree (PayPal)": (
+        "Card details + billing address routed to PayPal's Braintree subsidiary; "
+        "same identity linkage as PayPal."
+    ),
+    "Adyen": (
+        "Card / bank details, billing address, IP, device fingerprint. "
+        "Enterprise PSP — permanent identity linkage."
+    ),
+    "Checkout.com": (
+        "Card data, billing address, IP, device fingerprint. "
+        "PCI-scope processor — permanent identity linkage."
+    ),
+    "Klarna": (
+        "Buy-now-pay-later identity check — soft credit pull, billing name, "
+        "address, email. Strongest identity linkage of the listed processors."
+    ),
+    "Coinbase Commerce": (
+        "Wallet address, transaction hash, amount. Lower identity linkage but "
+        "transaction is public on-chain."
+    ),
+    "BTCPay (self-hosted)": (
+        "Wallet + tx hash; lowest identity linkage if not paired with KYC checkout."
+    ),
+    "Cryptomus": (
+        "Wallet + tx hash; off-chain bookkeeping at the processor."
+    ),
+    "CoinGate": (
+        "Wallet + tx hash; processor may apply KYC for refunds."
+    ),
+}
+
+
+# Known analytics-event endpoint patterns matched against full request URL
+_ANALYTICS_EVENT_PATTERNS: list[tuple[str, str]] = [
+    ("google-analytics.com/collect", "Google Analytics (event)"),
+    ("analytics.google.com/g/collect", "Google Analytics (g/collect)"),
+    ("region1.google-analytics.com/g/collect", "Google Analytics (regional)"),
+    ("googletagmanager.com/gtag", "Google Tag Manager"),
+    ("facebook.com/tr", "Meta Pixel"),
+    ("connect.facebook.net", "Meta Pixel SDK"),
+    ("px.ads.linkedin.com", "LinkedIn Pixel"),
+    ("snap.licdn.com", "LinkedIn Insight"),
+    ("sc-static.net", "Snapchat Pixel"),
+    ("tr.snapchat.com", "Snapchat Pixel"),
+    ("analytics.tiktok.com", "TikTok Analytics"),
+    ("api.amplitude.com", "Amplitude (event)"),
+    ("api2.amplitude.com", "Amplitude (event)"),
+    ("api.segment.io", "Segment (track)"),
+    ("api.mixpanel.com", "Mixpanel (event)"),
+]
+
+
+def fingerprint_payment_processors(
+    har_entries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Scan HAR entries for known payment-processor endpoints.
+
+    Returns one row per detected processor with the processor name, the matched
+    domain pattern, an evidence URL, and a hardcoded data-exposure description.
+    """
+    seen: dict[str, dict[str, Any]] = {}
+    for ent in har_entries:
+        if not isinstance(ent, dict):
+            continue
+        req = ent.get("request") or {}
+        url = str(req.get("url") or "")
+        if not url:
+            continue
+        url_l = url.lower()
+        for pattern, name in _PAYMENT_PROCESSORS.items():
+            if pattern in url_l:
+                if name not in seen:
+                    seen[name] = {
+                        "processor_name": name,
+                        "domain": pattern,
+                        "evidence": url[:240],
+                        "data_exposure": _PAYMENT_DATA_EXPOSURE.get(name, "—"),
+                    }
+                break
+    return sorted(seen.values(), key=lambda r: str(r["processor_name"]).lower())
+
+
+def _is_provider_domain(host: str, provider_apex_domains: list[str]) -> bool:
+    h = host.lower().strip(".")
+    for apex in provider_apex_domains:
+        a = apex.lower().strip(".")
+        if not a:
+            continue
+        if h == a or h.endswith("." + a):
+            return True
+    return False
+
+
+def _classify_third_party_domain(host: str) -> str:
+    """One of: analytics, advertising, cdn, payment, unknown."""
+    h = host.lower()
+    if any(p in h for p in (
+        "google-analytics", "googletagmanager", "amplitude", "segment.io",
+        "segment.com", "mixpanel", "hotjar", "heap", "clarity.ms",
+        "matomo", "plausible", "sentry.io",
+    )):
+        return "analytics"
+    if any(p in h for p in (
+        "doubleclick", "googleadservices", "facebook.com", "facebook.net",
+        "fbcdn", "snap.licdn", "sc-static", "ads.linkedin", "snapchat",
+        "tiktok", "twitter.com/i/ads", "bat.bing", "adservice.google",
+    )):
+        return "advertising"
+    if any(p in h for p in _PAYMENT_PROCESSORS.keys()):
+        return "payment"
+    if any(p in h for p in (
+        "cloudflare", "fastly", "akamai", "edgekey", "edgesuite",
+        "cloudfront", "azureedge", "kxcdn", "stackpath", "incapsula",
+        "imperva", "cdn.",
+    )):
+        return "cdn"
+    return "unknown"
+
+
+def aggregate_signup_exposure_across_runs(
+    rows: list[tuple[str, Path, dict[str, Any]]],
+    *,
+    repo_root_path: Path,
+) -> dict[str, Any]:
+    """Run analyze_signup_exposure() per run and merge results provider-wide.
+
+    Provider apex domains are taken from each run's competitor_surface.provider_dns
+    domains keys (collected across all runs).
+    """
+    apex_domains_set: set[str] = set()
+    for _rid, _p, data in rows:
+        cs = data.get("competitor_surface")
+        if isinstance(cs, dict):
+            pd = cs.get("provider_dns") or {}
+            if isinstance(pd, dict):
+                doms = pd.get("domains") or {}
+                if isinstance(doms, dict):
+                    for d in doms.keys():
+                        if isinstance(d, str) and d.strip():
+                            apex_domains_set.add(d.strip().lower())
+    apex_list = sorted(apex_domains_set)
+
+    third_party_agg: dict[str, dict[str, Any]] = {}
+    form_actions: list[dict[str, str]] = []
+    analytics_events: list[dict[str, str]] = []
+    payment_processors: dict[str, dict[str, Any]] = {}
+    pages_analyzed = 0
+
+    for _rid, _p, data in rows:
+        extra = data.get("extra") or {}
+        if not isinstance(extra, dict):
+            continue
+        sp = extra.get("surface_probe")
+        if not isinstance(sp, dict):
+            continue
+        per = analyze_signup_exposure(
+            sp,
+            repo_root_path=repo_root_path,
+            provider_apex_domains=apex_list,
+        )
+        if not per.get("has_data"):
+            continue
+        pages_analyzed += int(per.get("pages_analyzed") or 0)
+        for tp in per.get("third_party_domains") or []:
+            key = tp["domain"]
+            if key not in third_party_agg:
+                third_party_agg[key] = {
+                    "domain": tp["domain"],
+                    "category": tp["category"],
+                    "request_count": 0,
+                    "page_types": set(),
+                    "sends_on_load": tp.get("sends_on_load", True),
+                }
+            third_party_agg[key]["request_count"] += int(tp.get("request_count") or 0)
+            third_party_agg[key]["page_types"].update(tp.get("page_types") or [])
+        form_actions.extend(per.get("form_action_endpoints") or [])
+        analytics_events.extend(per.get("analytics_event_requests") or [])
+        for pp in per.get("payment_processors") or []:
+            n = pp["processor_name"]
+            if n not in payment_processors:
+                payment_processors[n] = pp
+
+    third_party_list = sorted(
+        (
+            {
+                "domain": v["domain"],
+                "category": v["category"],
+                "request_count": v["request_count"],
+                "page_types": sorted(v["page_types"]),
+                "sends_on_load": v["sends_on_load"],
+            }
+            for v in third_party_agg.values()
+        ),
+        key=lambda r: (
+            r["category"] != "advertising",
+            r["category"] != "payment",
+            -int(r["request_count"]),
+            r["domain"],
+        ),
+    )
+
+    has_advertising = any(
+        r["category"] == "advertising" for r in third_party_list
+    )
+
+    return {
+        "has_data": pages_analyzed > 0,
+        "pages_analyzed": pages_analyzed,
+        "provider_apex_domains": apex_list,
+        "third_party_domains": third_party_list,
+        "form_action_endpoints": form_actions[:80],
+        "analytics_event_requests": analytics_events[:80],
+        "payment_processors": sorted(
+            payment_processors.values(),
+            key=lambda r: str(r["processor_name"]).lower(),
+        ),
+        "advertising_pixel_warning": has_advertising,
+    }
+
+
+def analyze_signup_exposure(
+    surface_probe_block: dict[str, Any] | None,
+    *,
+    repo_root_path: Path,
+    provider_apex_domains: list[str],
+) -> dict[str, Any]:
+    """Deep HAR analysis for signup/checkout/pricing/order pages.
+
+    Returns ``{has_data, third_party_domains, form_action_endpoints,
+    analytics_event_requests, cross_origin_requests, payment_processors}``.
+    Reads ``probes[].har_path`` (repo-root-relative) for pages whose
+    ``page_type`` is in ``signup|checkout|pricing|order``. Fail-soft on missing
+    files or HAR parse errors.
+    """
+    empty: dict[str, Any] = {
+        "has_data": False,
+        "third_party_domains": [],
+        "form_action_endpoints": [],
+        "analytics_event_requests": [],
+        "cross_origin_requests": [],
+        "payment_processors": [],
+        "pages_analyzed": 0,
+    }
+    if not isinstance(surface_probe_block, dict):
+        return empty
+    probes = surface_probe_block.get("probes")
+    if not isinstance(probes, list):
+        return empty
+
+    target_page_types = {"signup", "checkout", "pricing", "order"}
+    apex_list = [a.lower().strip(".") for a in (provider_apex_domains or []) if isinstance(a, str)]
+
+    third_party_agg: dict[str, dict[str, Any]] = {}
+    form_actions: list[dict[str, str]] = []
+    analytics_events: list[dict[str, str]] = []
+    cross_origin: list[dict[str, str]] = []
+    all_har_entries: list[dict[str, Any]] = []
+    pages_analyzed = 0
+
+    for probe in probes:
+        if not isinstance(probe, dict):
+            continue
+        page_type = str(probe.get("page_type") or "").lower()
+        if page_type not in target_page_types:
+            continue
+        har_rel = probe.get("har_path")
+        if not isinstance(har_rel, str) or not har_rel:
+            continue
+        har_path = repo_root_path / har_rel
+        if not har_path.is_file():
+            continue
+        try:
+            data = json.loads(har_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        entries = ((data or {}).get("log") or {}).get("entries") or []
+        if not isinstance(entries, list):
+            continue
+        pages_analyzed += 1
+        all_har_entries.extend(entries)
+
+        for ent in entries:
+            if not isinstance(ent, dict):
+                continue
+            req = ent.get("request") or {}
+            url = str(req.get("url") or "")
+            method = str(req.get("method") or "GET").upper()
+            if not url:
+                continue
+            try:
+                from urllib.parse import urlparse
+                p = urlparse(url)
+            except Exception:
+                continue
+            host = (p.netloc or "").split("@")[-1].lower()
+            if not host:
+                continue
+
+            is_provider = _is_provider_domain(host, apex_list)
+            if not is_provider:
+                category = _classify_third_party_domain(host)
+                key = host
+                if key not in third_party_agg:
+                    third_party_agg[key] = {
+                        "domain": host,
+                        "category": category,
+                        "request_count": 0,
+                        "page_types": set(),
+                        "sends_on_load": True,
+                    }
+                third_party_agg[key]["request_count"] += 1
+                third_party_agg[key]["page_types"].add(page_type)
+
+                cross_origin.append({
+                    "url": url[:240],
+                    "domain": host,
+                    "page_type": page_type,
+                })
+
+                for pat, name in _ANALYTICS_EVENT_PATTERNS:
+                    if pat in url.lower():
+                        analytics_events.append({
+                            "url": url[:240],
+                            "platform": name,
+                            "event_type": method,
+                            "page_type": page_type,
+                        })
+                        break
+
+            if method == "POST" and not is_provider:
+                form_actions.append({
+                    "url": url[:240],
+                    "method": method,
+                    "domain": host,
+                    "page_type": page_type,
+                })
+
+    third_party_list = sorted(
+        (
+            {
+                "domain": v["domain"],
+                "category": v["category"],
+                "request_count": v["request_count"],
+                "page_types": sorted(v["page_types"]),
+                "sends_on_load": v["sends_on_load"],
+            }
+            for v in third_party_agg.values()
+        ),
+        key=lambda r: (r["category"] != "advertising", -int(r["request_count"]), r["domain"]),
+    )
+
+    payment_processors = fingerprint_payment_processors(all_har_entries)
+
+    return {
+        "has_data": pages_analyzed > 0,
+        "third_party_domains": third_party_list,
+        "form_action_endpoints": form_actions[:80],
+        "analytics_event_requests": analytics_events[:80],
+        "cross_origin_requests": cross_origin[:120],
+        "payment_processors": payment_processors,
+        "pages_analyzed": pages_analyzed,
+    }
+
+
 def _fmt_bytes(n: int) -> str:
     if n >= 1_000_000:
         return f"{n / 1_000_000:.1f} MB"
@@ -998,6 +1501,84 @@ def _heuristic_canonical(owner: str, rdns: str) -> str | None:
     return None
 
 
+# Substring patterns matched against owner / canonical company (lowercased).
+_ANALYTICS_VENDOR_PATTERNS: list[str] = [
+    "amplitude", "segment", "mixpanel", "braze", "fullstory", "heap",
+    "firebase", "google analytics", "adobe analytics", "datadog",
+    "new relic", "appsflyer", "adjust", "branch.io", "sentry",
+    "cloudflare insights", "hotjar", "mouseflow", "logrocket",
+]
+
+# TASK-12: known mobile/desktop SDK endpoint hostnames → friendly SDK name.
+# Matched as substrings against the row's host OR reverse_dns (lowercased).
+_SDK_ENDPOINT_PATTERNS: dict[str, str] = {
+    "api.amplitude.com": "Amplitude (usage analytics)",
+    "api2.amplitude.com": "Amplitude (usage analytics)",
+    "api.segment.io": "Segment (CDP)",
+    "cdn.segment.com": "Segment (CDP)",
+    "firebaseinstallations.googleapis.com": "Firebase Installations",
+    "firebaseremoteconfig.googleapis.com": "Firebase Remote Config",
+    "app-measurement.com": "Google Analytics for Firebase",
+    "sentry.io": "Sentry (crash reporting)",
+    "ingest.sentry.io": "Sentry (crash reporting)",
+    "api.mixpanel.com": "Mixpanel (analytics)",
+    "api.appsflyer.com": "AppsFlyer (attribution)",
+    "sdk.iad-01.braze.com": "Braze (CRM/messaging)",
+    "logs.browser-intake-datadoghq.com": "Datadog (observability)",
+    "bam.nr-data.net": "New Relic (observability)",
+    "splunk.com": "Splunk (logging)",
+}
+
+
+def _match_sdk_endpoint(host: str, reverse_dns: str) -> str | None:
+    """Return the friendly SDK name if `host` or `reverse_dns` matches one of
+    the known SDK endpoint patterns; otherwise None."""
+    h = (host or "").lower()
+    r = (reverse_dns or "").lower()
+    for pattern, name in _SDK_ENDPOINT_PATTERNS.items():
+        if pattern in h or pattern in r:
+            return name
+    return None
+
+
+def classify_contact_role(
+    owner: str,
+    canonical_company: str,
+    provider_name: str,
+    sources: str,
+) -> str:
+    """Return one of: vpn-control | vpn-data | provider-analytics | dns-resolver |
+    routing-infra | unknown.
+
+    The classification is based on three signals: source tag (DNS-only contacts
+    are resolvers), owner / company match against the VPN provider name (the
+    provider's own infrastructure is control-plane), and substring match against
+    a known analytics-vendor list.
+    """
+    owner_l = (owner or "").lower()
+    company_l = (canonical_company or "").lower()
+    provider_l = (provider_name or "").lower().replace(" ", "").replace("-", "")
+    sources_l = sources or ""
+
+    if "pcap_dns" in sources_l and "pcap_peer_ip" not in sources_l:
+        return "dns-resolver"
+
+    if provider_l:
+        co = company_l.replace(" ", "").replace("-", "")
+        ow = owner_l.replace(" ", "").replace("-", "")
+        if (
+            (co and (provider_l in co or co in provider_l))
+            or (ow and (provider_l in ow or ow in provider_l))
+        ):
+            return "vpn-control"
+
+    for pattern in _ANALYTICS_VENDOR_PATTERNS:
+        if pattern in owner_l or pattern in company_l:
+            return "provider-analytics"
+
+    return "unknown"
+
+
 def _normalize_org_names_llm(
     entries: list[dict[str, str]],
 ) -> dict[str, str]:
@@ -1061,6 +1642,12 @@ def build_capture_workspace_rollup(
     all_snis: set[str] = set()
     all_dns_hosts: set[str] = set()
     run_count_with_pcap = 0
+    provider_name = ""
+    for _rid, _p, _data in rows:
+        cand = str(_data.get("vpn_provider") or "").strip()
+        if cand:
+            provider_name = cand
+            break
 
     for run_id, _path, data in rows:
         pcap = data.get("pcap_derived")
@@ -1098,6 +1685,9 @@ def build_capture_workspace_rollup(
             whois_summary = str(row.get("whois_summary") or "—")
             upstream_asn = row.get("upstream_asn") or None
             prefix = row.get("prefix") or None
+            as_path = row.get("as_path") or None
+            tls_chain = row.get("tls_chain") or None
+            sdk_match = row.get("sdk_match") or None
 
             if ip not in ip_index:
                 ip_index[ip] = {
@@ -1111,6 +1701,9 @@ def build_capture_workspace_rollup(
                     "whois_summary": whois_summary,
                     "upstream_asn": upstream_asn,
                     "prefix": prefix,
+                    "as_path": as_path,
+                    "tls_chain": tls_chain,
+                    "sdk_match": sdk_match,
                     "run_ids": [run_id],
                 }
             else:
@@ -1130,6 +1723,12 @@ def build_capture_workspace_rollup(
                     entry["upstream_asn"] = upstream_asn
                 if not entry.get("prefix") and prefix:
                     entry["prefix"] = prefix
+                if not entry.get("as_path") and as_path:
+                    entry["as_path"] = as_path
+                if not entry.get("tls_chain") and tls_chain:
+                    entry["tls_chain"] = tls_chain
+                if not entry.get("sdk_match") and sdk_match:
+                    entry["sdk_match"] = sdk_match
 
     if not ip_index:
         return {
@@ -1143,9 +1742,19 @@ def build_capture_workspace_rollup(
                 "sni_count": len(all_snis),
                 "dns_host_count": len(all_dns_hosts),
                 "run_count_with_pcap": run_count_with_pcap,
+                "dns_operator_count": 0,
+                "tls_ca_count": 0,
+                "sdk_count": 0,
             },
             "all_snis": sorted(all_snis)[:200],
             "all_dns_hosts": sorted(all_dns_hosts)[:200],
+            "role_counts": {},
+            "dns_operators": {},
+            "dns_operators_by_org": {},
+            "dns_operator_count": 0,
+            "tls_cas": [],
+            "tls_ca_count": 0,
+            "sdk_matches": {},
         }
 
     # Resolve upstream ASN numbers → org names (cached in ip_intel.json under __upstream_asns__)
@@ -1192,6 +1801,57 @@ def build_capture_workspace_rollup(
         if raw in llm_map:
             return llm_map[raw]
         return heuristic_map.get(raw, raw)
+
+    # Apply role classification using canonical company name (TASK-03)
+    for entry in ip_index.values():
+        canonical_company = _canonical(entry.get("owner", ""))
+        entry["role"] = classify_contact_role(
+            owner=entry.get("owner", "") or "",
+            canonical_company=canonical_company,
+            provider_name=provider_name,
+            sources=entry.get("sources", "") or "",
+        )
+
+    # Aggregate role counts (TASK-06) — derived after classification, before IP cap
+    role_counts: dict[str, int] = {}
+    for entry in ip_index.values():
+        r = entry.get("role") or "unknown"
+        role_counts[r] = role_counts.get(r, 0) + 1
+
+    # TLS CA count (TASK-11): distinct issuer organizations across SNI rows.
+    tls_cas: set[str] = set()
+    for entry in ip_index.values():
+        chain = entry.get("tls_chain") or {}
+        if isinstance(chain, dict):
+            org = (chain.get("issuer_o") or chain.get("issuer_cn") or "").strip()
+            if org:
+                tls_cas.add(org)
+
+    # SDK matches (TASK-12): distinct SDK names detected across all contacts.
+    sdk_matches: dict[str, list[str]] = {}
+    for entry in ip_index.values():
+        sdk = entry.get("sdk_match")
+        if sdk:
+            sdk_matches.setdefault(sdk, []).append(str(entry.get("ip") or ""))
+
+    # Resolve DNS operators (TASK-04) for the unique DNS hostnames seen on wire.
+    dns_hostnames_capped = sorted(all_dns_hosts)[:200]
+    dns_operators = _resolve_dns_operators(dns_hostnames_capped, _dc)
+    if dns_operators:
+        _save_ip_intel_cache()
+    dns_operator_asns = sorted({
+        info.get("ns_asn", "—")
+        for info in dns_operators.values()
+        if info.get("ns_asn") and info.get("ns_asn") != "—"
+    })
+    dns_operators_by_org: dict[str, list[dict[str, str]]] = {}
+    for hostname, info in sorted(dns_operators.items()):
+        org = info.get("ns_org") or info.get("ns_asn") or "—"
+        dns_operators_by_org.setdefault(org, []).append({
+            "hostname": hostname,
+            "ns_host": info.get("ns_host", "—"),
+            "ns_asn": info.get("ns_asn", "—"),
+        })
 
     # Group: canonical_owner → asn → [ip entries]
     owner_asn: dict[str, dict[str, list[dict[str, Any]]]] = {}
@@ -1253,7 +1913,17 @@ def build_capture_workspace_rollup(
             "sni_count": len(all_snis),
             "dns_host_count": len(all_dns_hosts),
             "run_count_with_pcap": run_count_with_pcap,
+            "dns_operator_count": len(dns_operator_asns),
+            "tls_ca_count": len(tls_cas),
+            "sdk_count": len(sdk_matches),
         },
         "all_snis": sorted(all_snis)[:200],
         "all_dns_hosts": sorted(all_dns_hosts)[:200],
+        "role_counts": role_counts,
+        "dns_operators": dns_operators,
+        "dns_operators_by_org": dns_operators_by_org,
+        "dns_operator_count": len(dns_operator_asns),
+        "tls_cas": sorted(tls_cas),
+        "tls_ca_count": len(tls_cas),
+        "sdk_matches": sdk_matches,
     }

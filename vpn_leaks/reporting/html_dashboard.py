@@ -6,8 +6,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from vpn_leaks.config_loader import repo_root
 from vpn_leaks.reporting.benchmark_location import format_benchmark_location_display
 from vpn_leaks.reporting.web_exposure import (
+    aggregate_signup_exposure_across_runs,
     build_capture_workspace_rollup,
     collect_surface_probe_urls,
     merge_har_signals,
@@ -264,6 +266,7 @@ def build_html_dashboard_context(
     *,
     markdown_basename: str,
     pcap_intel_per_run: dict[str, dict[str, Any]] | None = None,
+    idle_telemetry: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Dashboard props for vpn_report_document.html.j2.
@@ -271,6 +274,7 @@ def build_html_dashboard_context(
     markdown_basename: e.g. NORDVPN.md (sibling link from HTML).
     pcap_intel_per_run: pre-computed pcap_host_intelligence results keyed by run_id,
         avoids re-running whois/dig lookups that already ran during Markdown generation.
+    idle_telemetry: payload from `vpn-leaks capture idle` (TASK-10), if present.
     """
     merged = framework_rollup.get("merged_coverage") or []
     if not isinstance(merged, list):
@@ -285,6 +289,7 @@ def build_html_dashboard_context(
 
     web_exposure = rollup_web_exposure(rows)
     capture_workspace = build_capture_workspace_rollup(rows, pcap_intel_per_run=pcap_intel_per_run)
+    signup_exposure = aggregate_signup_exposure_across_runs(rows, repo_root_path=repo_root())
 
     return {
         "markdown_basename": markdown_basename,
@@ -293,6 +298,8 @@ def build_html_dashboard_context(
         "spec_by_category": group_spec_by_category(merged),
         "third_party": extract_third_party_signals(rows),
         "web_exposure": web_exposure,
+        "signup_exposure": signup_exposure,
+        "idle_telemetry": idle_telemetry,
         "leak_flags": leak_flags_anywhere(rows),
         "top_findings": findings,
         "max_overall_severity": str(

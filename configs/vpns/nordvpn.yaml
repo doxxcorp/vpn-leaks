@@ -10,3 +10,22 @@ credentials:
   username_env: null
   password_env: null
 policy_urls: []
+surface_urls:
+  - page_type: home
+    url: "https://nordvpn.com/"
+  - page_type: pricing
+    url: "https://nordvpn.com/pricing/"
+  - page_type: signup
+    url: "https://nordvpn.com/order/"
+  - page_type: checkout
+    url: "https://nordvpn.com/checkout/"
+  - page_type: download
+    url: "https://nordvpn.com/download/"
+  - page_type: login
+    url: "https://my.nordaccount.com/"
+competitor_probe:
+  provider_domains:
+    - nordvpn.com
+    - nordaccount.com
+    - nordvpn.net
+  skip_browserleaks: false

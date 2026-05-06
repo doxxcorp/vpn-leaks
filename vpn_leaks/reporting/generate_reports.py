@@ -105,6 +105,25 @@ def collect_normalized_for_provider(provider_slug: str) -> list[tuple[str, Path,
     return collect_normalized_runs(provider_slug)
 
 
+def load_idle_telemetry_latest(provider_slug: str) -> dict[str, Any] | None:
+    """Return the most recent ``runs/idle_telemetry/<provider>-*.json`` payload, if any.
+
+    TASK-10: rendered as a Tier 3 section in the HTML report so operators can
+    see app telemetry captured before the VPN tunnel was established.
+    """
+    idle_dir = repo_root() / "runs" / "idle_telemetry"
+    if not idle_dir.is_dir():
+        return None
+    candidates = sorted(idle_dir.glob(f"{provider_slug}-*.json"))
+    if not candidates:
+        return None
+    latest = candidates[-1]
+    try:
+        return json.loads(latest.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def _fence_json(
     label: str, obj: Any, max_chars: int = REPORT_JSON_BLOCK_MAX
 ) -> tuple[str, bool]:
@@ -470,11 +489,13 @@ def generate_vpn_report(
     logo_raw = _load_report_static_file("logo-isotype.svg")
     if progress_step is not None:
         progress_step("Report: build HTML dashboard")
+    idle_telemetry = load_idle_telemetry_latest(provider_slug)
     dashboard = build_html_dashboard_context(
         rows,
         framework_rollup,
         markdown_basename=f"{safe}.md",
         pcap_intel_per_run=pcap_intel_per_run,
+        idle_telemetry=idle_telemetry,
     )
     if progress_step is not None:
         progress_step("Report: render HTML")
